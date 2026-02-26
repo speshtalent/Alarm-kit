@@ -6,19 +6,98 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		AB05AE832F50302C009916D8 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AB05AE822F50302C009916D8 /* WidgetKit.framework */; };
+		AB05AE852F50302C009916D8 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AB05AE842F50302C009916D8 /* SwiftUI.framework */; };
+		AB05AE922F50302C009916D8 /* CountdownLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AB05AE802F50302C009916D8 /* CountdownLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AB05AE902F50302C009916D8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB9FCCB72F4F797000410048 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AB05AE7F2F50302C009916D8;
+			remoteInfo = CountdownLiveActivityExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		AB05AE932F50302C009916D8 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				AB05AE922F50302C009916D8 /* CountdownLiveActivityExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		AB05AE802F50302C009916D8 /* CountdownLiveActivityExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CountdownLiveActivityExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB05AE822F50302C009916D8 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		AB05AE842F50302C009916D8 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		AB9FCCBF2F4F797000410048 /* MyAlarmApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MyAlarmApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		AB05AE972F50302C009916D8 /* Exceptions for "CountdownLiveActivity" folder in "CountdownLiveActivityExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = AB05AE7F2F50302C009916D8 /* CountdownLiveActivityExtension */;
+		};
+		AB05AE9B2F503300009916D8 /* Exceptions for "MyAlarmApp" folder in "CountdownLiveActivityExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Models/AlarmMetadata.swift,
+				Services/TimerIntents.swift,
+			);
+			target = AB05AE7F2F50302C009916D8 /* CountdownLiveActivityExtension */;
+		};
+		AB9FCCDA2F4F7AC700410048 /* Exceptions for "MyAlarmApp" folder in "MyAlarmApp" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = AB9FCCBE2F4F797000410048 /* MyAlarmApp */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		AB05AE862F50302C009916D8 /* CountdownLiveActivity */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				AB05AE972F50302C009916D8 /* Exceptions for "CountdownLiveActivity" folder in "CountdownLiveActivityExtension" target */,
+			);
+			path = CountdownLiveActivity;
+			sourceTree = "<group>";
+		};
 		AB9FCCC12F4F797000410048 /* MyAlarmApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				AB9FCCDA2F4F7AC700410048 /* Exceptions for "MyAlarmApp" folder in "MyAlarmApp" target */,
+				AB05AE9B2F503300009916D8 /* Exceptions for "MyAlarmApp" folder in "CountdownLiveActivityExtension" target */,
+			);
 			path = MyAlarmApp;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		AB05AE7D2F50302C009916D8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB05AE852F50302C009916D8 /* SwiftUI.framework in Frameworks */,
+				AB05AE832F50302C009916D8 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AB9FCCBC2F4F797000410048 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -29,10 +108,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		AB05AE812F50302C009916D8 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				AB05AE822F50302C009916D8 /* WidgetKit.framework */,
+				AB05AE842F50302C009916D8 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		AB9FCCB62F4F797000410048 = {
 			isa = PBXGroup;
 			children = (
 				AB9FCCC12F4F797000410048 /* MyAlarmApp */,
+				AB05AE862F50302C009916D8 /* CountdownLiveActivity */,
+				AB05AE812F50302C009916D8 /* Frameworks */,
 				AB9FCCC02F4F797000410048 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +131,7 @@
 			isa = PBXGroup;
 			children = (
 				AB9FCCBF2F4F797000410048 /* MyAlarmApp.app */,
+				AB05AE802F50302C009916D8 /* CountdownLiveActivityExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,6 +139,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		AB05AE7F2F50302C009916D8 /* CountdownLiveActivityExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AB05AE962F50302C009916D8 /* Build configuration list for PBXNativeTarget "CountdownLiveActivityExtension" */;
+			buildPhases = (
+				AB05AE7C2F50302C009916D8 /* Sources */,
+				AB05AE7D2F50302C009916D8 /* Frameworks */,
+				AB05AE7E2F50302C009916D8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AB05AE862F50302C009916D8 /* CountdownLiveActivity */,
+			);
+			name = CountdownLiveActivityExtension;
+			packageProductDependencies = (
+			);
+			productName = CountdownLiveActivityExtension;
+			productReference = AB05AE802F50302C009916D8 /* CountdownLiveActivityExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		AB9FCCBE2F4F797000410048 /* MyAlarmApp */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = AB9FCCCA2F4F797100410048 /* Build configuration list for PBXNativeTarget "MyAlarmApp" */;
@@ -55,10 +168,12 @@
 				AB9FCCBB2F4F797000410048 /* Sources */,
 				AB9FCCBC2F4F797000410048 /* Frameworks */,
 				AB9FCCBD2F4F797000410048 /* Resources */,
+				AB05AE932F50302C009916D8 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				AB05AE912F50302C009916D8 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				AB9FCCC12F4F797000410048 /* MyAlarmApp */,
@@ -80,6 +195,9 @@
 				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
+					AB05AE7F2F50302C009916D8 = {
+						CreatedOnToolsVersion = 26.2;
+					};
 					AB9FCCBE2F4F797000410048 = {
 						CreatedOnToolsVersion = 26.2;
 					};
@@ -100,11 +218,19 @@
 			projectRoot = "";
 			targets = (
 				AB9FCCBE2F4F797000410048 /* MyAlarmApp */,
+				AB05AE7F2F50302C009916D8 /* CountdownLiveActivityExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		AB05AE7E2F50302C009916D8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AB9FCCBD2F4F797000410048 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -115,6 +241,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		AB05AE7C2F50302C009916D8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AB9FCCBB2F4F797000410048 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -124,7 +257,75 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		AB05AE912F50302C009916D8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AB05AE7F2F50302C009916D8 /* CountdownLiveActivityExtension */;
+			targetProxy = AB05AE902F50302C009916D8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		AB05AE942F50302C009916D8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = PW3FJA8Y5Y;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CountdownLiveActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CountdownLiveActivity;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mani12.MyAlarmApp.CountdownLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AB05AE952F50302C009916D8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = PW3FJA8Y5Y;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CountdownLiveActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CountdownLiveActivity;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mani12.MyAlarmApp.CountdownLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		AB9FCCC82F4F797100410048 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -251,8 +452,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = PW3FJA8Y5Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MyAlarmApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -282,8 +485,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = PW3FJA8Y5Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MyAlarmApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -309,6 +514,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		AB05AE962F50302C009916D8 /* Build configuration list for PBXNativeTarget "CountdownLiveActivityExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB05AE942F50302C009916D8 /* Debug */,
+				AB05AE952F50302C009916D8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		AB9FCCBA2F4F797000410048 /* Build configuration list for PBXProject "MyAlarmApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
