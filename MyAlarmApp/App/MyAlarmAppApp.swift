@@ -1,12 +1,14 @@
 import SwiftUI
+import AppIntents
 
 @main
 struct MyAlarmAppApp: App {
 
     init() {
         Task {
-            await AlarmPermission.request()
+            await AlarmService.shared.requestAuthorizationIfNeeded()
         }
+        AlarmAppShortcutsProvider.updateAppShortcutParameters()
     }
 
     var body: some Scene {

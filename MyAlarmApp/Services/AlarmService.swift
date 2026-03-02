@@ -8,120 +8,139 @@ import AppIntents
 @MainActor
 final class AlarmService: ObservableObject {
 
+    struct AlarmListItem: Identifiable {
+        let alarm: Alarm
+        let label: String
+
+        var id: UUID { alarm.id }
+        var fireDate: Date? {
+            guard let schedule = alarm.schedule else { return nil }
+            guard case let .fixed(date) = schedule else { return nil }
+            return date
+        }
+    }
+
     static let shared = AlarmService()
 
-    @Published var alarms: [Alarm] = []
+    @Published var alarms: [AlarmListItem] = []
+
+    private let labelsStoreKey = "AlarmLabelsByID"
 
     private init() {}
 
-    // MARK: - Load existing alarms
+    // MARK: - Public API required by views + AppIntent
+    func requestAuthorizationIfNeeded() async {
+        do {
+            if AlarmManager.shared.authorizationState == .authorized { return }
+            _ = try await AlarmManager.shared.requestAuthorization()
+        } catch {
+            print("Alarm authorization error:", error)
+        }
+    }
+
+    @discardableResult
+    func scheduleAlarm(date: Date, label: String) async throws -> UUID {
+        // AlarmKit rejects past fire dates, so clamp to now+1s when needed.
+        let scheduleDate = max(date, Date().addingTimeInterval(1))
+        let id = Alarm.ID()
+
+        let alert = AlarmPresentation.Alert(
+            title: LocalizedStringResource(stringLiteral: label)
+        )
+
+        let presentation = AlarmPresentation(alert: alert)
+
+        let attributes = AlarmAttributes(
+            presentation: presentation,
+            // Metadata is stored with the AlarmKit alarm for system presentation.
+            metadata: AppAlarmMetadata(title: label, icon: "alarm"),
+            tintColor: .orange
+        )
+
+        let configuration = AlarmManager.AlarmConfiguration(
+            countdownDuration: nil,
+            schedule: .fixed(scheduleDate),
+            attributes: attributes,
+            stopIntent: StopAlarmIntent(alarmID: id.uuidString),
+            secondaryIntent: nil,
+            sound: .default
+        )
+
+        let alarm = try await AlarmManager.shared.schedule(id: id, configuration: configuration)
+        // The Alarm object does not expose metadata back out, so persist labels by id for UI rows.
+        saveLabel(label, for: id)
+        upsertAlarmInList(alarm, label: label)
+        return id
+    }
+
+    func cancelAlarm(id: UUID) {
+        do {
+            try AlarmManager.shared.cancel(id: id)
+        } catch {
+            print("Cancel alarm error:", error)
+        }
+        removeLabel(for: id)
+        alarms.removeAll { $0.alarm.id == id }
+    }
+
+    // Existing view integration
     func loadAlarms() {
         do {
             let all = try AlarmManager.shared.alarms
-            print("📋 All alarms count:", all.count)
-            for a in all {
-                print("   - id:", a.id)
-                print("   - schedule:", String(describing: a.schedule))
-                print("   - state:", String(describing: a.state))
-            }
-            alarms = all.filter { $0.schedule != nil }
-            print("📋 Filtered alarms:", alarms.count)
-        } catch {
-            print("❌ loadAlarms error:", error)
-        }
-    }
-
-    // MARK: - Schedule alarm
-    func scheduleFutureAlarm(date: Date, title: String, snoozeEnabled: Bool = true, snoozeDuration: TimeInterval = 300) async {
-        print("🚨 scheduleFutureAlarm called!")
-
-        // ✅ Always ensure date is in the future
-        let scheduleDate = date < Date() ? Date().addingTimeInterval(60) : date
-        print("📅 Final schedule date:", scheduleDate)
-        print("📅 Title:", title)
-        print("📅 Snooze:", snoozeEnabled)
-
-        do {
-            let id = Alarm.ID()
-
-            let schedule = Alarm.Schedule.fixed(scheduleDate)
-            print("⏰ Fixed schedule set for:", scheduleDate)
-
-            let alert = AlarmPresentation.Alert(
-                title: LocalizedStringResource(stringLiteral: title),
-                secondaryButton: snoozeEnabled ? AlarmButton(
-                    text: "Snooze",
-                    textColor: .white,
-                    systemImageName: "moon.zzz.fill"
-                ) : nil,
-                secondaryButtonBehavior: snoozeEnabled ? .countdown : nil
-            )
-
-            let presentation: AlarmPresentation
-            if snoozeEnabled {
-                presentation = AlarmPresentation(
-                    alert: alert,
-                    countdown: AlarmPresentation.Countdown(
-                        title: "Snoozed",
-                        pauseButton: AlarmButton(
-                            text: "Pause",
-                            textColor: .orange,
-                            systemImageName: "pause.fill"
-                        )
-                    ),
-                    paused: AlarmPresentation.Paused(
-                        title: "Paused",
-                        resumeButton: AlarmButton(
-                            text: "Resume",
-                            textColor: .orange,
-                            systemImageName: "play.fill"
-                        )
+            let labels = loadLabels()
+            alarms = all
+                .filter { $0.schedule != nil }
+                .map { alarm in
+                    AlarmListItem(
+                        alarm: alarm,
+                        label: labels[alarm.id.uuidString] ?? "Alarm"
                     )
-                )
-            } else {
-                presentation = AlarmPresentation(alert: alert)
-            }
-
-            let attributes = AlarmAttributes(
-                presentation: presentation,
-                metadata: AppAlarmMetadata(title: title, icon: "alarm"),
-                tintColor: .orange
-            )
-
-            let configuration = AlarmManager.AlarmConfiguration(
-                countdownDuration: snoozeEnabled ? Alarm.CountdownDuration(preAlert: nil, postAlert: snoozeDuration) : nil,
-                schedule: schedule,
-                attributes: attributes,
-                stopIntent: StopAlarmIntent(alarmID: id.uuidString),
-                secondaryIntent: snoozeEnabled ? RepeatAlarmIntent(alarmID: id.uuidString) : nil,
-                sound: .named("")
-            )
-
-            print("⚙️ Configuration created, scheduling now...")
-
-            let alarm = try await AlarmManager.shared.schedule(
-                id: id,
-                configuration: configuration
-            )
-
-            alarms.append(alarm)
-            print("✅ Alarm scheduled! Total:", alarms.count)
-
+                }
+                .sorted { lhs, rhs in
+                    (lhs.fireDate ?? .distantFuture) < (rhs.fireDate ?? .distantFuture)
+                }
         } catch {
-            print("❌ Schedule failed:", error)
-            print("❌ Details:", error.localizedDescription)
+            print("Load alarms error:", error)
+            alarms = []
         }
     }
 
-    // MARK: - Cancel alarm
-    func cancelAlarm(id: Alarm.ID) {
+    // Backward compatibility for AddAlarmView existing callback
+    func scheduleFutureAlarm(
+        date: Date,
+        title: String,
+        snoozeEnabled: Bool = true,
+        snoozeDuration: TimeInterval = 300
+    ) async {
         do {
-            try AlarmManager.shared.cancel(id: id)
-            alarms.removeAll { $0.id == id }
-            print("🗑️ Alarm cancelled")
+            _ = try await scheduleAlarm(date: date, label: title)
         } catch {
-            alarms.removeAll { $0.id == id }
-            print("❌ Cancel error:", error)
+            print("Schedule alarm error:", error)
+        }
+    }
+
+    // MARK: - Local label persistence
+    private func loadLabels() -> [String: String] {
+        UserDefaults.standard.dictionary(forKey: labelsStoreKey) as? [String: String] ?? [:]
+    }
+
+    private func saveLabel(_ label: String, for id: UUID) {
+        var labels = loadLabels()
+        labels[id.uuidString] = label
+        UserDefaults.standard.set(labels, forKey: labelsStoreKey)
+    }
+
+    private func removeLabel(for id: UUID) {
+        var labels = loadLabels()
+        labels.removeValue(forKey: id.uuidString)
+        UserDefaults.standard.set(labels, forKey: labelsStoreKey)
+    }
+
+    private func upsertAlarmInList(_ alarm: Alarm, label: String) {
+        alarms.removeAll { $0.alarm.id == alarm.id }
+        alarms.append(AlarmListItem(alarm: alarm, label: label))
+        alarms.sort { lhs, rhs in
+            (lhs.fireDate ?? .distantFuture) < (rhs.fireDate ?? .distantFuture)
         }
     }
 }
