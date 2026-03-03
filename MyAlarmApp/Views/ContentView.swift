@@ -70,9 +70,9 @@ struct ContentView: View {
                             if alarmService.alarms.isEmpty {
                                 emptyState(icon: "alarm", text: "No alarms yet")
                             } else {
-                                ForEach(alarmService.alarms) { alarm in
-                                    AlarmRow(alarm: alarm) {
-                                        alarmService.cancelAlarm(id: alarm.id)
+                                ForEach(alarmService.alarms) { item in
+                                    AlarmRow(item: item) {
+                                        alarmService.cancelAlarm(id: item.id)
                                     }
                                 }
                             }
@@ -147,7 +147,7 @@ struct ContentView: View {
 
 // MARK: - Alarm Row
 struct AlarmRow: View {
-    let alarm: Alarm
+    let item: AlarmService.AlarmListItem
     let onDelete: () -> Void
 
     var body: some View {
@@ -162,10 +162,17 @@ struct AlarmRow: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Alarm")
+                Text(item.label)
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
-                Text(alarm.id.uuidString.prefix(8).uppercased())
+                Text(
+                    item.fireDate?.formatted(
+                        Date.FormatStyle()
+                            .weekday(.abbreviated)
+                            .hour(.defaultDigits(amPM: .abbreviated))
+                            .minute(.twoDigits)
+                    ) ?? item.id.uuidString.prefix(8).uppercased()
+                )
                     .font(.system(size: 12, weight: .medium, design: .monospaced))
                     .foregroundStyle(.gray)
             }

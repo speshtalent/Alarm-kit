@@ -4,7 +4,5 @@
 <dict>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>This app needs permission to schedule alarms.</string>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
 </dict>
 </plist>
