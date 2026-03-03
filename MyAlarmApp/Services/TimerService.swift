@@ -14,11 +14,11 @@ final class TimerService: ObservableObject {
 
     private init() {}
 
-    // MARK: - Load timers (only timers, not alarms)
+    // MARK: - Load timers
     func loadTimers() {
         do {
             timers = try AlarmManager.shared.alarms.filter {
-                $0.schedule == nil  // timers have no schedule
+                $0.schedule == nil
             }
         } catch {
             print("Failed to load timers:", error)
@@ -26,7 +26,7 @@ final class TimerService: ObservableObject {
     }
 
     // MARK: - Start timer
-    func startTimer(duration: TimeInterval, title: String) async {
+    func startTimer(duration: TimeInterval, title: String, sound: String = "nokia") async {
         do {
             let id = Alarm.ID()
 
@@ -77,7 +77,7 @@ final class TimerService: ObservableObject {
                 attributes: attributes,
                 stopIntent: StopAlarmIntent(alarmID: id.uuidString),
                 secondaryIntent: RepeatAlarmIntent(alarmID: id.uuidString),
-                sound: .named("test")
+                sound: .named(sound) // ✅ uses selected sound
             )
 
             let timer = try await AlarmManager.shared.schedule(
@@ -86,7 +86,7 @@ final class TimerService: ObservableObject {
             )
 
             timers.append(timer)
-            print("⏱️ Timer started:", duration)
+            print("⏱️ Timer started:", duration, "sound:", sound)
 
         } catch {
             print("❌ Failed to start timer:", error)
@@ -100,7 +100,6 @@ final class TimerService: ObservableObject {
             timers.removeAll { $0.id == id }
             print("🗑️ Timer cancelled")
         } catch {
-            // even if cancel fails, remove from local list
             timers.removeAll { $0.id == id }
             print("❌ Failed to cancel timer:", error)
         }

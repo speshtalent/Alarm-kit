@@ -40,7 +40,6 @@ struct ContentView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 8)
 
-
                 // MARK: Segmented Picker
                 HStack(spacing: 0) {
                     ForEach([Mode.alarms, Mode.timers], id: \.self) { m in
@@ -95,13 +94,14 @@ struct ContentView: View {
         .sheet(isPresented: $showAddAlarm, onDismiss: {
             alarmService.loadAlarms()
         }) {
-            AddAlarmView { date, title, snoozeEnabled, snoozeDuration in
+            AddAlarmView { date, title, snoozeEnabled, snoozeDuration, sound in
                 Task {
                     await alarmService.scheduleFutureAlarm(
                         date: date,
                         title: title,
                         snoozeEnabled: snoozeEnabled,
-                        snoozeDuration: snoozeDuration
+                        snoozeDuration: snoozeDuration,
+                        sound: sound
                     )
                     await MainActor.run {
                         alarmService.loadAlarms()
@@ -112,11 +112,12 @@ struct ContentView: View {
         .sheet(isPresented: $showAddTimer, onDismiss: {
             timerService.loadTimers()
         }) {
-            AddTimerView { duration, title in
+            AddTimerView { duration, title, sound in
                 Task {
                     await timerService.startTimer(
                         duration: duration,
-                        title: title
+                        title: title,
+                        sound: sound
                     )
                     await MainActor.run {
                         timerService.loadTimers()
@@ -173,8 +174,8 @@ struct AlarmRow: View {
                             .minute(.twoDigits)
                     ) ?? item.id.uuidString.prefix(8).uppercased()
                 )
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.gray)
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundStyle(.gray)
             }
 
             Spacer()
@@ -203,6 +204,26 @@ struct TimerRow: View {
     let timer: Alarm
     let onDelete: () -> Void
 
+    private var durationText: String {
+        guard let duration = timer.countdownDuration else { return "Timer" }
+        let total = Int(duration.preAlert ?? duration.postAlert ?? 0)
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let seconds = total % 60
+
+        if hours > 0 && minutes > 0 {
+            return "\(hours)h \(minutes)m"
+        } else if hours > 0 {
+            return "\(hours) hr"
+        } else if minutes > 0 && seconds > 0 {
+            return "\(minutes)m \(seconds)s"
+        } else if minutes > 0 {
+            return "\(minutes) min"
+        } else {
+            return "\(seconds) sec"
+        }
+    }
+
     var body: some View {
         HStack(spacing: 16) {
             ZStack {
@@ -215,11 +236,11 @@ struct TimerRow: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Timer")
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                Text(durationText)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
-                Text(timer.id.uuidString.prefix(8).uppercased())
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                Text("Timer")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(.gray)
             }
 
