@@ -28,7 +28,7 @@ final class AlarmService: ObservableObject {
 
     private init() {}
 
-    // MARK: - Public API required by views + AppIntent
+    // MARK: - Public API
     func requestAuthorizationIfNeeded() async {
         do {
             if AlarmManager.shared.authorizationState == .authorized { return }
@@ -39,8 +39,7 @@ final class AlarmService: ObservableObject {
     }
 
     @discardableResult
-    func scheduleAlarm(date: Date, label: String) async throws -> UUID {
-        // AlarmKit rejects past fire dates, so clamp to now+1s when needed.
+    func scheduleAlarm(date: Date, label: String, sound: String = "nokia") async throws -> UUID {
         let scheduleDate = max(date, Date().addingTimeInterval(1))
         let id = Alarm.ID()
 
@@ -52,7 +51,6 @@ final class AlarmService: ObservableObject {
 
         let attributes = AlarmAttributes(
             presentation: presentation,
-            // Metadata is stored with the AlarmKit alarm for system presentation.
             metadata: AppAlarmMetadata(title: label, icon: "alarm"),
             tintColor: .orange
         )
@@ -63,11 +61,10 @@ final class AlarmService: ObservableObject {
             attributes: attributes,
             stopIntent: StopAlarmIntent(alarmID: id.uuidString),
             secondaryIntent: nil,
-            sound: .default
+            sound: .named(sound)
         )
 
         let alarm = try await AlarmManager.shared.schedule(id: id, configuration: configuration)
-        // The Alarm object does not expose metadata back out, so persist labels by id for UI rows.
         saveLabel(label, for: id)
         upsertAlarmInList(alarm, label: label)
         return id
@@ -83,7 +80,6 @@ final class AlarmService: ObservableObject {
         alarms.removeAll { $0.alarm.id == id }
     }
 
-    // Existing view integration
     func loadAlarms() {
         do {
             let all = try AlarmManager.shared.alarms
@@ -105,15 +101,16 @@ final class AlarmService: ObservableObject {
         }
     }
 
-    // Backward compatibility for AddAlarmView existing callback
+    // ✅ Updated with sound parameter
     func scheduleFutureAlarm(
         date: Date,
         title: String,
         snoozeEnabled: Bool = true,
-        snoozeDuration: TimeInterval = 300
+        snoozeDuration: TimeInterval = 300,
+        sound: String = "nokia"
     ) async {
         do {
-            _ = try await scheduleAlarm(date: date, label: title)
+            _ = try await scheduleAlarm(date: date, label: title, sound: sound)
         } catch {
             print("Schedule alarm error:", error)
         }

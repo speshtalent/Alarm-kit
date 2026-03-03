@@ -7,20 +7,24 @@ struct SetAlarmIntent: AppIntent, ProvidesDialog {
     static var title: LocalizedStringResource = "Set Alarm"
     static var description = IntentDescription("Creates an AlarmKit alarm for a specific date and label.")
 
-    @Parameter(title: "Date")
+    @Parameter(title: "Date", kind: .date)
     var date: Date
+
+    @Parameter(title: "Time", kind: .time)
+    var time: Date
 
     @Parameter(title: "Label")
     var label: String
 
     static var parameterSummary: some ParameterSummary {
-        Summary("Set an alarm for \(\.$date) about \(\.$label)")
+        Summary("Set an alarm for \(\.$date) at \(\.$time) about \(\.$label)")
     }
 
     init() {}
 
-    init(date: Date, label: String) {
+    init(date: Date, time: Date, label: String) {
         self.date = date
+        self.time = time
         self.label = label
     }
 
@@ -29,12 +33,14 @@ struct SetAlarmIntent: AppIntent, ProvidesDialog {
         let cleanedLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
         let finalLabel = cleanedLabel.isEmpty ? "Alarm" : cleanedLabel
 
+        let fireDate = Self.combineDateAndTime(date: date, time: time)
+
         // Shared service is used by SwiftUI and this intent so behavior stays identical.
         await AlarmService.shared.requestAuthorizationIfNeeded()
-        _ = try await AlarmService.shared.scheduleAlarm(date: date, label: finalLabel)
+        _ = try await AlarmService.shared.scheduleAlarm(date: fireDate, label: finalLabel)
         AlarmService.shared.loadAlarms()
 
-        let formatted = date.formatted(
+        let formatted = fireDate.formatted(
             Date.FormatStyle()
                 .weekday(.wide)
                 .hour(.defaultDigits(amPM: .abbreviated))
@@ -42,6 +48,22 @@ struct SetAlarmIntent: AppIntent, ProvidesDialog {
         )
 
         return .result(dialog: IntentDialog("Your alarm titled '\(finalLabel)' is set for \(formatted)."))
+    }
+
+    private static func combineDateAndTime(date: Date, time: Date) -> Date {
+        let calendar = Calendar.current
+        let dateComponents = calendar.dateComponents([.year, .month, .day], from: date)
+        let timeComponents = calendar.dateComponents([.hour, .minute], from: time)
+
+        var merged = DateComponents()
+        merged.year = dateComponents.year
+        merged.month = dateComponents.month
+        merged.day = dateComponents.day
+        merged.hour = timeComponents.hour
+        merged.minute = timeComponents.minute
+        merged.second = 0
+
+        return calendar.date(from: merged) ?? date
     }
 }
 
