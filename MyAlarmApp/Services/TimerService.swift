@@ -26,7 +26,7 @@ final class TimerService: ObservableObject {
     }
 
     // MARK: - Start timer
-    func startTimer(duration: TimeInterval, title: String, sound: String = "nokia") async {
+    func startTimer(duration: TimeInterval, title: String, sound: String = "nokia.caf") async {
         do {
             let id = Alarm.ID()
 
@@ -77,7 +77,7 @@ final class TimerService: ObservableObject {
                 attributes: attributes,
                 stopIntent: StopAlarmIntent(alarmID: id.uuidString),
                 secondaryIntent: RepeatAlarmIntent(alarmID: id.uuidString),
-                sound: .named(sound) // ✅ uses selected sound
+                sound: .named(sound)
             )
 
             let timer = try await AlarmManager.shared.schedule(
