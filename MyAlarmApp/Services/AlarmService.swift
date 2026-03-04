@@ -39,7 +39,7 @@ final class AlarmService: ObservableObject {
     }
 
     @discardableResult
-    func scheduleAlarm(date: Date, label: String, sound: String = "nokia") async throws -> UUID {
+    func scheduleAlarm(date: Date, label: String, sound: String = "nokia.caf") async throws -> UUID {
         let scheduleDate = max(date, Date().addingTimeInterval(1))
         let id = Alarm.ID()
 
@@ -107,7 +107,7 @@ final class AlarmService: ObservableObject {
         title: String,
         snoozeEnabled: Bool = true,
         snoozeDuration: TimeInterval = 300,
-        sound: String = "nokia"
+        sound: String = "nokia.caf"
     ) async {
         do {
             _ = try await scheduleAlarm(date: date, label: title, sound: sound)

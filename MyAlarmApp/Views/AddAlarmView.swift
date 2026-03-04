@@ -9,12 +9,12 @@ struct AddAlarmView: View {
     @State private var title = "Alarm"
     @State private var snoozeEnabled = true
     @State private var snoozeDuration = 5
-    @State private var selectedSound = "nokia"
+    @State private var selectedSound = "nokia.caf"
 
     let sounds: [(name: String, file: String)] = [
-        (name: "Nokia", file: "nokia"),
-        (name: "1985 Ring", file: "1985_ring 2"),
-        (name: "Sony", file: "sony")
+        (name: "Nokia", file: "nokia.caf"),
+        (name: "1985 Ring", file: "1985_ring2.caf"),
+        (name: "Sony", file: "sony.caf")
     ]
 
     var onSave: (Date, String, Bool, TimeInterval, String) -> Void

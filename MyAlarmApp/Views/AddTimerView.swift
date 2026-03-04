@@ -5,12 +5,12 @@ struct AddTimerView: View {
     @State private var minutes: Int = 5
     @State private var seconds: Int = 0
     @State private var title: String = "Timer"
-    @State private var selectedSound = "nokia"
+    @State private var selectedSound = "nokia.caf"
 
     let sounds: [(name: String, file: String)] = [
-        (name: "Nokia", file: "nokia"),
-        (name: "1985 Ring", file: "1985_ring 2"),
-        (name: "Sony", file: "sony")
+        (name: "Nokia", file: "nokia.caf"),
+        (name: "1985 Ring", file: "1985_ring2.caf"),
+        (name: "Sony", file: "sony.caf")
     ]
 
     var onStart: (TimeInterval, String, String) -> Void
