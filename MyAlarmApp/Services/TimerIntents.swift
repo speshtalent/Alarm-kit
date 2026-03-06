@@ -13,6 +13,9 @@ struct StopAlarmIntent: LiveActivityIntent {
     func perform() async throws -> some IntentResult {
         guard let id = UUID(uuidString: alarmID) else { return .result() }
         try AlarmManager.shared.cancel(id: id)
+        // Notify main app to play voice
+        UserDefaults.standard.set(true, forKey: "pendingVoicePlay")
+        NotificationCenter.default.post(name: NSNotification.Name("AlarmDidStop"), object: nil)
         return .result()
     }
 }

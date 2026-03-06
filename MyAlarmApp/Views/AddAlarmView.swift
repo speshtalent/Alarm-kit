@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 struct AddAlarmView: View {
     @Environment(\.dismiss) private var dismiss
@@ -11,6 +12,12 @@ struct AddAlarmView: View {
     @State private var snoozeDuration = 5
     @State private var selectedSound = "nokia.caf"
 
+    // Voice recording
+    @State private var isRecording = false
+    @State private var hasRecording = false
+    @State private var audioRecorder: AVAudioRecorder?
+    @State private var audioPlayer: AVAudioPlayer?
+
     let sounds: [(name: String, file: String)] = [
         (name: "Nokia", file: "nokia.caf"),
         (name: "1985 Ring", file: "1985_ring2.caf"),
@@ -18,6 +25,13 @@ struct AddAlarmView: View {
     ]
 
     var onSave: (Date, String, Bool, TimeInterval, String) -> Void
+
+    private var recordingURL: URL {
+        let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+        let soundsURL = libraryURL.appendingPathComponent("Sounds")
+        try? FileManager.default.createDirectory(at: soundsURL, withIntermediateDirectories: true)
+        return soundsURL.appendingPathComponent("alarm_voice.caf")
+    }
 
     private var fireDate: Date {
         if useSpecificDate {
@@ -136,6 +150,78 @@ struct AddAlarmView: View {
                     .frame(height: 54)
                     .padding(.horizontal, 20)
 
+                    // Voice Recording Section
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(white: 0.13))
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "mic.fill")
+                                    .foregroundStyle(.orange)
+                                Text("Voice Message")
+                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(.white)
+                                Spacer()
+                                if hasRecording {
+                                    Text("Recorded ✓")
+                                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                                        .foregroundStyle(.green)
+                                }
+                            }
+                            Divider().background(Color(white: 0.25))
+                            Text("Record your voice — it will play once when alarm fires")
+                                .font(.system(size: 12, design: .rounded))
+                                .foregroundStyle(.gray)
+
+                            HStack(spacing: 12) {
+                                // Record Button
+                                Button {
+                                    isRecording ? stopRecording() : startRecording()
+                                } label: {
+                                    HStack {
+                                        Image(systemName: isRecording ? "stop.circle.fill" : "mic.circle.fill")
+                                        Text(isRecording ? "Stop" : "Record")
+                                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                    }
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 10)
+                                    .background(isRecording ? Color.red : Color.orange)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+
+                                // Play Button
+                                if hasRecording {
+                                    Button {
+                                        playRecording()
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "play.circle.fill")
+                                            Text("Preview")
+                                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                        }
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 10)
+                                        .background(Color(white: 0.25))
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    }
+
+                                    // Delete Button
+                                    Button {
+                                        deleteRecording()
+                                    } label: {
+                                        Image(systemName: "trash.circle.fill")
+                                            .foregroundStyle(.red)
+                                            .font(.system(size: 34))
+                                    }
+                                }
+                            }
+                        }
+                        .padding(16)
+                    }
+                    .padding(.horizontal, 20)
+
                     // Sound Picker
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
@@ -221,5 +307,47 @@ struct AddAlarmView: View {
                 }
             }
         }
+        .onAppear {
+            hasRecording = FileManager.default.fileExists(atPath: recordingURL.path)
+        }
+    }
+
+    // MARK: - Recording functions
+    private func startRecording() {
+        AVAudioApplication.requestRecordPermission { granted in
+            guard granted else { return }
+            DispatchQueue.main.async {
+                let settings: [String: Any] = [
+                    AVFormatIDKey: Int(kAudioFormatLinearPCM),
+                    AVSampleRateKey: 44100,
+                    AVNumberOfChannelsKey: 1,
+                    AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+                ]
+                try? AVAudioSession.sharedInstance().setCategory(.record, mode: .default)
+                try? AVAudioSession.sharedInstance().setActive(true)
+                audioRecorder = try? AVAudioRecorder(url: recordingURL, settings: settings)
+                audioRecorder?.record()
+                isRecording = true
+            }
+        }
+    }
+
+    private func stopRecording() {
+        audioRecorder?.stop()
+        isRecording = false
+        hasRecording = true
+        try? AVAudioSession.sharedInstance().setActive(false)
+    }
+
+    private func playRecording() {
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+        try? AVAudioSession.sharedInstance().setActive(true)
+        audioPlayer = try? AVAudioPlayer(contentsOf: recordingURL)
+        audioPlayer?.play()
+    }
+
+    private func deleteRecording() {
+        try? FileManager.default.removeItem(at: recordingURL)
+        hasRecording = false
     }
 }
