@@ -70,7 +70,7 @@ final class AlarmService: ObservableObject {
         return id
     }
 
-    func cancelAlarm(id: UUID) {
+    func cancelAlarm(id: UUID) {    
         do {
             try AlarmManager.shared.cancel(id: id)
         } catch {
@@ -110,7 +110,12 @@ final class AlarmService: ObservableObject {
         sound: String = "nokia.caf"
     ) async {
         do {
-            _ = try await scheduleAlarm(date: date, label: title, sound: sound)
+            // Check if voice recording exists — use it as alarm sound
+            let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+            let voiceURL = libraryURL.appendingPathComponent("Sounds/alarm_voice.caf")
+            let finalSound = FileManager.default.fileExists(atPath: voiceURL.path) ? "alarm_voice.caf" : sound
+            
+            _ = try await scheduleAlarm(date: date, label: title, sound: finalSound)
         } catch {
             print("Schedule alarm error:", error)
         }
