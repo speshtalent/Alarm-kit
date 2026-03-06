@@ -1,7 +1,10 @@
 import SwiftUI
+import CoreData
 
 struct AddAlarmView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.managedObjectContext) private var context
+
     @State private var selectedHour: Int = Calendar.current.component(.hour, from: Date())
     @State private var selectedMinute: Int = Calendar.current.component(.minute, from: Date())
     @State private var selectedDate: Date = Date()
@@ -9,31 +12,48 @@ struct AddAlarmView: View {
     @State private var title = "Alarm"
     @State private var snoozeEnabled = true
     @State private var snoozeDuration = 5
-    @State private var selectedSound = "nokia.caf"
 
-    let sounds: [(name: String, file: String)] = [
-        (name: "Nokia", file: "nokia.caf"),
-        (name: "1985 Ring", file: "1985_ring2.caf"),
-        (name: "Sony", file: "sony.caf")
-    ]
+    @State private var soundSource: SoundSource = .system
+    @State private var selectedRecordingID: UUID?
+    @State private var showRecordingsManager = false
 
-    var onSave: (Date, String, Bool, TimeInterval, String) -> Void
+    @FetchRequest(
+        sortDescriptors: [NSSortDescriptor(key: #keyPath(VoiceRecording.createdAt), ascending: false)],
+        animation: .default
+    )
+    private var recordings: FetchedResults<VoiceRecording>
+
+    var onSave: (Date, String, Bool, TimeInterval, AlarmSoundChoice) -> Void
+
+    enum SoundSource: String, CaseIterable {
+        case system = "System"
+        case recording = "Recording"
+    }
 
     private var fireDate: Date {
         if useSpecificDate {
             var components = Calendar.current.dateComponents(in: TimeZone.current, from: selectedDate)
             components.second = 0
             return Calendar.current.date(from: components) ?? selectedDate
-        } else {
-            var components = Calendar.current.dateComponents(in: TimeZone.current, from: Date())
-            components.hour = selectedHour
-            components.minute = selectedMinute
-            components.second = 0
-            var date = Calendar.current.date(from: components) ?? Date()
-            if date <= Date() {
-                date = Calendar.current.date(byAdding: .day, value: 1, to: date) ?? date
-            }
-            return date
+        }
+
+        var components = Calendar.current.dateComponents(in: TimeZone.current, from: Date())
+        components.hour = selectedHour
+        components.minute = selectedMinute
+        components.second = 0
+        var date = Calendar.current.date(from: components) ?? Date()
+        if date <= Date() {
+            date = Calendar.current.date(byAdding: .day, value: 1, to: date) ?? date
+        }
+        return date
+    }
+
+    private var canSave: Bool {
+        switch soundSource {
+        case .system:
+            return true
+        case .recording:
+            return selectedRecordingID != nil
         }
     }
 
@@ -43,7 +63,6 @@ struct AddAlarmView: View {
 
             ScrollView {
                 VStack(spacing: 20) {
-                    // Handle
                     RoundedRectangle(cornerRadius: 3)
                         .fill(Color(white: 0.3))
                         .frame(width: 40, height: 5)
@@ -53,12 +72,10 @@ struct AddAlarmView: View {
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
 
-                    // Fire time preview
                     Text("Rings at \(fireDate.formatted(date: useSpecificDate ? .abbreviated : .omitted, time: .shortened))")
                         .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(.orange)
 
-                    // Toggle specific date
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color(white: 0.13))
@@ -76,10 +93,10 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // Time Picker
                     ZStack {
                         RoundedRectangle(cornerRadius: 20)
                             .fill(Color(white: 0.13))
+
                         if useSpecificDate {
                             DatePicker(
                                 "",
@@ -94,8 +111,8 @@ struct AddAlarmView: View {
                         } else {
                             HStack(spacing: 0) {
                                 Picker("Hour", selection: $selectedHour) {
-                                    ForEach(0...23, id: \.self) { h in
-                                        Text(String(format: "%02d", h)).tag(h)
+                                    ForEach(0...23, id: \.self) { hour in
+                                        Text(String(format: "%02d", hour)).tag(hour)
                                             .foregroundStyle(.white)
                                     }
                                 }
@@ -107,8 +124,8 @@ struct AddAlarmView: View {
                                     .foregroundStyle(.orange)
 
                                 Picker("Minute", selection: $selectedMinute) {
-                                    ForEach(0...59, id: \.self) { m in
-                                        Text(String(format: "%02d", m)).tag(m)
+                                    ForEach(0...59, id: \.self) { minute in
+                                        Text(String(format: "%02d", minute)).tag(minute)
                                             .foregroundStyle(.white)
                                     }
                                 }
@@ -121,12 +138,12 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // Title Field
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color(white: 0.13))
                         HStack {
-                            Image(systemName: "tag").foregroundStyle(.orange)
+                            Image(systemName: "tag")
+                                .foregroundStyle(.orange)
                             TextField("Alarm title", text: $title)
                                 .foregroundStyle(.white)
                                 .tint(.orange)
@@ -136,42 +153,8 @@ struct AddAlarmView: View {
                     .frame(height: 54)
                     .padding(.horizontal, 20)
 
-                    // Sound Picker
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(white: 0.13))
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Image(systemName: "bell.fill")
-                                    .foregroundStyle(.orange)
-                                Text("Sound")
-                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(.white)
-                            }
-                            Divider().background(Color(white: 0.25))
-                            ForEach(sounds, id: \.file) { sound in
-                                Button {
-                                    selectedSound = sound.file
-                                } label: {
-                                    HStack {
-                                        Text(sound.name)
-                                            .font(.system(size: 15, weight: .medium, design: .rounded))
-                                            .foregroundStyle(.white)
-                                        Spacer()
-                                        if selectedSound == sound.file {
-                                            Image(systemName: "checkmark.circle.fill")
-                                                .foregroundStyle(.orange)
-                                        }
-                                    }
-                                    .padding(.vertical, 6)
-                                }
-                            }
-                        }
-                        .padding(16)
-                    }
-                    .padding(.horizontal, 20)
+                    soundSelectionSection
 
-                    // Snooze Section
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color(white: 0.13))
@@ -203,9 +186,16 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // Save Button
                     Button {
-                        onSave(fireDate, title, snoozeEnabled, TimeInterval(snoozeDuration * 60), selectedSound)
+                        let finalChoice: AlarmSoundChoice
+                        switch soundSource {
+                        case .system:
+                            finalChoice = .systemDefault
+                        case .recording:
+                            finalChoice = .customRecording(selectedRecordingID ?? UUID())
+                        }
+
+                        onSave(fireDate, title, snoozeEnabled, TimeInterval(snoozeDuration * 60), finalChoice)
                         dismiss()
                     } label: {
                         Text("Set Alarm")
@@ -213,13 +203,102 @@ struct AddAlarmView: View {
                             .foregroundStyle(.black)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 18)
-                            .background(.orange)
+                            .background(canSave ? .orange : .gray)
                             .clipShape(RoundedRectangle(cornerRadius: 18))
                     }
+                    .disabled(!canSave)
                     .padding(.horizontal, 20)
                     .padding(.bottom, 32)
                 }
             }
         }
+        .sheet(isPresented: $showRecordingsManager) {
+            VoiceRecordingsView(context: context)
+                .environment(\.managedObjectContext, context)
+        }
+    }
+
+    private var soundSelectionSection: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(white: 0.13))
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .foregroundStyle(.orange)
+                    Text("Alarm Tone")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Button("Manage") {
+                        showRecordingsManager = true
+                    }
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.orange)
+                }
+
+                Picker("Sound Source", selection: $soundSource) {
+                    ForEach(SoundSource.allCases, id: \.self) { source in
+                        Text(source.rawValue).tag(source)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                if soundSource == .system {
+                    HStack {
+                        Text("System Default (Nokia)")
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white)
+                        Spacer()
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.orange)
+                    }
+                    .padding(.top, 2)
+                } else {
+                    if recordings.isEmpty {
+                        Text("No voice recordings found. Create one using Manage.")
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(.gray)
+                            .padding(.top, 2)
+                    } else {
+                        VStack(spacing: 8) {
+                            ForEach(recordings, id: \.id) { recording in
+                                Button {
+                                    selectedRecordingID = recording.id
+                                } label: {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(recording.name)
+                                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                                .foregroundStyle(.white)
+                                            Text(formattedDuration(recording.duration))
+                                                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                                .foregroundStyle(.gray)
+                                        }
+                                        Spacer()
+                                        if selectedRecordingID == recording.id {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundStyle(.orange)
+                                        }
+                                    }
+                                    .padding(.vertical, 6)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .padding(.horizontal, 20)
+    }
+
+    private func formattedDuration(_ seconds: TimeInterval) -> String {
+        let total = Int(seconds.rounded())
+        let mins = total / 60
+        let secs = total % 60
+        return String(format: "%02d:%02d", mins, secs)
     }
 }

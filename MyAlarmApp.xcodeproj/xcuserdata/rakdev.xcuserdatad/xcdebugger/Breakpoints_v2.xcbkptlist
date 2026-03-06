@@ -18,6 +18,36 @@
             endingLineNumber = "29"
             landmarkName = "init(date:time:label:)"
             landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "6B2C6605-D594-4761-8AB8-876A92808855 - 2c0206294d838f1b"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "MyAlarmApp.SetAlarmIntent.init(date: Foundation.Date, time: Foundation.Date, label: Swift.String) -&gt; MyAlarmApp.SetAlarmIntent"
+                  moduleName = "MyAlarmApp.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/rakdev/Desktop/iOS%20Apps/Alarm-kit/MyAlarmApp/Services/SetAlarmIntent.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "29"
+                  endingLineNumber = "29">
+               </Location>
+               <Location
+                  uuid = "6B2C6605-D594-4761-8AB8-876A92808855 - ee06c48401e4cfe3"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(1) suspend resume partial function for MyAlarmApp.SetAlarmIntent.perform() async throws -&gt; some"
+                  moduleName = "MyAlarmApp.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/rakdev/Desktop/iOS%20Apps/Alarm-kit/MyAlarmApp/Services/SetAlarmIntent.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "29"
+                  endingLineNumber = "29">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy

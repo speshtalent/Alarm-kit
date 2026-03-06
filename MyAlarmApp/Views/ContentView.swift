@@ -1,13 +1,17 @@
 import SwiftUI
 import AlarmKit
+import CoreData
 
 struct ContentView: View {
 
     enum Mode { case alarms, timers }
 
+    @Environment(\.managedObjectContext) private var context
+
     @State private var mode: Mode = .alarms
     @State private var showAddAlarm = false
     @State private var showAddTimer = false
+    @State private var showVoiceRecordings = false
 
     @StateObject private var alarmService = AlarmService.shared
     @StateObject private var timerService = TimerService.shared
@@ -19,12 +23,26 @@ struct ContentView: View {
 
             VStack(spacing: 0) {
 
-                // MARK: Header
                 HStack {
                     Text(mode == .alarms ? "Alarms" : "Timers")
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                     Spacer()
+
+                    if mode == .alarms {
+                        Button {
+                            showVoiceRecordings = true
+                        } label: {
+                            Image(systemName: "waveform")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.orange)
+                                .frame(width: 36, height: 36)
+                                .background(Color.orange.opacity(0.16))
+                                .clipShape(Circle())
+                        }
+                        .padding(.trailing, 8)
+                    }
+
                     Button {
                         mode == .alarms ? (showAddAlarm = true) : (showAddTimer = true)
                     } label: {
@@ -40,7 +58,6 @@ struct ContentView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 8)
 
-                // MARK: Segmented Picker
                 HStack(spacing: 0) {
                     ForEach([Mode.alarms, Mode.timers], id: \.self) { m in
                         Button {
@@ -62,7 +79,6 @@ struct ContentView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
 
-                // MARK: List
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         if mode == .alarms {
@@ -94,20 +110,21 @@ struct ContentView: View {
         .sheet(isPresented: $showAddAlarm, onDismiss: {
             alarmService.loadAlarms()
         }) {
-            AddAlarmView { date, title, snoozeEnabled, snoozeDuration, sound in
+            AddAlarmView { date, title, snoozeEnabled, snoozeDuration, soundChoice in
                 Task {
                     await alarmService.scheduleFutureAlarm(
                         date: date,
                         title: title,
                         snoozeEnabled: snoozeEnabled,
                         snoozeDuration: snoozeDuration,
-                        sound: sound
+                        soundChoice: soundChoice
                     )
                     await MainActor.run {
                         alarmService.loadAlarms()
                     }
                 }
             }
+            .environment(\.managedObjectContext, context)
         }
         .sheet(isPresented: $showAddTimer, onDismiss: {
             timerService.loadTimers()
@@ -124,6 +141,10 @@ struct ContentView: View {
                     }
                 }
             }
+        }
+        .sheet(isPresented: $showVoiceRecordings) {
+            VoiceRecordingsView(context: context)
+                .environment(\.managedObjectContext, context)
         }
         .onAppear {
             alarmService.loadAlarms()
@@ -146,7 +167,6 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Alarm Row
 struct AlarmRow: View {
     let item: AlarmService.AlarmListItem
     let onDelete: () -> Void
@@ -176,6 +196,10 @@ struct AlarmRow: View {
                 )
                 .font(.system(size: 12, weight: .medium, design: .monospaced))
                 .foregroundStyle(.gray)
+
+                Text(item.soundDescription)
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(.orange.opacity(0.85))
             }
 
             Spacer()
@@ -199,7 +223,6 @@ struct AlarmRow: View {
     }
 }
 
-// MARK: - Timer Row
 struct TimerRow: View {
     let timer: Alarm
     let onDelete: () -> Void

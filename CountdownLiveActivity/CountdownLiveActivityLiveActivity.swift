@@ -72,9 +72,4 @@ extension CountdownLiveActivityAttributes.ContentState {
      }
 }
 
-#Preview("Notification", as: .content, using: CountdownLiveActivityAttributes.preview) {
-   CountdownLiveActivityLiveActivity()
-} contentStates: {
-    CountdownLiveActivityAttributes.ContentState.smiley
-    CountdownLiveActivityAttributes.ContentState.starEyes
-}
+// Preview macros are disabled to keep CLI builds stable in sandboxed environments.

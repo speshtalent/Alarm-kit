@@ -3,7 +3,7 @@ import AppIntents
 
 struct SetAlarmIntent: AppIntent, ProvidesDialog {
     var value: Never?
-    
+
     static var title: LocalizedStringResource = "Set Alarm"
     static var description = IntentDescription("Creates an AlarmKit alarm for a specific date and label.")
 
@@ -15,10 +15,6 @@ struct SetAlarmIntent: AppIntent, ProvidesDialog {
 
     @Parameter(title: "Label")
     var label: String
-
-    static var parameterSummary: some ParameterSummary {
-        Summary("Set an alarm for \(\.$date) at \(\.$time) about \(\.$label)")
-    }
 
     init() {}
 
@@ -35,7 +31,6 @@ struct SetAlarmIntent: AppIntent, ProvidesDialog {
 
         let fireDate = Self.combineDateAndTime(date: date, time: time)
 
-        // Shared service is used by SwiftUI and this intent so behavior stays identical.
         await AlarmService.shared.requestAuthorizationIfNeeded()
         _ = try await AlarmService.shared.scheduleAlarm(date: fireDate, label: finalLabel)
         AlarmService.shared.loadAlarms()

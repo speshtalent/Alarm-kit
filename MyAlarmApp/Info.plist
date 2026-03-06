@@ -4,5 +4,15 @@
 <dict>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>This app needs permission to schedule alarms.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs microphone access to record custom alarm tones.</string>
+	<key>NSSiriUsageDescription</key>
+	<string>This app uses Siri and Shortcuts to set alarms with voice commands.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
 </dict>
 </plist>
