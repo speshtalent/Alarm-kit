@@ -4,7 +4,5 @@
 <dict>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>This app needs permission to schedule alarms.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>This app needs microphone access to record your voice alarm messag</string>
 </dict>
 </plist>
