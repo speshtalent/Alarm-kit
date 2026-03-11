@@ -12,9 +12,11 @@ struct AddAlarmView: View {
     @State private var snoozeDuration = 5
     @State private var selectedSound = "nokia.caf"
 
-    // Voice recording
-    @State private var isRecording = false
-    @State private var hasRecording = false
+    // Voice recording states
+    @State private var isRecording = false        // true = currently recording
+    @State private var hasRecording = false       // true = recording saved
+    @State private var isJustRecorded = false     // true = recording done, waiting to be named & saved
+    @State private var recordingName = ""         // name user gives to recording
     @State private var audioRecorder: AVAudioRecorder?
     @State private var audioPlayer: AVAudioPlayer?
 
@@ -26,6 +28,7 @@ struct AddAlarmView: View {
 
     var onSave: (Date, String, Bool, TimeInterval, String) -> Void
 
+    // Save recording to Library/Sounds/ so AlarmKit can find it
     private var recordingURL: URL {
         let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
         let soundsURL = libraryURL.appendingPathComponent("Sounds")
@@ -57,7 +60,7 @@ struct AddAlarmView: View {
 
             ScrollView {
                 VStack(spacing: 20) {
-                    // Handle
+                    // Handle bar at top of sheet
                     RoundedRectangle(cornerRadius: 3)
                         .fill(Color(white: 0.3))
                         .frame(width: 40, height: 5)
@@ -67,12 +70,12 @@ struct AddAlarmView: View {
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
 
-                    // Fire time preview
+                    // Shows what time alarm will ring
                     Text("Rings at \(fireDate.formatted(date: useSpecificDate ? .abbreviated : .omitted, time: .shortened))")
                         .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(.orange)
 
-                    // Toggle specific date
+                    // Toggle to switch between hour/minute picker and date picker
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color(white: 0.13))
@@ -90,7 +93,7 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // Time Picker
+                    // Time Picker — shows wheel picker for hour/minute or full date picker
                     ZStack {
                         RoundedRectangle(cornerRadius: 20)
                             .fill(Color(white: 0.13))
@@ -135,7 +138,7 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // Title Field
+                    // Alarm title text field
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color(white: 0.13))
@@ -150,11 +153,13 @@ struct AddAlarmView: View {
                     .frame(height: 54)
                     .padding(.horizontal, 20)
 
-                    // Voice Recording Section
+                    // MARK: - Voice Recording Section
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color(white: 0.13))
                         VStack(alignment: .leading, spacing: 12) {
+
+                            // Header row
                             HStack {
                                 Image(systemName: "mic.fill")
                                     .foregroundStyle(.orange)
@@ -162,67 +167,146 @@ struct AddAlarmView: View {
                                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                                     .foregroundStyle(.white)
                                 Spacer()
+                                // Show green badge only when recording is fully saved
                                 if hasRecording {
                                     Text("Recorded ✓")
                                         .font(.system(size: 12, weight: .medium, design: .rounded))
                                         .foregroundStyle(.green)
                                 }
                             }
+
                             Divider().background(Color(white: 0.25))
-                            Text("Record your voice — it will play once when alarm fires")
+
+                            Text("Record your voice — it will play when alarm fires")
                                 .font(.system(size: 12, design: .rounded))
                                 .foregroundStyle(.gray)
 
-                            HStack(spacing: 12) {
-                                // Record Button
-                                Button {
-                                    isRecording ? stopRecording() : startRecording()
-                                } label: {
+                            // Record / Stop button
+                            // tapping toggles between start and stop recording
+                            Button {
+                                isRecording ? stopRecording() : startRecording()
+                            } label: {
+                                HStack {
+                                    Image(systemName: isRecording ? "stop.circle.fill" : "mic.circle.fill")
+                                    Text(isRecording ? "Stop" : "Record")
+                                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                }
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                // Red when recording, orange when idle
+                                .background(isRecording ? Color.red : Color.orange)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+
+                            // MARK: Name + Save UI
+                            // This slides in after user stops recording
+                            // isJustRecorded = true means recording is done but not named/saved yet
+                            if isJustRecorded {
+                                VStack(alignment: .leading, spacing: 10) {
+
+                                    Divider().background(Color(white: 0.25))
+
+                                    // Text field for user to name their recording
+                                    // e.g. "Morning Motivation", "Wake Up!", "Go to gym!"
                                     HStack {
-                                        Image(systemName: isRecording ? "stop.circle.fill" : "mic.circle.fill")
-                                        Text(isRecording ? "Stop" : "Record")
-                                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                        Image(systemName: "pencil")
+                                            .foregroundStyle(.orange)
+                                        TextField("Name your recording...", text: $recordingName)
+                                            .foregroundStyle(.white)
+                                            .tint(.orange)
                                     }
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 10)
-                                    .background(isRecording ? Color.red : Color.orange)
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                }
+                                    .padding(10)
+                                    .background(Color(white: 0.2))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
 
-                                // Play Button
-                                if hasRecording {
-                                    Button {
-                                        playRecording()
-                                    } label: {
-                                        HStack {
-                                            Image(systemName: "play.circle.fill")
-                                            Text("Preview")
-                                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                    HStack(spacing: 12) {
+
+                                        // Preview button — plays the recording so user can hear it
+                                        Button {
+                                            playRecording()
+                                        } label: {
+                                            HStack {
+                                                Image(systemName: "play.circle.fill")
+                                                Text("Preview")
+                                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                            }
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 10)
+                                            .background(Color(white: 0.25))
+                                            .clipShape(RoundedRectangle(cornerRadius: 12))
                                         }
-                                        .foregroundStyle(.white)
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 10)
-                                        .background(Color(white: 0.25))
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    }
 
-                                    // Delete Button
-                                    Button {
-                                        deleteRecording()
-                                    } label: {
-                                        Image(systemName: "trash.circle.fill")
-                                            .foregroundStyle(.red)
-                                            .font(.system(size: 34))
+                                        // Save button — saves name to UserDefaults
+                                        // hides this UI and shows saved recording row
+                                        Button {
+                                            saveRecordingWithName()
+                                        } label: {
+                                            HStack {
+                                                Image(systemName: "checkmark.circle.fill")
+                                                Text("Save")
+                                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                            }
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 10)
+                                            .background(Color.green)
+                                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                                        }
+
+                                        // Delete button — discards recording without saving
+                                        Button {
+                                            deleteRecording()
+                                        } label: {
+                                            Image(systemName: "trash.circle.fill")
+                                                .foregroundStyle(.red)
+                                                .font(.system(size: 34))
+                                        }
                                     }
                                 }
+                                // Smooth slide down + fade in animation
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                            }
+
+                            // MARK: Saved Recording Row
+                            // Shows after user taps Save — displays recording name
+                            // with option to re-record
+                            if hasRecording && !isJustRecorded {
+                                HStack {
+                                    Image(systemName: "waveform")
+                                        .foregroundStyle(.orange)
+                                    // Show name user gave, fallback to "Voice Recording"
+                                    Text(recordingName.isEmpty ? "Voice Recording" : recordingName)
+                                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                                        .foregroundStyle(.white)
+                                    Spacer()
+                                    // Re-record button — resets everything so user can record again
+                                    Button {
+                                        hasRecording = false
+                                        isJustRecorded = false
+                                        recordingName = ""
+                                        UserDefaults.standard.removeObject(forKey: "voiceRecordingName")
+                                    } label: {
+                                        Text("Re-record")
+                                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                                            .foregroundStyle(.orange)
+                                    }
+                                }
+                                .padding(10)
+                                .background(Color(white: 0.2))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .transition(.move(edge: .top).combined(with: .opacity))
                             }
                         }
                         .padding(16)
                     }
                     .padding(.horizontal, 20)
+                    // Animate section when states change
+                    .animation(.easeInOut(duration: 0.3), value: isJustRecorded)
+                    .animation(.easeInOut(duration: 0.3), value: hasRecording)
 
-                    // Sound Picker
+                    // Sound Picker — choose Nokia, 1985 Ring or Sony
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color(white: 0.13))
@@ -257,7 +341,7 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // Snooze Section
+                    // Snooze toggle and duration stepper
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color(white: 0.13))
@@ -289,7 +373,7 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // Save Button
+                    // Set Alarm button — passes all data back to ContentView
                     Button {
                         onSave(fireDate, title, snoozeEnabled, TimeInterval(snoozeDuration * 60), selectedSound)
                         dismiss()
@@ -308,11 +392,16 @@ struct AddAlarmView: View {
             }
         }
         .onAppear {
+            // Check if recording already exists when screen opens
             hasRecording = FileManager.default.fileExists(atPath: recordingURL.path)
+            // Load previously saved recording name
+            recordingName = UserDefaults.standard.string(forKey: "voiceRecordingName") ?? ""
         }
     }
 
-    // MARK: - Recording functions
+    // MARK: - Recording Functions
+
+    // Asks microphone permission then starts recording
     private func startRecording() {
         AVAudioApplication.requestRecordPermission { granted in
             guard granted else { return }
@@ -332,13 +421,16 @@ struct AddAlarmView: View {
         }
     }
 
+    // Stops recording and shows the name + save UI
     private func stopRecording() {
         audioRecorder?.stop()
         isRecording = false
-        hasRecording = true
+        // Show name/save UI instead of directly marking as saved
+        isJustRecorded = true
         try? AVAudioSession.sharedInstance().setActive(false)
     }
 
+    // Plays the recording for preview
     private func playRecording() {
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         try? AVAudioSession.sharedInstance().setActive(true)
@@ -346,8 +438,20 @@ struct AddAlarmView: View {
         audioPlayer?.play()
     }
 
+    // Saves the recording name to UserDefaults and marks as saved
+    private func saveRecordingWithName() {
+        // Save name so it persists even after app restarts
+        UserDefaults.standard.set(recordingName, forKey: "voiceRecordingName")
+        hasRecording = true
+        isJustRecorded = false
+    }
+
+    // Deletes the recording file and resets all states
     private func deleteRecording() {
         try? FileManager.default.removeItem(at: recordingURL)
         hasRecording = false
+        isJustRecorded = false
+        recordingName = ""
+        UserDefaults.standard.removeObject(forKey: "voiceRecordingName")
     }
 }

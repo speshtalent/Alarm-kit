@@ -12,6 +12,9 @@ struct ContentView: View {
     @StateObject private var alarmService = AlarmService.shared
     @StateObject private var timerService = TimerService.shared
 
+    // receives which quick action was tapped from MyAlarmAppApp
+    var quickActionMode: Binding<String?>
+
     var body: some View {
         ZStack {
             Color(red: 0.07, green: 0.07, blue: 0.09)
@@ -129,10 +132,45 @@ struct ContentView: View {
             alarmService.loadAlarms()
             timerService.loadTimers()
         }
+        // watches quickActionMode — when it changes, open correct screen
+        .onChange(of: quickActionMode.wrappedValue) {
+            handleQuickAction()
+        }
+    }
+
+    // opens correct screen based on quick action type
+    func handleQuickAction() {
+        guard let action = quickActionMode.wrappedValue else { return }
+        quickActionMode.wrappedValue = nil // reset immediately
+
+        switch action {
+        case "newAlarm":
+            showAddAlarm = true
+        case "newTimer":
+            showAddTimer = true
+        case "fiveMinTimer":
+            Task {
+                await timerService.startTimer(
+                    duration: 300,
+                    title: "5 Min Timer",
+                    sound: "nokia.caf"
+                )
+                await MainActor.run {
+                    timerService.loadTimers()
+                    mode = .timers
+                }
+            }
+        case "settings":
+            if let url = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(url)
+            }
+        default:
+            break
+        }
     }
 
     @ViewBuilder
-    private func emptyState(icon: String, text: String) -> some View {
+    func emptyState(icon: String, text: String) -> some View {
         VStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 48))
@@ -161,7 +199,6 @@ struct AlarmRow: View {
                     .foregroundStyle(.orange)
                     .font(.system(size: 20))
             }
-
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.label)
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
@@ -177,13 +214,10 @@ struct AlarmRow: View {
                 .font(.system(size: 12, weight: .medium, design: .monospaced))
                 .foregroundStyle(.gray)
             }
-
             Spacer()
-
             Image(systemName: "moon.zzz.fill")
                 .foregroundStyle(.orange.opacity(0.6))
                 .font(.system(size: 14))
-
             Button(action: onDelete) {
                 Image(systemName: "trash")
                     .font(.system(size: 14))
@@ -211,17 +245,11 @@ struct TimerRow: View {
         let minutes = (total % 3600) / 60
         let seconds = total % 60
 
-        if hours > 0 && minutes > 0 {
-            return "\(hours)h \(minutes)m"
-        } else if hours > 0 {
-            return "\(hours) hr"
-        } else if minutes > 0 && seconds > 0 {
-            return "\(minutes)m \(seconds)s"
-        } else if minutes > 0 {
-            return "\(minutes) min"
-        } else {
-            return "\(seconds) sec"
-        }
+        if hours > 0 && minutes > 0 { return "\(hours)h \(minutes)m" }
+        else if hours > 0 { return "\(hours) hr" }
+        else if minutes > 0 && seconds > 0 { return "\(minutes)m \(seconds)s" }
+        else if minutes > 0 { return "\(minutes) min" }
+        else { return "\(seconds) sec" }
     }
 
     var body: some View {
@@ -234,7 +262,6 @@ struct TimerRow: View {
                     .foregroundStyle(.orange)
                     .font(.system(size: 20))
             }
-
             VStack(alignment: .leading, spacing: 4) {
                 Text(durationText)
                     .font(.system(size: 20, weight: .bold, design: .rounded))
@@ -243,9 +270,7 @@ struct TimerRow: View {
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(.gray)
             }
-
             Spacer()
-
             Button(action: onDelete) {
                 Image(systemName: "trash")
                     .font(.system(size: 14))
