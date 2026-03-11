@@ -3,16 +3,23 @@ import AVFoundation
 
 struct AddAlarmView: View {
     @Environment(\.dismiss) private var dismiss
+    
+    // MARK: - Time & Date States
     @State private var selectedHour: Int = Calendar.current.component(.hour, from: Date())
     @State private var selectedMinute: Int = Calendar.current.component(.minute, from: Date())
     @State private var selectedDate: Date = Date()
+    // when true — shows full date picker instead of hour/minute wheel
     @State private var useSpecificDate: Bool = false
+    
+    // MARK: - Alarm Settings States
     @State private var title = "Alarm"
     @State private var snoozeEnabled = true
     @State private var snoozeDuration = 5
     @State private var selectedSound = "nokia.caf"
+    // when true — alarm will also be added to iPhone Calendar app
+    @State private var addToCalendar = false
 
-    // Voice recording states
+    // MARK: - Voice Recording States
     @State private var isRecording = false        // true = currently recording
     @State private var hasRecording = false       // true = recording saved
     @State private var isJustRecorded = false     // true = recording done, waiting to be named & saved
@@ -20,15 +27,18 @@ struct AddAlarmView: View {
     @State private var audioRecorder: AVAudioRecorder?
     @State private var audioPlayer: AVAudioPlayer?
 
+    // MARK: - Sound Options
     let sounds: [(name: String, file: String)] = [
         (name: "Nokia", file: "nokia.caf"),
         (name: "1985 Ring", file: "1985_ring2.caf"),
         (name: "Sony", file: "sony.caf")
     ]
 
+    // callback to ContentView — called when user taps Set Alarm
     var onSave: (Date, String, Bool, TimeInterval, String) -> Void
 
-    // Save recording to Library/Sounds/ so AlarmKit can find it
+    // MARK: - Recording URL
+    // Save recording to Library/Sounds/ so AlarmKit can find it at runtime
     private var recordingURL: URL {
         let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
         let soundsURL = libraryURL.appendingPathComponent("Sounds")
@@ -36,12 +46,16 @@ struct AddAlarmView: View {
         return soundsURL.appendingPathComponent("alarm_voice.caf")
     }
 
+    // MARK: - Computed Fire Date
+    // calculates the exact date/time the alarm will fire
     private var fireDate: Date {
         if useSpecificDate {
+            // use the full date picker value
             var components = Calendar.current.dateComponents(in: TimeZone.current, from: selectedDate)
             components.second = 0
             return Calendar.current.date(from: components) ?? selectedDate
         } else {
+            // use hour/minute wheel picker — if time already passed today, set for tomorrow
             var components = Calendar.current.dateComponents(in: TimeZone.current, from: Date())
             components.hour = selectedHour
             components.minute = selectedMinute
@@ -60,22 +74,27 @@ struct AddAlarmView: View {
 
             ScrollView {
                 VStack(spacing: 20) {
-                    // Handle bar at top of sheet
+                    
+                    // MARK: - Handle Bar
+                    // visual indicator that this is a draggable sheet
                     RoundedRectangle(cornerRadius: 3)
                         .fill(Color(white: 0.3))
                         .frame(width: 40, height: 5)
                         .padding(.top, 12)
 
+                    // MARK: - Title
                     Text("New Alarm")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
 
-                    // Shows what time alarm will ring
+                    // MARK: - Rings At Label
+                    // shows user exactly when alarm will fire based on their selection
                     Text("Rings at \(fireDate.formatted(date: useSpecificDate ? .abbreviated : .omitted, time: .shortened))")
                         .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(.orange)
 
-                    // Toggle to switch between hour/minute picker and date picker
+                    // MARK: - Specific Date Toggle
+                    // switches between hour/minute wheel and full date picker
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color(white: 0.13))
@@ -93,11 +112,13 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // Time Picker — shows wheel picker for hour/minute or full date picker
+                    // MARK: - Time Picker
+                    // shows wheel picker for hour/minute OR full date picker
                     ZStack {
                         RoundedRectangle(cornerRadius: 20)
                             .fill(Color(white: 0.13))
                         if useSpecificDate {
+                            // full date + time picker
                             DatePicker(
                                 "",
                                 selection: $selectedDate,
@@ -109,6 +130,7 @@ struct AddAlarmView: View {
                             .colorScheme(.dark)
                             .padding(8)
                         } else {
+                            // hour and minute wheel pickers side by side
                             HStack(spacing: 0) {
                                 Picker("Hour", selection: $selectedHour) {
                                     ForEach(0...23, id: \.self) { h in
@@ -138,7 +160,8 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // Alarm title text field
+                    // MARK: - Alarm Title Field
+                    // user can give their alarm a custom name
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color(white: 0.13))
@@ -167,7 +190,7 @@ struct AddAlarmView: View {
                                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                                     .foregroundStyle(.white)
                                 Spacer()
-                                // Show green badge only when recording is fully saved
+                                // show green badge only when recording is fully saved
                                 if hasRecording {
                                     Text("Recorded ✓")
                                         .font(.system(size: 12, weight: .medium, design: .rounded))
@@ -194,21 +217,20 @@ struct AddAlarmView: View {
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 10)
-                                // Red when recording, orange when idle
+                                // red when recording, orange when idle
                                 .background(isRecording ? Color.red : Color.orange)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
 
                             // MARK: Name + Save UI
-                            // This slides in after user stops recording
-                            // isJustRecorded = true means recording is done but not named/saved yet
+                            // slides in after user stops recording
+                            // isJustRecorded = true means recording done but not named/saved yet
                             if isJustRecorded {
                                 VStack(alignment: .leading, spacing: 10) {
 
                                     Divider().background(Color(white: 0.25))
 
-                                    // Text field for user to name their recording
-                                    // e.g. "Morning Motivation", "Wake Up!", "Go to gym!"
+                                    // text field for user to name their recording
                                     HStack {
                                         Image(systemName: "pencil")
                                             .foregroundStyle(.orange)
@@ -222,7 +244,7 @@ struct AddAlarmView: View {
 
                                     HStack(spacing: 12) {
 
-                                        // Preview button — plays the recording so user can hear it
+                                        // Preview button — plays recording so user can hear it
                                         Button {
                                             playRecording()
                                         } label: {
@@ -265,23 +287,22 @@ struct AddAlarmView: View {
                                         }
                                     }
                                 }
-                                // Smooth slide down + fade in animation
+                                // smooth slide down + fade in animation
                                 .transition(.move(edge: .top).combined(with: .opacity))
                             }
 
                             // MARK: Saved Recording Row
-                            // Shows after user taps Save — displays recording name
-                            // with option to re-record
+                            // shows after user taps Save — displays recording name
                             if hasRecording && !isJustRecorded {
                                 HStack {
                                     Image(systemName: "waveform")
                                         .foregroundStyle(.orange)
-                                    // Show name user gave, fallback to "Voice Recording"
+                                    // show name user gave, fallback to "Voice Recording"
                                     Text(recordingName.isEmpty ? "Voice Recording" : recordingName)
                                         .font(.system(size: 14, weight: .medium, design: .rounded))
                                         .foregroundStyle(.white)
                                     Spacer()
-                                    // Re-record button — resets everything so user can record again
+                                    // re-record button — resets so user can record again
                                     Button {
                                         hasRecording = false
                                         isJustRecorded = false
@@ -302,11 +323,12 @@ struct AddAlarmView: View {
                         .padding(16)
                     }
                     .padding(.horizontal, 20)
-                    // Animate section when states change
+                    // animate section when states change
                     .animation(.easeInOut(duration: 0.3), value: isJustRecorded)
                     .animation(.easeInOut(duration: 0.3), value: hasRecording)
 
-                    // Sound Picker — choose Nokia, 1985 Ring or Sony
+                    // MARK: - Sound Picker
+                    // user picks which sound plays when alarm fires
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color(white: 0.13))
@@ -328,6 +350,7 @@ struct AddAlarmView: View {
                                             .font(.system(size: 15, weight: .medium, design: .rounded))
                                             .foregroundStyle(.white)
                                         Spacer()
+                                        // checkmark on currently selected sound
                                         if selectedSound == sound.file {
                                             Image(systemName: "checkmark.circle.fill")
                                                 .foregroundStyle(.orange)
@@ -341,7 +364,8 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // Snooze toggle and duration stepper
+                    // MARK: - Snooze Section
+                    // toggle snooze on/off and set snooze duration in minutes
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color(white: 0.13))
@@ -373,9 +397,48 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // Set Alarm button — passes all data back to ContentView
+                    // MARK: - Add to Calendar Toggle
+                    // when ON — alarm will also be saved as event in iPhone Calendar app
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(white: 0.13))
+                        HStack {
+                            // calendar icon
+                            Image(systemName: "calendar.badge.plus")
+                                .foregroundStyle(.orange)
+                            Text("Add to Calendar")
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white)
+                            Spacer()
+                            // toggle — bound to addToCalendar state
+                            Toggle("", isOn: $addToCalendar)
+                                .tint(.orange)
+                        }
+                        .padding(16)
+                    }
+                    .padding(.horizontal, 20)
+
+                    // MARK: - Set Alarm Button
+                    // tapping this saves the alarm and optionally adds to iPhone Calendar
                     Button {
+                        // Step 1 — save alarm in app (existing behaviour)
                         onSave(fireDate, title, snoozeEnabled, TimeInterval(snoozeDuration * 60), selectedSound)
+
+                        // Step 2 — if user turned on "Add to Calendar" toggle
+                        // add this alarm as an event in iPhone Calendar app
+                        if addToCalendar {
+                            let savedDate = fireDate
+                            let savedTitle = title
+                            Task {
+                                await CalendarService.shared.addAlarmToCalendar(
+                                    title: savedTitle,
+                                    date: savedDate,
+                                    alarmID: savedDate.timeIntervalSince1970.description
+                                )
+                            }
+                        }
+
+                        // Step 3 — close the Add Alarm sheet
                         dismiss()
                     } label: {
                         Text("Set Alarm")
@@ -392,16 +455,16 @@ struct AddAlarmView: View {
             }
         }
         .onAppear {
-            // Check if recording already exists when screen opens
+            // check if recording already exists when screen opens
             hasRecording = FileManager.default.fileExists(atPath: recordingURL.path)
-            // Load previously saved recording name
+            // load previously saved recording name
             recordingName = UserDefaults.standard.string(forKey: "voiceRecordingName") ?? ""
         }
     }
 
     // MARK: - Recording Functions
 
-    // Asks microphone permission then starts recording
+    // asks microphone permission then starts recording
     private func startRecording() {
         AVAudioApplication.requestRecordPermission { granted in
             guard granted else { return }
@@ -421,16 +484,16 @@ struct AddAlarmView: View {
         }
     }
 
-    // Stops recording and shows the name + save UI
+    // stops recording and shows the name + save UI
     private func stopRecording() {
         audioRecorder?.stop()
         isRecording = false
-        // Show name/save UI instead of directly marking as saved
+        // show name/save UI instead of directly marking as saved
         isJustRecorded = true
         try? AVAudioSession.sharedInstance().setActive(false)
     }
 
-    // Plays the recording for preview
+    // plays the recording for preview
     private func playRecording() {
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         try? AVAudioSession.sharedInstance().setActive(true)
@@ -438,15 +501,15 @@ struct AddAlarmView: View {
         audioPlayer?.play()
     }
 
-    // Saves the recording name to UserDefaults and marks as saved
+    // saves the recording name to UserDefaults and marks as saved
     private func saveRecordingWithName() {
-        // Save name so it persists even after app restarts
+        // save name so it persists even after app restarts
         UserDefaults.standard.set(recordingName, forKey: "voiceRecordingName")
         hasRecording = true
         isJustRecorded = false
     }
 
-    // Deletes the recording file and resets all states
+    // deletes the recording file and resets all states
     private func deleteRecording() {
         try? FileManager.default.removeItem(at: recordingURL)
         hasRecording = false

@@ -70,7 +70,15 @@ final class AlarmService: ObservableObject {
         return id
     }
 
-    func cancelAlarm(id: UUID) {    
+    func cancelAlarm(id: UUID) {
+        // find the alarm's fireDate BEFORE removing from list
+        // use fireDate as key — same key used when adding to calendar in AddAlarmView
+        if let item = alarms.first(where: { $0.id == id }),
+           let fireDate = item.fireDate {
+            let key = fireDate.timeIntervalSince1970.description
+            CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
+            print("✅ Removing calendar event for key: \(key)")
+        }
         do {
             try AlarmManager.shared.cancel(id: id)
         } catch {
