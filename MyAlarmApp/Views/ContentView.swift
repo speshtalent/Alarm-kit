@@ -8,14 +8,46 @@ struct ContentView: View {
     @State private var mode: Mode = .alarms
     @State private var showAddAlarm = false
     @State private var showAddTimer = false
+    @State private var selectedTab: Int = 0  // NEW
 
     @StateObject private var alarmService = AlarmService.shared
     @StateObject private var timerService = TimerService.shared
 
-    // receives which quick action was tapped from MyAlarmAppApp
     var quickActionMode: Binding<String?>
 
     var body: some View {
+        TabView(selection: $selectedTab) {
+
+            // MARK: Tab 1 - Alarms & Timers
+            alarmsTimersTab
+                .tabItem {
+                    Label("Alarms", systemImage: "alarm")
+                }
+                .tag(0)
+
+            // MARK: Tab 2 - Calendar (NEW)
+            CalendarView()
+                .tabItem {
+                    Label("Calendar", systemImage: "calendar")
+                }
+                .tag(1)
+        }
+        .tint(.orange)
+        .onAppear {
+            // dark tab bar
+            let appearance = UITabBarAppearance()
+            appearance.configureWithOpaqueBackground()
+            appearance.backgroundColor = UIColor(red: 0.07, green: 0.07, blue: 0.09, alpha: 1)
+            UITabBar.appearance().standardAppearance = appearance
+            UITabBar.appearance().scrollEdgeAppearance = appearance
+        }
+        .onChange(of: quickActionMode.wrappedValue) {
+            handleQuickAction()
+        }
+    }
+
+    // MARK: Alarms & Timers Tab
+    var alarmsTimersTab: some View {
         ZStack {
             Color(red: 0.07, green: 0.07, blue: 0.09)
                 .ignoresSafeArea()
@@ -132,21 +164,20 @@ struct ContentView: View {
             alarmService.loadAlarms()
             timerService.loadTimers()
         }
-        // watches quickActionMode — when it changes, open correct screen
-        .onChange(of: quickActionMode.wrappedValue) {
-            handleQuickAction()
-        }
     }
 
-    // opens correct screen based on quick action type
     func handleQuickAction() {
         guard let action = quickActionMode.wrappedValue else { return }
-        quickActionMode.wrappedValue = nil // reset immediately
+        quickActionMode.wrappedValue = nil
 
         switch action {
         case "newAlarm":
+            selectedTab = 0
+            mode = .alarms
             showAddAlarm = true
         case "newTimer":
+            selectedTab = 0
+            mode = .timers
             showAddTimer = true
         case "fiveMinTimer":
             Task {
@@ -157,6 +188,7 @@ struct ContentView: View {
                 )
                 await MainActor.run {
                     timerService.loadTimers()
+                    selectedTab = 0
                     mode = .timers
                 }
             }
@@ -184,7 +216,7 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Alarm Row
+// MARK: - Alarm Row — unchanged
 struct AlarmRow: View {
     let item: AlarmService.AlarmListItem
     let onDelete: () -> Void
@@ -233,7 +265,7 @@ struct AlarmRow: View {
     }
 }
 
-// MARK: - Timer Row
+// MARK: - Timer Row — unchanged
 struct TimerRow: View {
     let timer: Alarm
     let onDelete: () -> Void
@@ -285,3 +317,4 @@ struct TimerRow: View {
         .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 }
+
