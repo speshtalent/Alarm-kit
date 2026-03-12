@@ -1,21 +1,25 @@
 import Foundation
 import AVFoundation
-
+ 
 @MainActor
 final class AlarmHandler {
     static let shared = AlarmHandler()
     private var audioPlayer: AVAudioPlayer?
-
+ 
     private init() {}
-
+ 
     private var recordingURL: URL {
         let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
         let soundsURL = libraryURL.appendingPathComponent("Sounds")
         try? FileManager.default.createDirectory(at: soundsURL, withIntermediateDirectories: true)
         return soundsURL.appendingPathComponent("alarm_voice.caf")
     }
-
+ 
     func playVoiceIfNeeded() {
+        // ✅ ADDED — set flag so review popup shows next time user opens app
+        UserDefaults.standard.set(true, forKey: "alarmFiredSinceLastReview")
+        print("⭐ Alarm fired — will ask for review on next app open")
+ 
         guard FileManager.default.fileExists(atPath: recordingURL.path) else {
             print("No voice recording found")
             return

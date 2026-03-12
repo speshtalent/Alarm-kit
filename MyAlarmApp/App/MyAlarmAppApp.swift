@@ -1,12 +1,13 @@
 import SwiftUI
 import AppIntents
 import UIKit
-
+import StoreKit // ✅ ADDED — for review popup
+ 
 @main
 struct MyAlarmAppApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var quickActionMode: String? = nil
-
+ 
     init() {
         Task {
             await AlarmService.shared.requestAuthorizationIfNeeded()
@@ -14,7 +15,7 @@ struct MyAlarmAppApp: App {
         AlarmAppShortcutsProvider.updateAppShortcutParameters()
         setupAlarmStopListener()
     }
-
+ 
     private func setupAlarmStopListener() {
         NotificationCenter.default.addObserver(
             forName: NSNotification.Name("AlarmDidStop"),
@@ -26,7 +27,7 @@ struct MyAlarmAppApp: App {
             }
         }
     }
-
+ 
     private func setupQuickActions() {
         UIApplication.shared.shortcutItems = [
             UIApplicationShortcutItem(
@@ -59,7 +60,25 @@ struct MyAlarmAppApp: App {
             ),
         ]
     }
-
+ 
+    // ✅ ADDED — shows review popup if alarm fired since last app open
+    private func requestReviewIfNeeded() {
+        let alarmFired = UserDefaults.standard.bool(forKey: "alarmFiredSinceLastReview")
+        guard alarmFired else { return }
+ 
+        // ✅ ADDED — clear flag so won't show again until next alarm fires
+        UserDefaults.standard.set(false, forKey: "alarmFiredSinceLastReview")
+ 
+        // ✅ ADDED — 1.5s delay so app is fully visible before popup appears
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            if let scene = UIApplication.shared.connectedScenes
+                .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+                AppStore.requestReview(in: scene)
+                print("⭐ Review popup shown!")
+            }
+        }
+    }
+ 
     var body: some Scene {
         WindowGroup {
             ContentView(quickActionMode: $quickActionMode)
@@ -80,6 +99,9 @@ struct MyAlarmAppApp: App {
                             try? await Task.sleep(nanoseconds: 300_000_000)
                             quickActionMode = action
                         }
+ 
+                        // ✅ ADDED — show review if alarm fired since last open
+                        requestReviewIfNeeded()
                     }
                 }
                 // background app case
@@ -94,9 +116,9 @@ struct MyAlarmAppApp: App {
         }
     }
 }
-
+ 
 class AppDelegate: NSObject, UIApplicationDelegate {
-
+ 
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -104,7 +126,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         print("✅ AppDelegate connected!")
         return true
     }
-
+ 
     // killed app — connect SceneDelegate here
     func application(
         _ application: UIApplication,
