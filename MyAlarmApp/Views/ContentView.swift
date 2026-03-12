@@ -1,59 +1,71 @@
 import SwiftUI
 import AlarmKit
-
+ 
 struct ContentView: View {
-
+ 
     enum Mode { case alarms, timers }
-
+ 
     @State private var mode: Mode = .alarms
     @State private var showAddAlarm = false
     @State private var showAddTimer = false
-    @State private var selectedTab: Int = 0  // NEW
-
+    @State private var selectedTab: Int = 0
+ 
     @StateObject private var alarmService = AlarmService.shared
     @StateObject private var timerService = TimerService.shared
-
+ 
+    // ✅ Shows onboarding only on first launch — never again after
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
+ 
     var quickActionMode: Binding<String?>
-
+ 
     var body: some View {
-        TabView(selection: $selectedTab) {
-
-            // MARK: Tab 1 - Alarms & Timers
-            alarmsTimersTab
-                .tabItem {
-                    Label("Alarms", systemImage: "alarm")
-                }
-                .tag(0)
-
-            // MARK: Tab 2 - Calendar (NEW)
-            CalendarView()
-                .tabItem {
-                    Label("Calendar", systemImage: "calendar")
-                }
-                .tag(1)
+        ZStack {
+            TabView(selection: $selectedTab) {
+ 
+                // MARK: Tab 1 - Alarms & Timers
+                alarmsTimersTab
+                    .tabItem {
+                        Label("Alarms", systemImage: "alarm")
+                    }
+                    .tag(0)
+ 
+                // MARK: Tab 2 - Calendar
+                CalendarView()
+                    .tabItem {
+                        Label("Calendar", systemImage: "calendar")
+                    }
+                    .tag(1)
+            }
+            .tint(.orange)
+            .onAppear {
+                let appearance = UITabBarAppearance()
+                appearance.configureWithOpaqueBackground()
+                appearance.backgroundColor = UIColor(red: 0.07, green: 0.07, blue: 0.09, alpha: 1)
+                UITabBar.appearance().standardAppearance = appearance
+                UITabBar.appearance().scrollEdgeAppearance = appearance
+            }
+            .onChange(of: quickActionMode.wrappedValue) {
+                handleQuickAction()
+            }
+ 
+            // ✅ Onboarding overlay — only shows if first launch
+            if !hasSeenOnboarding {
+                OnboardingView()
+                    .transition(.opacity)
+                    .zIndex(1)
+            }
         }
-        .tint(.orange)
-        .onAppear {
-            // dark tab bar
-            let appearance = UITabBarAppearance()
-            appearance.configureWithOpaqueBackground()
-            appearance.backgroundColor = UIColor(red: 0.07, green: 0.07, blue: 0.09, alpha: 1)
-            UITabBar.appearance().standardAppearance = appearance
-            UITabBar.appearance().scrollEdgeAppearance = appearance
-        }
-        .onChange(of: quickActionMode.wrappedValue) {
-            handleQuickAction()
-        }
+        .animation(.easeInOut(duration: 0.4), value: hasSeenOnboarding)
     }
-
+ 
     // MARK: Alarms & Timers Tab
     var alarmsTimersTab: some View {
         ZStack {
             Color(red: 0.07, green: 0.07, blue: 0.09)
                 .ignoresSafeArea()
-
+ 
             VStack(spacing: 0) {
-
+ 
                 // MARK: Header
                 HStack {
                     Text(mode == .alarms ? "Alarms" : "Timers")
@@ -74,7 +86,7 @@ struct ContentView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 8)
-
+ 
                 // MARK: Segmented Picker
                 HStack(spacing: 0) {
                     ForEach([Mode.alarms, Mode.timers], id: \.self) { m in
@@ -96,7 +108,7 @@ struct ContentView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
-
+ 
                 // MARK: List
                 ScrollView {
                     LazyVStack(spacing: 12) {
@@ -165,11 +177,11 @@ struct ContentView: View {
             timerService.loadTimers()
         }
     }
-
+ 
     func handleQuickAction() {
         guard let action = quickActionMode.wrappedValue else { return }
         quickActionMode.wrappedValue = nil
-
+ 
         switch action {
         case "newAlarm":
             selectedTab = 0
@@ -200,7 +212,7 @@ struct ContentView: View {
             break
         }
     }
-
+ 
     @ViewBuilder
     func emptyState(icon: String, text: String) -> some View {
         VStack(spacing: 12) {
@@ -215,12 +227,12 @@ struct ContentView: View {
         .padding(.top, 80)
     }
 }
-
-// MARK: - Alarm Row — unchanged
+ 
+// MARK: - Alarm Row
 struct AlarmRow: View {
     let item: AlarmService.AlarmListItem
     let onDelete: () -> Void
-
+ 
     var body: some View {
         HStack(spacing: 16) {
             ZStack {
@@ -264,26 +276,26 @@ struct AlarmRow: View {
         .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 }
-
-// MARK: - Timer Row — unchanged
+ 
+// MARK: - Timer Row
 struct TimerRow: View {
     let timer: Alarm
     let onDelete: () -> Void
-
+ 
     private var durationText: String {
         guard let duration = timer.countdownDuration else { return "Timer" }
         let total = Int(duration.preAlert ?? duration.postAlert ?? 0)
         let hours = total / 3600
         let minutes = (total % 3600) / 60
         let seconds = total % 60
-
+ 
         if hours > 0 && minutes > 0 { return "\(hours)h \(minutes)m" }
         else if hours > 0 { return "\(hours) hr" }
         else if minutes > 0 && seconds > 0 { return "\(minutes)m \(seconds)s" }
         else if minutes > 0 { return "\(minutes) min" }
         else { return "\(seconds) sec" }
     }
-
+ 
     var body: some View {
         HStack(spacing: 16) {
             ZStack {
@@ -317,4 +329,3 @@ struct TimerRow: View {
         .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 }
-
