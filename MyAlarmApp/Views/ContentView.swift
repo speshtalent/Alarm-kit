@@ -109,6 +109,8 @@ struct ContentView: View {
                                     .listRowBackground(Color(red: 0.07, green: 0.07, blue: 0.09))
                                     .listRowSeparator(.hidden)
                                     .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                                    // ✅ ADDED — empty leading swipe stops right swipe sliding
+                                    .swipeActions(edge: .leading) {}
                                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                         Button(role: .destructive) {
                                             alarmService.cancelAlarm(id: item.id)
@@ -122,20 +124,18 @@ struct ContentView: View {
                                         }
                                         .tint(.orange)
                                     }
-                                    // ✅ UPDATED — dark background to match app UI
-                                // ✅ UPDATED — no preview, just clean menu
-                                .contextMenu {
-                                    Button {
-                                        alarmToEdit = item
-                                    } label: {
-                                        Label("Edit", systemImage: "pencil")
+                                    .contextMenu {
+                                        Button {
+                                            alarmToEdit = item
+                                        } label: {
+                                            Label("Edit", systemImage: "pencil")
+                                        }
+                                        Button(role: .destructive) {
+                                            alarmService.cancelAlarm(id: item.id)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
                                     }
-                                    Button(role: .destructive) {
-                                        alarmService.cancelAlarm(id: item.id)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                }
                             }
                         }
                     } else {
@@ -149,6 +149,8 @@ struct ContentView: View {
                                     .listRowBackground(Color(red: 0.07, green: 0.07, blue: 0.09))
                                     .listRowSeparator(.hidden)
                                     .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                                    // ✅ ADDED — empty leading swipe stops right swipe sliding
+                                    .swipeActions(edge: .leading) {}
                                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                         Button(role: .destructive) {
                                             timerService.cancelTimer(id: timer.id)
@@ -156,19 +158,13 @@ struct ContentView: View {
                                             Label("Delete", systemImage: "trash")
                                         }
                                     }
-                                    // ✅ ADDED — long press context menu for timers
-                                // ✅ UPDATED — no preview, just clean menu
-                                .contextMenu {
-                                    Button(role: .destructive) {
-                                        timerService.cancelTimer(id: timer.id)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                } preview: {
-                                        // ✅ ADDED — dark preview matching app UI
-                                        TimerRow(timer: timer)
-                                            .padding(.horizontal, 20)
-                                            .background(Color(red: 0.07, green: 0.07, blue: 0.09))
+                                    // ✅ UPDATED — removed preview block
+                                    .contextMenu {
+                                        Button(role: .destructive) {
+                                            timerService.cancelTimer(id: timer.id)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
                                     }
                             }
                         }
@@ -292,7 +288,6 @@ struct AlarmRow: View {
                 .foregroundStyle(.gray)
             }
             Spacer()
-            // ✅ REMOVED — moon.zzz.fill icon (no functionality)
             Image(systemName: "chevron.right")
                 .foregroundStyle(Color.white.opacity(0.15))
                 .font(.system(size: 12))
