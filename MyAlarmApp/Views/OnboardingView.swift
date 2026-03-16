@@ -20,7 +20,8 @@ struct OnboardingView: View {
                     Spacer()
                     if currentPage < 5 {
                         Button("Skip") {
-                            navigate(to: 5)
+                            // ✅ UPDATED — skip goes directly to main app, not last onboarding screen
+                            hasSeenOnboarding = true
                         }
                         .font(.system(size: 16, weight: .medium, design: .rounded))
                         .foregroundStyle(Color.white.opacity(0.38))

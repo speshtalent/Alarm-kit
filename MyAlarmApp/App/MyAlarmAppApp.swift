@@ -7,13 +7,11 @@ import StoreKit
 struct MyAlarmAppApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var quickActionMode: String? = nil
+    // ✅ UPDATED — only need one state now
     @State private var showFeedbackAlert = false
-    @State private var showFeedbackBox = false
-    @State private var feedbackText = ""
 
     init() {
         #if DEBUG
-        // ✅ TESTING ONLY — only show review after first alarm has been set
         let hasEverSetAlarm = UserDefaults.standard.bool(forKey: "hasEverSetAlarm")
         if hasEverSetAlarm {
             UserDefaults.standard.set(true, forKey: "alarmFiredSinceLastReview")
@@ -65,6 +63,17 @@ struct MyAlarmAppApp: App {
         }
     }
 
+    // ✅ UPDATED — goes straight to native Apple review popup
+    private func showNativeReview() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            if let scene = UIApplication.shared.connectedScenes
+                .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+                AppStore.requestReview(in: scene)
+                print("⭐ Native Apple review popup shown!")
+            }
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView(quickActionMode: $quickActionMode)
@@ -73,24 +82,15 @@ struct MyAlarmAppApp: App {
                     print("✅ App launched")
                 }
 
-                // STEP 1 — Alert
+                // ✅ UPDATED — simple alert → native Apple review directly
                 .alert("Enjoying Future Alarm? 🔔", isPresented: $showFeedbackAlert) {
                     Button("Yes, Rate Us ⭐") {
-                        showFeedbackBox = true
+                        // ✅ goes straight to native Apple review with stars + message
+                        showNativeReview()
                     }
                     Button("Not Now", role: .cancel) { }
                 } message: {
-                    Text("We'd love to hear your thoughts! Rate us and share feedback 😊")
-                }
-
-                // STEP 2 — Stars + Feedback box together
-                .sheet(isPresented: $showFeedbackBox) {
-                    FeedbackView(feedbackText: $feedbackText) {
-                        showFeedbackBox = false
-                        feedbackText = ""
-                        print("📝 Feedback submitted!")
-                    }
-                    .presentationDetents([.height(480)])
+                    Text("We'd love to hear your thoughts! Rate us on the App Store 😊")
                 }
 
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
@@ -121,106 +121,6 @@ struct MyAlarmAppApp: App {
     }
 }
 
-// ✅ UPDATED — Stars + Feedback message in one sheet
-// ✅ UPDATED — Stars + Feedback message in one sheet
-struct FeedbackView: View {
-    @Binding var feedbackText: String
-    @State private var selectedStars = 0
-    @State private var showThankYou = false
-    let onSubmit: () -> Void
-
-    var body: some View {
-        ZStack {
-            Color(red: 0.07, green: 0.07, blue: 0.09).ignoresSafeArea()
-            VStack(spacing: 20) {
-
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color(white: 0.3))
-                    .frame(width: 40, height: 5)
-                    .padding(.top, 12)
-
-                Text("Rate & Review 🔔")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-
-                Text("How was your experience with Future Alarm?")
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color.white.opacity(0.5))
-                    .multilineTextAlignment(.center)
-
-                // ✅ UPDATED — gold when selected, gray when not
-                HStack(spacing: 12) {
-                    ForEach(1...5, id: \.self) { star in
-                        Image(systemName: star <= selectedStars ? "star.fill" : "star")
-                            .font(.system(size: 40))
-                            // ✅ gold selected, gray unselected
-                            .foregroundStyle(star <= selectedStars ? Color(red: 1.0, green: 0.84, blue: 0.0) : Color.gray.opacity(0.5))
-                            .onTapGesture {
-                                withAnimation(.spring(response: 0.3)) {
-                                    selectedStars = star
-                                }
-                            }
-                    }
-                }
-                .padding(.vertical, 4)
-
-                // ✅ UPDATED — white box, black text, gray placeholder
-                ZStack(alignment: .topLeading) {
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.white)
-                        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
-                    if feedbackText.isEmpty {
-                        Text("Write your feedback here... (optional)")
-                            .font(.system(size: 14, design: .rounded))
-                            .foregroundStyle(Color.gray.opacity(0.55))
-                            .padding(14)
-                    }
-                    TextEditor(text: $feedbackText)
-                        .font(.system(size: 14, design: .rounded))
-                        .foregroundStyle(.black)
-                        .scrollContentBackground(.hidden)
-                        .background(Color.clear)
-                        .padding(10)
-                        .tint(.blue)
-                }
-                .frame(height: 100)
-                .padding(.horizontal, 24)
-
-                // ✅ UPDATED — blue submit button
-                Button {
-                    if selectedStars > 0 {
-                        showThankYou = true
-                    }
-                } label: {
-                    Text(selectedStars == 0 ? "Select a Star to Submit" : "Submit")
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        // ✅ blue when stars selected, gray when not
-                        .background(selectedStars > 0 ? Color.blue : Color.gray.opacity(0.3))
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                }
-                .disabled(selectedStars == 0)
-                .padding(.horizontal, 24)
-                .alert("Thank You! 🎉", isPresented: $showThankYou) {
-                    Button("Close") {
-                        onSubmit()
-                    }
-                } message: {
-                    Text("We really appreciate your feedback! It helps us make Future Alarm even better for you 😊")
-                }
-
-                Button("Maybe Later") {
-                    onSubmit()
-                }
-                .font(.system(size: 14, design: .rounded))
-                .foregroundStyle(Color.white.opacity(0.35))
-                .padding(.bottom, 8)
-            }
-        }
-    }
-}
 class AppDelegate: NSObject, UIApplicationDelegate {
 
     func application(
