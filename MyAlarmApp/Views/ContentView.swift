@@ -1,39 +1,31 @@
 import SwiftUI
 import AlarmKit
- 
+
 struct ContentView: View {
- 
+
     enum Mode { case alarms, timers }
- 
+
     @State private var mode: Mode = .alarms
     @State private var showAddAlarm = false
     @State private var showAddTimer = false
     @State private var selectedTab: Int = 0
- 
+    @State private var alarmToEdit: AlarmService.AlarmListItem? = nil
+
     @StateObject private var alarmService = AlarmService.shared
     @StateObject private var timerService = TimerService.shared
- 
-    // ✅ Shows onboarding only on first launch — never again after
+
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
- 
+
     var quickActionMode: Binding<String?>
- 
+
     var body: some View {
         ZStack {
             TabView(selection: $selectedTab) {
- 
-                // MARK: Tab 1 - Alarms & Timers
                 alarmsTimersTab
-                    .tabItem {
-                        Label("Alarms", systemImage: "alarm")
-                    }
+                    .tabItem { Label("Alarms", systemImage: "alarm") }
                     .tag(0)
- 
-                // MARK: Tab 2 - Calendar
                 CalendarView()
-                    .tabItem {
-                        Label("Calendar", systemImage: "calendar")
-                    }
+                    .tabItem { Label("Calendar", systemImage: "calendar") }
                     .tag(1)
             }
             .tint(.orange)
@@ -47,8 +39,7 @@ struct ContentView: View {
             .onChange(of: quickActionMode.wrappedValue) {
                 handleQuickAction()
             }
- 
-            // ✅ Onboarding overlay — only shows if first launch
+
             if !hasSeenOnboarding {
                 OnboardingView()
                     .transition(.opacity)
@@ -57,16 +48,14 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.4), value: hasSeenOnboarding)
     }
- 
-    // MARK: Alarms & Timers Tab
+
     var alarmsTimersTab: some View {
         ZStack {
             Color(red: 0.07, green: 0.07, blue: 0.09)
                 .ignoresSafeArea()
- 
+
             VStack(spacing: 0) {
- 
-                // MARK: Header
+
                 HStack {
                     Text(mode == .alarms ? "Alarms" : "Timers")
                         .font(.system(size: 34, weight: .bold, design: .rounded))
@@ -86,8 +75,7 @@ struct ContentView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 8)
- 
-                // MARK: Segmented Picker
+
                 HStack(spacing: 0) {
                     ForEach([Mode.alarms, Mode.timers], id: \.self) { m in
                         Button {
@@ -108,34 +96,62 @@ struct ContentView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
- 
-                // MARK: List
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        if mode == .alarms {
-                            if alarmService.alarms.isEmpty {
-                                emptyState(icon: "alarm", text: "No alarms yet")
-                            } else {
-                                ForEach(alarmService.alarms) { item in
-                                    AlarmRow(item: item) {
-                                        alarmService.cancelAlarm(id: item.id)
-                                    }
-                                }
-                            }
+
+                // ✅ UPDATED — changed ScrollView+LazyVStack to List so swipeActions work
+                List {
+                    if mode == .alarms {
+                        if alarmService.alarms.isEmpty {
+                            emptyState(icon: "alarm", text: "No alarms yet")
+                                .listRowBackground(Color(red: 0.07, green: 0.07, blue: 0.09))
+                                .listRowSeparator(.hidden)
                         } else {
-                            if timerService.timers.isEmpty {
-                                emptyState(icon: "timer", text: "No timers yet")
-                            } else {
-                                ForEach(timerService.timers) { timer in
-                                    TimerRow(timer: timer) {
-                                        timerService.cancelTimer(id: timer.id)
+                            ForEach(alarmService.alarms) { item in
+                                AlarmRow(item: item)
+                                    .listRowBackground(Color(red: 0.07, green: 0.07, blue: 0.09))
+                                    .listRowSeparator(.hidden)
+                                    .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                                    // ✅ swipe left — Edit (orange) + Delete (red)
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                        Button(role: .destructive) {
+                                            alarmService.cancelAlarm(id: item.id)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                        Button {
+                                            alarmToEdit = item
+                                        } label: {
+                                            Label("Edit", systemImage: "pencil")
+                                        }
+                                        .tint(.orange)
                                     }
-                                }
+                            }
+                        }
+                    } else {
+                        if timerService.timers.isEmpty {
+                            emptyState(icon: "timer", text: "No timers yet")
+                                .listRowBackground(Color(red: 0.07, green: 0.07, blue: 0.09))
+                                .listRowSeparator(.hidden)
+                        } else {
+                            ForEach(timerService.timers) { timer in
+                                TimerRow(timer: timer)
+                                    .listRowBackground(Color(red: 0.07, green: 0.07, blue: 0.09))
+                                    .listRowSeparator(.hidden)
+                                    .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                                    // ✅ swipe left — Delete only for timers
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                        Button(role: .destructive) {
+                                            timerService.cancelTimer(id: timer.id)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
                             }
                         }
                     }
-                    .padding(.horizontal, 20)
                 }
+                .listStyle(.plain)
+                .background(Color(red: 0.07, green: 0.07, blue: 0.09))
+                .scrollContentBackground(.hidden)
             }
         }
         .sheet(isPresented: $showAddAlarm, onDismiss: {
@@ -143,16 +159,31 @@ struct ContentView: View {
         }) {
             AddAlarmView { date, title, snoozeEnabled, snoozeDuration, sound in
                 Task {
-                    await alarmService.scheduleFutureAlarm(
-                        date: date,
-                        title: title,
+                    _ = await alarmService.scheduleFutureAlarm(
+                        date: date, title: title,
                         snoozeEnabled: snoozeEnabled,
                         snoozeDuration: snoozeDuration,
                         sound: sound
                     )
-                    await MainActor.run {
-                        alarmService.loadAlarms()
-                    }
+                    await MainActor.run { alarmService.loadAlarms() }
+                }
+            }
+        }
+        // ✅ edit sheet — opens when alarmToEdit is set
+        .sheet(item: $alarmToEdit, onDismiss: {
+            alarmService.loadAlarms()
+        }) { item in
+            AddAlarmView(editingItem: item) { date, title, snoozeEnabled, snoozeDuration, sound in
+                Task {
+                    // ✅ cancel old alarm first then schedule new one with updated values
+                    alarmService.cancelAlarm(id: item.id)
+                    _ = await alarmService.scheduleFutureAlarm(
+                        date: date, title: title,
+                        snoozeEnabled: snoozeEnabled,
+                        snoozeDuration: snoozeDuration,
+                        sound: sound
+                    )
+                    await MainActor.run { alarmService.loadAlarms() }
                 }
             }
         }
@@ -161,14 +192,8 @@ struct ContentView: View {
         }) {
             AddTimerView { duration, title, sound in
                 Task {
-                    await timerService.startTimer(
-                        duration: duration,
-                        title: title,
-                        sound: sound
-                    )
-                    await MainActor.run {
-                        timerService.loadTimers()
-                    }
+                    await timerService.startTimer(duration: duration, title: title, sound: sound)
+                    await MainActor.run { timerService.loadTimers() }
                 }
             }
         }
@@ -177,42 +202,28 @@ struct ContentView: View {
             timerService.loadTimers()
         }
     }
- 
+
     func handleQuickAction() {
         guard let action = quickActionMode.wrappedValue else { return }
         quickActionMode.wrappedValue = nil
- 
         switch action {
         case "newAlarm":
-            selectedTab = 0
-            mode = .alarms
-            showAddAlarm = true
+            selectedTab = 0; mode = .alarms; showAddAlarm = true
         case "newTimer":
-            selectedTab = 0
-            mode = .timers
-            showAddTimer = true
+            selectedTab = 0; mode = .timers; showAddTimer = true
         case "fiveMinTimer":
             Task {
-                await timerService.startTimer(
-                    duration: 300,
-                    title: "5 Min Timer",
-                    sound: "nokia.caf"
-                )
-                await MainActor.run {
-                    timerService.loadTimers()
-                    selectedTab = 0
-                    mode = .timers
-                }
+                await timerService.startTimer(duration: 300, title: "5 Min Timer", sound: "nokia.caf")
+                await MainActor.run { timerService.loadTimers(); selectedTab = 0; mode = .timers }
             }
         case "settings":
             if let url = URL(string: UIApplication.openSettingsURLString) {
                 UIApplication.shared.open(url)
             }
-        default:
-            break
+        default: break
         }
     }
- 
+
     @ViewBuilder
     func emptyState(icon: String, text: String) -> some View {
         VStack(spacing: 12) {
@@ -227,12 +238,11 @@ struct ContentView: View {
         .padding(.top, 80)
     }
 }
- 
+
 // MARK: - Alarm Row
 struct AlarmRow: View {
     let item: AlarmService.AlarmListItem
-    let onDelete: () -> Void
- 
+
     var body: some View {
         HStack(spacing: 16) {
             ZStack {
@@ -262,40 +272,33 @@ struct AlarmRow: View {
             Image(systemName: "moon.zzz.fill")
                 .foregroundStyle(.orange.opacity(0.6))
                 .font(.system(size: 14))
-            Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.red.opacity(0.8))
-                    .padding(8)
-                    .background(.red.opacity(0.1))
-                    .clipShape(Circle())
-            }
+            Image(systemName: "chevron.right")
+                .foregroundStyle(Color.white.opacity(0.15))
+                .font(.system(size: 12))
         }
         .padding(16)
         .background(Color(white: 0.13))
         .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 }
- 
+
 // MARK: - Timer Row
 struct TimerRow: View {
     let timer: Alarm
-    let onDelete: () -> Void
- 
+
     private var durationText: String {
         guard let duration = timer.countdownDuration else { return "Timer" }
         let total = Int(duration.preAlert ?? duration.postAlert ?? 0)
         let hours = total / 3600
         let minutes = (total % 3600) / 60
         let seconds = total % 60
- 
         if hours > 0 && minutes > 0 { return "\(hours)h \(minutes)m" }
         else if hours > 0 { return "\(hours) hr" }
         else if minutes > 0 && seconds > 0 { return "\(minutes)m \(seconds)s" }
         else if minutes > 0 { return "\(minutes) min" }
         else { return "\(seconds) sec" }
     }
- 
+
     var body: some View {
         HStack(spacing: 16) {
             ZStack {
@@ -315,14 +318,6 @@ struct TimerRow: View {
                     .foregroundStyle(.gray)
             }
             Spacer()
-            Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.red.opacity(0.8))
-                    .padding(8)
-                    .background(.red.opacity(0.1))
-                    .clipShape(Circle())
-            }
         }
         .padding(16)
         .background(Color(white: 0.13))

@@ -43,6 +43,23 @@ struct OnboardingView: View {
                 }
                 .opacity(opacity)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // ✅ ADDED — swipe left to go next, swipe right to go back
+                .gesture(
+                    DragGesture(minimumDistance: 50)
+                        .onEnded { value in
+                            if value.translation.width < -50 {
+                                // swipe left — next
+                                if currentPage < 5 {
+                                    navigate(to: currentPage + 1)
+                                }
+                            } else if value.translation.width > 50 {
+                                // swipe right — back
+                                if currentPage > 0 {
+                                    navigate(to: currentPage - 1)
+                                }
+                            }
+                        }
+                )
  
                 // MARK: Dots
                 HStack(spacing: 8) {
@@ -57,7 +74,8 @@ struct OnboardingView: View {
  
                 // MARK: Buttons
                 HStack(spacing: 12) {
-                    if currentPage > 0 && currentPage < 5 {
+                    // ✅ UPDATED — Back button now shows on ALL pages including last page (page 5)
+                    if currentPage > 0 {
                         Button {
                             navigate(to: currentPage - 1)
                         } label: {
@@ -169,29 +187,24 @@ private struct Screen2: View {
  
                 Canvas { ctx, size in
                     let cx: CGFloat = 100, cy: CGFloat = 108, r: CGFloat = 68
-                    // Clock face
                     var facePath = Path()
                     facePath.addArc(center: CGPoint(x: cx, y: cy), radius: r, startAngle: .degrees(0), endAngle: .degrees(360), clockwise: false)
                     ctx.fill(facePath, with: .color(Color(red: 0.11, green: 0.07, blue: 0.02).opacity(0.7)))
  
-                    // Dashed arc
                     var arcPath = Path()
                     arcPath.addArc(center: CGPoint(x: cx, y: cy), radius: r, startAngle: .degrees(-190), endAngle: .degrees(80), clockwise: false)
                     ctx.stroke(arcPath, with: .color(.orange), style: StrokeStyle(lineWidth: 5, lineCap: .round, dash: [18, 8]))
  
-                    // Hour hand
                     var hourPath = Path()
                     hourPath.move(to: CGPoint(x: cx, y: cy))
                     hourPath.addLine(to: CGPoint(x: cx, y: cy - 40))
                     ctx.stroke(hourPath, with: .color(.white), style: StrokeStyle(lineWidth: 5, lineCap: .round))
  
-                    // Minute hand
                     var minPath = Path()
                     minPath.move(to: CGPoint(x: cx, y: cy))
                     minPath.addLine(to: CGPoint(x: cx + 36, y: cy))
                     ctx.stroke(minPath, with: .color(.white), style: StrokeStyle(lineWidth: 5, lineCap: .round))
  
-                    // Center dot
                     var dotPath = Path()
                     dotPath.addArc(center: CGPoint(x: cx, y: cy), radius: 5, startAngle: .degrees(0), endAngle: .degrees(360), clockwise: false)
                     ctx.fill(dotPath, with: .color(.white))
@@ -258,9 +271,7 @@ private struct Screen3: View {
         VStack(spacing: 0) {
             Spacer()
  
-            // Card
             VStack(spacing: 8) {
-                // Select Your Ringtone row — selected
                 HStack(spacing: 12) {
                     RoundedRectangle(cornerRadius: 9)
                         .fill(Color(red: 0.42, green: 0.23, blue: 0.72))
@@ -284,7 +295,6 @@ private struct Screen3: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14))
                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.orange, lineWidth: 1.5))
  
-                // Voice recorder row
                 HStack(spacing: 10) {
                     Circle()
                         .fill(Color.red)
@@ -295,7 +305,6 @@ private struct Screen3: View {
                                 .frame(width: 11, height: 11)
                         )
  
-                    // Waveform
                     HStack(alignment: .center, spacing: 3) {
                         ForEach(0..<10, id: \.self) { i in
                             RoundedRectangle(cornerRadius: 2)
@@ -344,7 +353,6 @@ private struct Screen4: View {
         VStack(spacing: 0) {
             Spacer()
  
-            // Phone mockup
             ZStack(alignment: .top) {
                 RoundedRectangle(cornerRadius: 34)
                     .fill(Color(white: 0.1))
@@ -356,13 +364,11 @@ private struct Screen4: View {
                     .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
  
                 VStack(spacing: 0) {
-                    // Notch
                     Capsule()
                         .fill(Color.black)
                         .frame(width: 76, height: 20)
                         .padding(.top, 10)
  
-                    // Lock screen
                     VStack(spacing: 0) {
                         Text("MONDAY, JULY 15")
                             .font(.system(size: 10, weight: .medium, design: .rounded))
@@ -376,7 +382,6 @@ private struct Screen4: View {
                             .padding(.top, 2)
                             .padding(.bottom, 14)
  
-                        // Live Activity card
                         VStack(spacing: 0) {
                             HStack {
                                 HStack(spacing: 5) {
@@ -406,7 +411,6 @@ private struct Screen4: View {
                                         .foregroundStyle(.orange)
                                 }
                                 Spacer()
-                                // Circular progress
                                 ZStack {
                                     Circle()
                                         .stroke(Color.orange.opacity(0.18), lineWidth: 3)
@@ -424,7 +428,6 @@ private struct Screen4: View {
                         .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.orange.opacity(0.28), lineWidth: 1))
                         .padding(.horizontal, 14)
  
-                        // Timer pill
                         HStack {
                             Text("⏱ Kitchen Timer")
                                 .font(.system(size: 10, design: .rounded))
@@ -473,7 +476,6 @@ private struct Screen5: View {
         VStack(spacing: 0) {
             Spacer()
  
-            // Home screen mockup
             ZStack(alignment: .bottomTrailing) {
                 RoundedRectangle(cornerRadius: 36)
                     .fill(LinearGradient(
@@ -483,7 +485,6 @@ private struct Screen5: View {
                     .frame(width: 300, height: 285)
                     .overlay(RoundedRectangle(cornerRadius: 36).stroke(Color.white.opacity(0.07), lineWidth: 1))
  
-                // App icon grid row (top)
                 HStack(spacing: 14) {
                     ForEach(0..<4) { _ in
                         RoundedRectangle(cornerRadius: 14)
@@ -495,9 +496,7 @@ private struct Screen5: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .padding(.leading, 18)
  
-                // Context menu + app icon
                 VStack(alignment: .trailing, spacing: 0) {
-                    // Context menu
                     VStack(spacing: 0) {
                         ForEach(["New Alarm", "New Timer", "5 Min Timer", "Settings"], id: \.self) { item in
                             HStack {
@@ -520,14 +519,12 @@ private struct Screen5: View {
                     .frame(width: 178)
                     .padding(.trailing, 14)
  
-                    // App icon
                     RoundedRectangle(cornerRadius: 18)
                         .fill(Color.orange)
                         .frame(width: 64, height: 64)
                         .overlay(Image(systemName: "alarm").font(.system(size: 30, weight: .medium)).foregroundStyle(.black))
                         .shadow(color: .orange.opacity(0.5), radius: 10, y: 4)
                         .padding(.trailing, 14)
-                        .padding(.top, 0)
                         .padding(.bottom, 18)
                 }
             }
@@ -562,9 +559,7 @@ private struct Screen6: View {
         VStack(spacing: 0) {
             Spacer()
  
-            // Calendar card
             VStack(alignment: .leading, spacing: 0) {
-                // Month header
                 HStack {
                     Text("October")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
@@ -577,7 +572,6 @@ private struct Screen6: View {
                 }
                 .padding(.bottom, 14)
  
-                // Day headers
                 HStack(spacing: 0) {
                     ForEach(dayHeaders, id: \.self) { d in
                         Text(d)
@@ -588,7 +582,6 @@ private struct Screen6: View {
                 }
                 .padding(.bottom, 6)
  
-                // Week rows
                 ForEach([week1, week2], id: \.first) { week in
                     HStack(spacing: 0) {
                         ForEach(Array(week.enumerated()), id: \.offset) { idx, date in
@@ -613,7 +606,6 @@ private struct Screen6: View {
                     .background(Color.white.opacity(0.07))
                     .padding(.vertical, 10)
  
-                // Upcoming
                 Text("UPCOMING")
                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.white.opacity(0.3))
