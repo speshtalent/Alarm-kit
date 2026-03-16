@@ -28,7 +28,6 @@ final class AlarmService: ObservableObject {
 
     private init() {}
 
-    // MARK: - Public API
     func requestAuthorizationIfNeeded() async {
         do {
             if AlarmManager.shared.authorizationState == .authorized { return }
@@ -46,15 +45,12 @@ final class AlarmService: ObservableObject {
         let alert = AlarmPresentation.Alert(
             title: LocalizedStringResource(stringLiteral: label)
         )
-
         let presentation = AlarmPresentation(alert: alert)
-
         let attributes = AlarmAttributes(
             presentation: presentation,
             metadata: AppAlarmMetadata(title: label, icon: "alarm"),
             tintColor: .orange
         )
-
         let configuration = AlarmManager.AlarmConfiguration(
             countdownDuration: nil,
             schedule: .fixed(scheduleDate),
@@ -71,14 +67,13 @@ final class AlarmService: ObservableObject {
     }
 
     func cancelAlarm(id: UUID) {
-        // find the alarm's fireDate BEFORE removing from list
-        // use fireDate as key — same key used when adding to calendar in AddAlarmView
         if let item = alarms.first(where: { $0.id == id }),
            let fireDate = item.fireDate {
             let key = fireDate.timeIntervalSince1970.description
             CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
             print("✅ Removing calendar event for key: \(key)")
         }
+        deleteVoiceFile(for: id.uuidString)
         do {
             try AlarmManager.shared.cancel(id: id)
         } catch {
@@ -95,10 +90,7 @@ final class AlarmService: ObservableObject {
             alarms = all
                 .filter { $0.schedule != nil }
                 .map { alarm in
-                    AlarmListItem(
-                        alarm: alarm,
-                        label: labels[alarm.id.uuidString] ?? "Alarm"
-                    )
+                    AlarmListItem(alarm: alarm, label: labels[alarm.id.uuidString] ?? "Alarm")
                 }
                 .sorted { lhs, rhs in
                     (lhs.fireDate ?? .distantFuture) < (rhs.fireDate ?? .distantFuture)
@@ -109,27 +101,82 @@ final class AlarmService: ObservableObject {
         }
     }
 
-    // ✅ Updated with sound parameter
+    // ✅ UPDATED — generate UUID first, save voice file with that UUID,
+    // then schedule alarm using that exact voice filename
+    // this way each alarm has its own unique voice file — no sharing!
     func scheduleFutureAlarm(
         date: Date,
         title: String,
         snoozeEnabled: Bool = true,
         snoozeDuration: TimeInterval = 300,
         sound: String = "nokia.caf"
-    ) async {
+    ) async -> UUID? {
         do {
-            // Check if voice recording exists — use it as alarm sound
             let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
-            let voiceURL = libraryURL.appendingPathComponent("Sounds/alarm_voice.caf")
-            let finalSound = FileManager.default.fileExists(atPath: voiceURL.path) ? "alarm_voice.caf" : sound
-            
-            _ = try await scheduleAlarm(date: date, label: title, sound: finalSound)
+            let tempURL = libraryURL.appendingPathComponent("Sounds/alarm_voice_temp.caf")
+            let tempExists = FileManager.default.fileExists(atPath: tempURL.path)
+
+            // ✅ generate alarm ID first so we can name voice file after it
+            let alarmID = UUID()
+            var finalSound = sound
+
+            if tempExists {
+                // ✅ copy temp voice to alarm-specific file BEFORE scheduling
+                let voiceFileName = "alarm_voice_\(alarmID.uuidString).caf"
+                let destURL = libraryURL.appendingPathComponent("Sounds/\(voiceFileName)")
+                try? FileManager.default.removeItem(at: destURL)
+                try? FileManager.default.copyItem(at: tempURL, to: destURL)
+                finalSound = voiceFileName
+                print("✅ Voice file saved as: \(voiceFileName)")
+            }
+            // ✅ ADDED — mark that user has set at least one alarm
+            UserDefaults.standard.set(true, forKey: "hasEverSetAlarm")
+
+            // schedule alarm with the correct voice file as sound
+            let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
+            return id
         } catch {
             print("Schedule alarm error:", error)
+            return nil
         }
     }
 
-    // MARK: - Local label persistence
+    // ✅ ADDED — schedule alarm with a pre-generated UUID
+    @discardableResult
+    func scheduleAlarmWithID(id: UUID, date: Date, label: String, sound: String = "nokia.caf") async throws -> UUID {
+        let scheduleDate = max(date, Date().addingTimeInterval(1))
+
+        let alert = AlarmPresentation.Alert(
+            title: LocalizedStringResource(stringLiteral: label)
+        )
+        let presentation = AlarmPresentation(alert: alert)
+        let attributes = AlarmAttributes(
+            presentation: presentation,
+            metadata: AppAlarmMetadata(title: label, icon: "alarm"),
+            tintColor: .orange
+        )
+        let configuration = AlarmManager.AlarmConfiguration(
+            countdownDuration: nil,
+            schedule: .fixed(scheduleDate),
+            attributes: attributes,
+            stopIntent: StopAlarmIntent(alarmID: id.uuidString),
+            secondaryIntent: nil,
+            sound: .named(sound)
+        )
+
+        let alarm = try await AlarmManager.shared.schedule(id: id, configuration: configuration)
+        saveLabel(label, for: id)
+        upsertAlarmInList(alarm, label: label)
+        return id
+    }
+
+    func deleteVoiceFile(for alarmID: String) {
+        let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+        let voiceURL = libraryURL.appendingPathComponent("Sounds/alarm_voice_\(alarmID).caf")
+        try? FileManager.default.removeItem(at: voiceURL)
+        print("🗑️ Deleted voice file for alarm: \(alarmID)")
+    }
+
     private func loadLabels() -> [String: String] {
         UserDefaults.standard.dictionary(forKey: labelsStoreKey) as? [String: String] ?? [:]
     }
