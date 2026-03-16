@@ -97,7 +97,6 @@ struct ContentView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
 
-                // ✅ UPDATED — changed ScrollView+LazyVStack to List so swipeActions work
                 List {
                     if mode == .alarms {
                         if alarmService.alarms.isEmpty {
@@ -110,7 +109,6 @@ struct ContentView: View {
                                     .listRowBackground(Color(red: 0.07, green: 0.07, blue: 0.09))
                                     .listRowSeparator(.hidden)
                                     .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
-                                    // ✅ swipe left — Edit (orange) + Delete (red)
                                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                         Button(role: .destructive) {
                                             alarmService.cancelAlarm(id: item.id)
@@ -124,6 +122,20 @@ struct ContentView: View {
                                         }
                                         .tint(.orange)
                                     }
+                                    // ✅ UPDATED — dark background to match app UI
+                                // ✅ UPDATED — no preview, just clean menu
+                                .contextMenu {
+                                    Button {
+                                        alarmToEdit = item
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    Button(role: .destructive) {
+                                        alarmService.cancelAlarm(id: item.id)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
                             }
                         }
                     } else {
@@ -137,13 +149,26 @@ struct ContentView: View {
                                     .listRowBackground(Color(red: 0.07, green: 0.07, blue: 0.09))
                                     .listRowSeparator(.hidden)
                                     .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
-                                    // ✅ swipe left — Delete only for timers
                                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                         Button(role: .destructive) {
                                             timerService.cancelTimer(id: timer.id)
                                         } label: {
                                             Label("Delete", systemImage: "trash")
                                         }
+                                    }
+                                    // ✅ ADDED — long press context menu for timers
+                                // ✅ UPDATED — no preview, just clean menu
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        timerService.cancelTimer(id: timer.id)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                } preview: {
+                                        // ✅ ADDED — dark preview matching app UI
+                                        TimerRow(timer: timer)
+                                            .padding(.horizontal, 20)
+                                            .background(Color(red: 0.07, green: 0.07, blue: 0.09))
                                     }
                             }
                         }
@@ -169,13 +194,11 @@ struct ContentView: View {
                 }
             }
         }
-        // ✅ edit sheet — opens when alarmToEdit is set
         .sheet(item: $alarmToEdit, onDismiss: {
             alarmService.loadAlarms()
         }) { item in
             AddAlarmView(editingItem: item) { date, title, snoozeEnabled, snoozeDuration, sound in
                 Task {
-                    // ✅ cancel old alarm first then schedule new one with updated values
                     alarmService.cancelAlarm(id: item.id)
                     _ = await alarmService.scheduleFutureAlarm(
                         date: date, title: title,
@@ -269,9 +292,7 @@ struct AlarmRow: View {
                 .foregroundStyle(.gray)
             }
             Spacer()
-            Image(systemName: "moon.zzz.fill")
-                .foregroundStyle(.orange.opacity(0.6))
-                .font(.system(size: 14))
+            // ✅ REMOVED — moon.zzz.fill icon (no functionality)
             Image(systemName: "chevron.right")
                 .foregroundStyle(Color.white.opacity(0.15))
                 .font(.system(size: 12))
