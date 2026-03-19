@@ -13,6 +13,7 @@ struct AddAlarmView: View {
     @State private var snoozeDuration = 5
     @State private var selectedSound = "nokia.caf"
     @State private var addToCalendar = true
+    @State private var selectedAMPM: Int
 
     @State private var isRecording = false
     @State private var hasRecording = false
@@ -37,21 +38,27 @@ struct AddAlarmView: View {
         if let item = editingItem, let fireDate = item.fireDate {
             _title = State(initialValue: item.label)
             _selectedDate = State(initialValue: fireDate)
-            _selectedHour = State(initialValue: Calendar.current.component(.hour, from: fireDate))
+            let hour24 = Calendar.current.component(.hour, from: fireDate)
+            _selectedHour = State(initialValue: hour24 % 12 == 0 ? 12 : hour24 % 12)
+            _selectedAMPM = State(initialValue: hour24 < 12 ? 0 : 1)
             _selectedMinute = State(initialValue: Calendar.current.component(.minute, from: fireDate))
             _useSpecificDate = State(initialValue: true)
             self.editingAlarmID = item.id.uuidString
         } else if let date = preselectedDate, !Calendar.current.isDateInToday(date) {
             _title = State(initialValue: "Alarm")
             _selectedDate = State(initialValue: date)
-            _selectedHour = State(initialValue: Calendar.current.component(.hour, from: date))
+            let hour24 = Calendar.current.component(.hour, from: date)
+            _selectedHour = State(initialValue: hour24 % 12 == 0 ? 12 : hour24 % 12)
+            _selectedAMPM = State(initialValue: hour24 < 12 ? 0 : 1)
             _selectedMinute = State(initialValue: Calendar.current.component(.minute, from: date))
             _useSpecificDate = State(initialValue: true)
             self.editingAlarmID = nil
         } else {
             _title = State(initialValue: "Alarm")
             _selectedDate = State(initialValue: Date())
-            _selectedHour = State(initialValue: Calendar.current.component(.hour, from: Date()))
+            let hour24 = Calendar.current.component(.hour, from: Date())
+            _selectedHour = State(initialValue: hour24 % 12 == 0 ? 12 : hour24 % 12)
+            _selectedAMPM = State(initialValue: hour24 < 12 ? 0 : 1)
             _selectedMinute = State(initialValue: Calendar.current.component(.minute, from: Date()))
             _useSpecificDate = State(initialValue: false)
             self.editingAlarmID = nil
@@ -71,7 +78,6 @@ struct AddAlarmView: View {
         return soundsURL.appendingPathComponent("alarm_voice_\(alarmID).caf")
     }
 
-    // legacy URL — AlarmKit uses this as ringtone
     private var legacyVoiceURL: URL {
         let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
         return libraryURL.appendingPathComponent("Sounds/alarm_voice.caf")
@@ -87,8 +93,10 @@ struct AddAlarmView: View {
             components.second = 0
             return Calendar.current.date(from: components) ?? selectedDate
         } else {
+            var hour24 = selectedHour % 12
+            if selectedAMPM == 1 { hour24 += 12 }
             var components = Calendar.current.dateComponents(in: TimeZone.current, from: Date())
-            components.hour = selectedHour
+            components.hour = hour24
             components.minute = selectedMinute
             components.second = 0
             var date = Calendar.current.date(from: components) ?? Date()
@@ -147,8 +155,8 @@ struct AddAlarmView: View {
                         } else {
                             HStack(spacing: 0) {
                                 Picker("Hour", selection: $selectedHour) {
-                                    ForEach(0...23, id: \.self) { h in
-                                        Text(String(format: "%02d", h)).tag(h).foregroundStyle(.white)
+                                    ForEach(1...12, id: \.self) { h in
+                                        Text(String(format: "%d", h)).tag(h).foregroundStyle(.white)
                                     }
                                 }
                                 .pickerStyle(.wheel).frame(maxWidth: .infinity)
@@ -159,6 +167,11 @@ struct AddAlarmView: View {
                                     }
                                 }
                                 .pickerStyle(.wheel).frame(maxWidth: .infinity)
+                                Picker("AM/PM", selection: $selectedAMPM) {
+                                    Text("AM").tag(0).foregroundStyle(.white)
+                                    Text("PM").tag(1).foregroundStyle(.white)
+                                }
+                                .pickerStyle(.wheel).frame(maxWidth: 70)
                             }
                             .colorScheme(.dark).padding(8)
                         }
@@ -333,16 +346,14 @@ struct AddAlarmView: View {
                     .padding(.horizontal, 20)
 
                     Button {
+                        // ✅ ADDED — haptic on set alarm
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+
                         let savedDate = fireDate
                         let savedTitle = title
                         let savedRecordingName = recordingName
-
-                        // ✅ UPDATED — voice file is now handled inside scheduleFutureAlarm
-                        // it reads alarm_voice_temp.caf and copies to alarm_voice_{UUID}.caf
-                        // no need to copy here anymore
                         onSave(savedDate, savedTitle, snoozeEnabled, TimeInterval(snoozeDuration * 60), selectedSound)
 
-                        // ✅ save per-alarm name in background after scheduling
                         if hasRecording {
                             Task {
                                 try? await Task.sleep(nanoseconds: 500_000_000)
