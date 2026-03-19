@@ -105,37 +105,44 @@ struct ContentView: View {
                                 .listRowSeparator(.hidden)
                         } else {
                             ForEach(alarmService.alarms) { item in
-                                AlarmRow(item: item)
-                                    .listRowBackground(Color(red: 0.07, green: 0.07, blue: 0.09))
-                                    .listRowSeparator(.hidden)
-                                    .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
-                                    // ✅ ADDED — empty leading swipe stops right swipe sliding
-                                    .swipeActions(edge: .leading) {}
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                        Button(role: .destructive) {
-                                            alarmService.cancelAlarm(id: item.id)
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
-                                        Button {
-                                            alarmToEdit = item
-                                        } label: {
-                                            Label("Edit", systemImage: "pencil")
-                                        }
-                                        .tint(.orange)
+                                AlarmRow(item: item) {
+                                    // ✅ ADDED — haptic on toggle
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    alarmService.toggleAlarm(id: item.id)
+                                }
+                                .listRowBackground(Color(red: 0.07, green: 0.07, blue: 0.09))
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                                .swipeActions(edge: .leading) {}
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        // ✅ ADDED — haptic on delete
+                                        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                                        alarmService.cancelAlarm(id: item.id)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
                                     }
-                                    .contextMenu {
-                                        Button {
-                                            alarmToEdit = item
-                                        } label: {
-                                            Label("Edit", systemImage: "pencil")
-                                        }
-                                        Button(role: .destructive) {
-                                            alarmService.cancelAlarm(id: item.id)
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
+                                    Button {
+                                        alarmToEdit = item
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
                                     }
+                                    .tint(.orange)
+                                }
+                                .contextMenu {
+                                    Button {
+                                        alarmToEdit = item
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    Button(role: .destructive) {
+                                        // ✅ ADDED — haptic on delete from context menu
+                                        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                                        alarmService.cancelAlarm(id: item.id)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
                             }
                         }
                     } else {
@@ -149,18 +156,19 @@ struct ContentView: View {
                                     .listRowBackground(Color(red: 0.07, green: 0.07, blue: 0.09))
                                     .listRowSeparator(.hidden)
                                     .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
-                                    // ✅ ADDED — empty leading swipe stops right swipe sliding
                                     .swipeActions(edge: .leading) {}
                                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                         Button(role: .destructive) {
+                                            // ✅ ADDED — haptic on timer delete
+                                            UINotificationFeedbackGenerator().notificationOccurred(.warning)
                                             timerService.cancelTimer(id: timer.id)
                                         } label: {
                                             Label("Delete", systemImage: "trash")
                                         }
                                     }
-                                    // ✅ UPDATED — removed preview block
                                     .contextMenu {
                                         Button(role: .destructive) {
+                                            UINotificationFeedbackGenerator().notificationOccurred(.warning)
                                             timerService.cancelTimer(id: timer.id)
                                         } label: {
                                             Label("Delete", systemImage: "trash")
@@ -261,40 +269,42 @@ struct ContentView: View {
 // MARK: - Alarm Row
 struct AlarmRow: View {
     let item: AlarmService.AlarmListItem
+    let onToggle: () -> Void
 
     var body: some View {
         HStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(.orange.opacity(0.15))
+                    .fill(item.isEnabled ? .orange.opacity(0.15) : .gray.opacity(0.1))
                     .frame(width: 48, height: 48)
                 Image(systemName: "alarm")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(item.isEnabled ? .orange : .gray)
                     .font(.system(size: 20))
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.label)
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
-                Text(
-                    item.fireDate?.formatted(
-                        Date.FormatStyle()
-                            .weekday(.abbreviated)
-                            .hour(.defaultDigits(amPM: .abbreviated))
-                            .minute(.twoDigits)
-                    ) ?? item.id.uuidString.prefix(8).uppercased()
-                )
+                    .foregroundStyle(item.isEnabled ? .white : .gray)
+                Text(item.fireDate.flatMap { date -> String? in
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "EEE h:mm a"
+                    return formatter.string(from: date)
+                } ?? item.id.uuidString.prefix(8).uppercased())
                 .font(.system(size: 12, weight: .medium, design: .monospaced))
                 .foregroundStyle(.gray)
             }
             Spacer()
-            Image(systemName: "chevron.right")
-                .foregroundStyle(Color.white.opacity(0.15))
-                .font(.system(size: 12))
+            Toggle("", isOn: Binding(
+                get: { item.isEnabled },
+                set: { _ in onToggle() }
+            ))
+            .tint(.orange)
+            .labelsHidden()
         }
         .padding(16)
         .background(Color(white: 0.13))
         .clipShape(RoundedRectangle(cornerRadius: 18))
+        .opacity(item.isEnabled ? 1.0 : 0.6)
     }
 }
 
