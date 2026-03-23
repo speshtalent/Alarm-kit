@@ -4,6 +4,7 @@ import AlarmKit
 import ActivityKit
 import SwiftUI
 import AppIntents
+import WidgetKit
 
 @MainActor
 final class AlarmService: ObservableObject {
@@ -84,6 +85,8 @@ final class AlarmService: ObservableObject {
         removeLabel(for: id)
         removeFromDisabled(id: id)
         alarms.removeAll { $0.alarm.id == id }
+        // ✅ ADDED — update widget after cancel
+        saveNextAlarmForWidget()
     }
 
     func toggleAlarm(id: UUID) {
@@ -99,6 +102,8 @@ final class AlarmService: ObservableObject {
             } catch {
                 print("Disable alarm error:", error)
             }
+            // ✅ ADDED — update widget after toggle OFF
+            saveNextAlarmForWidget()
         } else {
             guard let fireDate = item.fireDate, fireDate > Date() else {
                 print("⚠️ Cannot re-enable past alarm")
@@ -117,6 +122,8 @@ final class AlarmService: ObservableObject {
                 } catch {
                     print("Re-enable alarm error:", error)
                 }
+                // ✅ ADDED — update widget after toggle ON
+                saveNextAlarmForWidget()
             }
         }
     }
@@ -170,6 +177,8 @@ final class AlarmService: ObservableObject {
             UserDefaults.standard.set(true, forKey: "hasEverSetAlarm")
 
             let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
+            // ✅ ADDED — update widget after scheduling
+            saveNextAlarmForWidget()
             return id
         } catch {
             print("Schedule alarm error:", error)
@@ -210,6 +219,22 @@ final class AlarmService: ObservableObject {
         let voiceURL = libraryURL.appendingPathComponent("Sounds/alarm_voice_\(alarmID).caf")
         try? FileManager.default.removeItem(at: voiceURL)
         print("🗑️ Deleted voice file for alarm: \(alarmID)")
+    }
+
+    // ✅ ADDED — save next alarm to App Group for widget
+    func saveNextAlarmForWidget() {
+        let userDefaults = UserDefaults(suiteName: "group.com.maniraj48.MyAlarmApp2026")
+        if let nextAlarm = alarms.filter({ $0.isEnabled && ($0.fireDate ?? .distantPast) > Date() }).first {
+            userDefaults?.set(nextAlarm.fireDate, forKey: "widgetNextAlarmDate")
+            userDefaults?.set(nextAlarm.label, forKey: "widgetNextAlarmLabel")
+            print("✅ Widget data saved: \(nextAlarm.label)")
+        } else {
+            userDefaults?.removeObject(forKey: "widgetNextAlarmDate")
+            userDefaults?.removeObject(forKey: "widgetNextAlarmLabel")
+            print("✅ Widget data cleared — no alarms")
+        }
+        // ✅ ADDED — force widget to refresh immediately
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func loadDisabledIDs() -> Set<String> {
