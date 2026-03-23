@@ -2,11 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>Future Alarm needs calendar access to add your alarms to your calendar.</string>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>This app needs permission to schedule alarms.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Future Alarm needs microphone access to record voice messages for alarms.</string>
 </dict>
 </plist>

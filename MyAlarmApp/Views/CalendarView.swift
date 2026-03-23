@@ -123,12 +123,38 @@ struct CalendarView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 16)
 
-                // ✅ ADDED — show correct view based on mode
-                switch viewMode {
-                case .monthly: monthlyView
-                case .weekly:  weeklyView
-                case .daily:   dailyView
+                // ✅ UPDATED — swipe left/right to switch between Day/Week/Month
+                Group {
+                    switch viewMode {
+                    case .monthly: monthlyView
+                    case .weekly:  weeklyView
+                    case .daily:   dailyView
+                    }
                 }
+                .gesture(
+                    DragGesture(minimumDistance: 50)
+                        .onEnded { value in
+                            if value.translation.width < -50 {
+                                // ✅ swipe left → next mode
+                                withAnimation(.spring(response: 0.3)) {
+                                    switch viewMode {
+                                    case .daily: viewMode = .weekly
+                                    case .weekly: viewMode = .monthly
+                                    case .monthly: viewMode = .daily
+                                    }
+                                }
+                            } else if value.translation.width > 50 {
+                                // ✅ swipe right → previous mode
+                                withAnimation(.spring(response: 0.3)) {
+                                    switch viewMode {
+                                    case .daily: viewMode = .monthly
+                                    case .weekly: viewMode = .daily
+                                    case .monthly: viewMode = .weekly
+                                    }
+                                }
+                            }
+                        }
+                )
             }
         }
         .onAppear {

@@ -1,84 +1,239 @@
-//
-//  FutureAlarmWidget.swift
-//  FutureAlarmWidget
-//
-//  Created by Maniraj on 3/23/26.
-//
-
 import WidgetKit
 import SwiftUI
 
-struct Provider: TimelineProvider {
-    func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), emoji: "😀")
+// MARK: - Timeline Entry
+struct FutureAlarmEntry: TimelineEntry {
+    let date: Date
+    let alarmDate: Date?
+    let alarmLabel: String
+}
+
+// MARK: - Timeline Provider
+struct FutureAlarmProvider: TimelineProvider {
+
+    func placeholder(in context: Context) -> FutureAlarmEntry {
+        FutureAlarmEntry(
+            date: Date(),
+            alarmDate: Date().addingTimeInterval(3600),
+            alarmLabel: "Morning Coffee"
+        )
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry(date: Date(), emoji: "😀")
-        completion(entry)
+    func getSnapshot(in context: Context, completion: @escaping (FutureAlarmEntry) -> Void) {
+        completion(entry())
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
-        var entries: [SimpleEntry] = []
-
-        // Generate a timeline consisting of five entries an hour apart, starting from the current date.
-        let currentDate = Date()
-        for hourOffset in 0 ..< 5 {
-            let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SimpleEntry(date: entryDate, emoji: "😀")
-            entries.append(entry)
-        }
-
-        let timeline = Timeline(entries: entries, policy: .atEnd)
+    func getTimeline(in context: Context, completion: @escaping (Timeline<FutureAlarmEntry>) -> Void) {
+        let entry = entry()
+        // ✅ refresh widget every 15 minutes
+        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date()
+        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
         completion(timeline)
     }
 
-//    func relevances() async -> WidgetRelevances<Void> {
-//        // Generate a list containing the contexts this widget is relevant in.
-//    }
+    // ✅ read alarm data from App Group
+    private func entry() -> FutureAlarmEntry {
+        let userDefaults = UserDefaults(suiteName: "group.com.maniraj48.MyAlarmApp2026")
+        let alarmDate = userDefaults?.object(forKey: "widgetNextAlarmDate") as? Date
+        let alarmLabel = userDefaults?.string(forKey: "widgetNextAlarmLabel") ?? "No Alarm Set"
+        return FutureAlarmEntry(date: Date(), alarmDate: alarmDate, alarmLabel: alarmLabel)
+    }
 }
 
-struct SimpleEntry: TimelineEntry {
-    let date: Date
-    let emoji: String
-}
-
-struct FutureAlarmWidgetEntryView : View {
-    var entry: Provider.Entry
+// MARK: - Small Widget View
+struct SmallWidgetView: View {
+    let entry: FutureAlarmEntry
 
     var body: some View {
-        VStack {
-            Text("Time:")
-            Text(entry.date, style: .time)
+        ZStack {
+            Color(red: 0.07, green: 0.07, blue: 0.09)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(systemName: "alarm.fill")
+                        .foregroundStyle(.orange)
+                        .font(.system(size: 14, weight: .bold))
+                    Text("Next Alarm")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.orange)
+                }
 
-            Text("Emoji:")
-            Text(entry.emoji)
+                if let alarmDate = entry.alarmDate {
+                    Text(alarmDate.formatted(
+                        Date.FormatStyle()
+                            .hour(.defaultDigits(amPM: .abbreviated))
+                            .minute(.twoDigits)
+                    ))
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+
+                    Text(dayText(for: alarmDate))
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(.gray)
+
+                    Text(entry.alarmLabel)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(.orange.opacity(0.8))
+                        .lineLimit(1)
+                } else {
+                    Text("No Alarm")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(.gray)
+                    Text("Tap to set one")
+                        .font(.system(size: 11, design: .rounded))
+                        .foregroundStyle(.gray.opacity(0.6))
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        }
+    }
+
+    private func dayText(for date: Date) -> String {
+        if Calendar.current.isDateInToday(date) {
+            return "Today"
+        } else if Calendar.current.isDateInTomorrow(date) {
+            return "Tomorrow"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEE, MMM d"
+            return formatter.string(from: date)
         }
     }
 }
 
+// MARK: - Medium Widget View
+struct MediumWidgetView: View {
+    let entry: FutureAlarmEntry
+
+    var body: some View {
+        ZStack {
+            Color(red: 0.07, green: 0.07, blue: 0.09)
+            HStack(spacing: 0) {
+                // left side
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "alarm.fill")
+                            .foregroundStyle(.orange)
+                            .font(.system(size: 14, weight: .bold))
+                        Text("Future Alarm")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.orange)
+                    }
+
+                    if let alarmDate = entry.alarmDate {
+                        Text(alarmDate.formatted(
+                            Date.FormatStyle()
+                                .hour(.defaultDigits(amPM: .abbreviated))
+                                .minute(.twoDigits)
+                        ))
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+
+                        Text(entry.alarmLabel)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.8))
+                            .lineLimit(1)
+                    } else {
+                        Text("No Alarm")
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .foregroundStyle(.gray)
+                        Text("Tap to set one")
+                            .font(.system(size: 12, design: .rounded))
+                            .foregroundStyle(.gray.opacity(0.6))
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                // right side
+                if let alarmDate = entry.alarmDate {
+                    VStack(alignment: .trailing, spacing: 6) {
+                        Text(dayText(for: alarmDate))
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.orange)
+                        Text(hoursAway(for: alarmDate))
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundStyle(.gray)
+                            .multilineTextAlignment(.trailing)
+                    }
+                    .frame(width: 100, alignment: .trailing)
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        }
+    }
+
+    private func dayText(for date: Date) -> String {
+        if Calendar.current.isDateInToday(date) {
+            return "Today"
+        } else if Calendar.current.isDateInTomorrow(date) {
+            return "Tomorrow"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEE, MMM d"
+            return formatter.string(from: date)
+        }
+    }
+
+    // ✅ shows how many hours away alarm is
+    private func hoursAway(for date: Date) -> String {
+        let diff = date.timeIntervalSince(Date())
+        if diff <= 0 { return "Now!" }
+        let hours = Int(diff / 3600)
+        let minutes = Int((diff.truncatingRemainder(dividingBy: 3600)) / 60)
+        if hours == 0 {
+            return "in \(minutes)m"
+        } else if minutes == 0 {
+            return "in \(hours)h"
+        } else {
+            return "in \(hours)h \(minutes)m"
+        }
+    }
+}
+
+// MARK: - Widget Entry View
+struct FutureAlarmWidgetEntryView: View {
+    @Environment(\.widgetFamily) var family
+    let entry: FutureAlarmEntry
+
+    var body: some View {
+        switch family {
+        case .systemSmall:
+            SmallWidgetView(entry: entry)
+        case .systemMedium:
+            MediumWidgetView(entry: entry)
+        default:
+            SmallWidgetView(entry: entry)
+        }
+    }
+}
+
+// MARK: - Widget
 struct FutureAlarmWidget: Widget {
     let kind: String = "FutureAlarmWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: Provider()) { entry in
-            if #available(iOS 17.0, *) {
-                FutureAlarmWidgetEntryView(entry: entry)
-                    .containerBackground(.fill.tertiary, for: .widget)
-            } else {
-                FutureAlarmWidgetEntryView(entry: entry)
-                    .padding()
-                    .background()
-            }
+        StaticConfiguration(kind: kind, provider: FutureAlarmProvider()) { entry in
+            FutureAlarmWidgetEntryView(entry: entry)
+                .containerBackground(Color(red: 0.07, green: 0.07, blue: 0.09), for: .widget)
         }
-        .configurationDisplayName("My Widget")
-        .description("This is an example widget.")
+        .configurationDisplayName("Future Alarm")
+        .description("See your next alarm at a glance.")
+        .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
 
+// MARK: - Preview
 #Preview(as: .systemSmall) {
     FutureAlarmWidget()
 } timeline: {
-    SimpleEntry(date: .now, emoji: "😀")
-    SimpleEntry(date: .now, emoji: "🤩")
+    FutureAlarmEntry(date: .now, alarmDate: Date().addingTimeInterval(3600), alarmLabel: "Morning Coffee")
+    FutureAlarmEntry(date: .now, alarmDate: nil, alarmLabel: "No Alarm Set")
+}
+
+#Preview(as: .systemMedium) {
+    FutureAlarmWidget()
+} timeline: {
+    FutureAlarmEntry(date: .now, alarmDate: Date().addingTimeInterval(3600), alarmLabel: "Morning Coffee")
+    FutureAlarmEntry(date: .now, alarmDate: nil, alarmLabel: "No Alarm Set")
 }
