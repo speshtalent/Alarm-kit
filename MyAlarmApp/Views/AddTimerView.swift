@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AddTimerView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @State private var minutes: Int = 5
     @State private var seconds: Int = 0
     @State private var title: String = "Timer"
@@ -17,29 +18,30 @@ struct AddTimerView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.07, green: 0.07, blue: 0.09).ignoresSafeArea()
+            // ✅ UPDATED — dynamic background
+            Color("AppBackground").ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: 24) {
                     // Handle
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(Color(white: 0.3))
+                        .fill(Color("SecondaryText").opacity(0.4))
                         .frame(width: 40, height: 5)
                         .padding(.top, 12)
 
                     Text("New Timer")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        // ✅ UPDATED — dynamic text
+                        .foregroundStyle(Color("PrimaryText"))
 
-                    // Time Picker
+                    // ✅ UPDATED — Time Picker card
                     ZStack {
                         RoundedRectangle(cornerRadius: 20)
-                            .fill(Color(white: 0.13))
+                            .fill(Color("CardBackground"))
                         HStack(spacing: 0) {
                             Picker("Minutes", selection: $minutes) {
                                 ForEach(0...179, id: \.self) { m in
                                     Text("\(m) min").tag(m)
-                                        .foregroundStyle(.white)
                                 }
                             }
                             .pickerStyle(.wheel)
@@ -48,25 +50,26 @@ struct AddTimerView: View {
                             Picker("Seconds", selection: $seconds) {
                                 ForEach(0...59, id: \.self) { s in
                                     Text("\(s) sec").tag(s)
-                                        .foregroundStyle(.white)
                                 }
                             }
                             .pickerStyle(.wheel)
                             .frame(maxWidth: .infinity)
                         }
-                        .colorScheme(.dark)
+                        // ✅ UPDATED — follows system color scheme
+                        .colorScheme(colorScheme)
                         .padding(8)
                     }
                     .padding(.horizontal, 20)
 
-                    // Title Field
+                    // ✅ UPDATED — Title Field card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(white: 0.13))
+                            .fill(Color("CardBackground"))
                         HStack {
                             Image(systemName: "tag").foregroundStyle(.orange)
                             TextField("Timer title", text: $title)
-                                .foregroundStyle(.white)
+                                // ✅ UPDATED — dynamic text
+                                .foregroundStyle(Color("PrimaryText"))
                                 .tint(.orange)
                         }
                         .padding(16)
@@ -74,19 +77,20 @@ struct AddTimerView: View {
                     .frame(height: 54)
                     .padding(.horizontal, 20)
 
-                    // Sound Picker
+                    // ✅ UPDATED — Sound Picker card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(white: 0.13))
+                            .fill(Color("CardBackground"))
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Image(systemName: "bell.fill")
                                     .foregroundStyle(.orange)
                                 Text("Sound")
                                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(.white)
+                                    // ✅ UPDATED — dynamic text
+                                    .foregroundStyle(Color("PrimaryText"))
                             }
-                            Divider().background(Color(white: 0.25))
+                            Divider()
                             ForEach(sounds, id: \.file) { sound in
                                 Button {
                                     selectedSound = sound.file
@@ -94,7 +98,8 @@ struct AddTimerView: View {
                                     HStack {
                                         Text(sound.name)
                                             .font(.system(size: 15, weight: .medium, design: .rounded))
-                                            .foregroundStyle(.white)
+                                            // ✅ UPDATED — dynamic text
+                                            .foregroundStyle(Color("PrimaryText"))
                                         Spacer()
                                         if selectedSound == sound.file {
                                             Image(systemName: "checkmark.circle.fill")

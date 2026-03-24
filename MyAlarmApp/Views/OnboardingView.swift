@@ -113,6 +113,8 @@ struct OnboardingView: View {
                 .padding(.bottom, 36)
             }
         }
+        // ✅ ADDED — force dark mode for onboarding always
+        .preferredColorScheme(.dark)
     }
  
     func navigate(to page: Int) {

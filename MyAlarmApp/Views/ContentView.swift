@@ -32,7 +32,8 @@ struct ContentView: View {
             .onAppear {
                 let appearance = UITabBarAppearance()
                 appearance.configureWithOpaqueBackground()
-                appearance.backgroundColor = UIColor(red: 0.07, green: 0.07, blue: 0.09, alpha: 1)
+                // ✅ UPDATED — dynamic tab bar color
+                appearance.backgroundColor = UIColor(named: "AppBackground")
                 UITabBar.appearance().standardAppearance = appearance
                 UITabBar.appearance().scrollEdgeAppearance = appearance
             }
@@ -51,7 +52,8 @@ struct ContentView: View {
 
     var alarmsTimersTab: some View {
         ZStack {
-            Color(red: 0.07, green: 0.07, blue: 0.09)
+            // ✅ UPDATED — dynamic background
+            Color("AppBackground")
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -59,7 +61,8 @@ struct ContentView: View {
                 HStack {
                     Text(mode == .alarms ? "Alarms" : "Timers")
                         .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        // ✅ UPDATED — dynamic text
+                        .foregroundStyle(Color("PrimaryText"))
                     Spacer()
                     Button {
                         mode == .alarms ? (showAddAlarm = true) : (showAddTimer = true)
@@ -83,7 +86,7 @@ struct ContentView: View {
                         } label: {
                             Text(m == .alarms ? "Alarms" : "Timers")
                                 .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                .foregroundStyle(mode == m ? .black : .gray)
+                                .foregroundStyle(mode == m ? .black : Color("SecondaryText"))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
                                 .background(mode == m ? .orange : .clear)
@@ -92,7 +95,8 @@ struct ContentView: View {
                     }
                 }
                 .padding(4)
-                .background(Color(white: 0.15))
+                // ✅ UPDATED — dynamic segment background
+                .background(Color("CardBackground"))
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
@@ -101,22 +105,22 @@ struct ContentView: View {
                     if mode == .alarms {
                         if alarmService.alarms.isEmpty {
                             emptyState(icon: "alarm", text: "No alarms yet")
-                                .listRowBackground(Color(red: 0.07, green: 0.07, blue: 0.09))
+                                // ✅ UPDATED — dynamic list background
+                                .listRowBackground(Color("AppBackground"))
                                 .listRowSeparator(.hidden)
                         } else {
                             ForEach(alarmService.alarms) { item in
                                 AlarmRow(item: item) {
-                                    // ✅ ADDED — haptic on toggle
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                     alarmService.toggleAlarm(id: item.id)
                                 }
-                                .listRowBackground(Color(red: 0.07, green: 0.07, blue: 0.09))
+                                // ✅ UPDATED — dynamic list background
+                                .listRowBackground(Color("AppBackground"))
                                 .listRowSeparator(.hidden)
                                 .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
                                 .swipeActions(edge: .leading) {}
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                     Button(role: .destructive) {
-                                        // ✅ ADDED — haptic on delete
                                         UINotificationFeedbackGenerator().notificationOccurred(.warning)
                                         alarmService.cancelAlarm(id: item.id)
                                     } label: {
@@ -136,7 +140,6 @@ struct ContentView: View {
                                         Label("Edit", systemImage: "pencil")
                                     }
                                     Button(role: .destructive) {
-                                        // ✅ ADDED — haptic on delete from context menu
                                         UINotificationFeedbackGenerator().notificationOccurred(.warning)
                                         alarmService.cancelAlarm(id: item.id)
                                     } label: {
@@ -148,18 +151,17 @@ struct ContentView: View {
                     } else {
                         if timerService.timers.isEmpty {
                             emptyState(icon: "timer", text: "No timers yet")
-                                .listRowBackground(Color(red: 0.07, green: 0.07, blue: 0.09))
+                                .listRowBackground(Color("AppBackground"))
                                 .listRowSeparator(.hidden)
                         } else {
                             ForEach(timerService.timers) { timer in
                                 TimerRow(timer: timer)
-                                    .listRowBackground(Color(red: 0.07, green: 0.07, blue: 0.09))
+                                    .listRowBackground(Color("AppBackground"))
                                     .listRowSeparator(.hidden)
                                     .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
                                     .swipeActions(edge: .leading) {}
                                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                         Button(role: .destructive) {
-                                            // ✅ ADDED — haptic on timer delete
                                             UINotificationFeedbackGenerator().notificationOccurred(.warning)
                                             timerService.cancelTimer(id: timer.id)
                                         } label: {
@@ -179,7 +181,8 @@ struct ContentView: View {
                     }
                 }
                 .listStyle(.plain)
-                .background(Color(red: 0.07, green: 0.07, blue: 0.09))
+                // ✅ UPDATED — dynamic list background
+                .background(Color("AppBackground"))
                 .scrollContentBackground(.hidden)
             }
         }
@@ -259,7 +262,8 @@ struct ContentView: View {
                 .foregroundStyle(.orange.opacity(0.4))
             Text(text)
                 .font(.system(size: 16, weight: .medium, design: .rounded))
-                .foregroundStyle(.gray)
+                // ✅ UPDATED — dynamic text
+                .foregroundStyle(Color("SecondaryText"))
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 80)
@@ -284,14 +288,15 @@ struct AlarmRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.label)
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundStyle(item.isEnabled ? .white : .gray)
+                    // ✅ UPDATED — dynamic text
+                    .foregroundStyle(item.isEnabled ? Color("PrimaryText") : Color("SecondaryText"))
                 Text(item.fireDate.flatMap { date -> String? in
                     let formatter = DateFormatter()
                     formatter.dateFormat = "EEE h:mm a"
                     return formatter.string(from: date)
                 } ?? item.id.uuidString.prefix(8).uppercased())
                 .font(.system(size: 12, weight: .medium, design: .monospaced))
-                .foregroundStyle(.gray)
+                .foregroundStyle(Color("SecondaryText"))
             }
             Spacer()
             Toggle("", isOn: Binding(
@@ -302,7 +307,8 @@ struct AlarmRow: View {
             .labelsHidden()
         }
         .padding(16)
-        .background(Color(white: 0.13))
+        // ✅ UPDATED — dynamic card background
+        .background(Color("CardBackground"))
         .clipShape(RoundedRectangle(cornerRadius: 18))
         .opacity(item.isEnabled ? 1.0 : 0.6)
     }
@@ -338,15 +344,18 @@ struct TimerRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(durationText)
                     .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    // ✅ UPDATED — dynamic text
+                    .foregroundStyle(Color("PrimaryText"))
                 Text("Timer")
                     .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(.gray)
+                    // ✅ UPDATED — dynamic text
+                    .foregroundStyle(Color("SecondaryText"))
             }
             Spacer()
         }
         .padding(16)
-        .background(Color(white: 0.13))
+        // ✅ UPDATED — dynamic card background
+        .background(Color("CardBackground"))
         .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 }

@@ -3,6 +3,7 @@ import AVFoundation
 
 struct AddAlarmView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var selectedHour: Int
     @State private var selectedMinute: Int
@@ -27,7 +28,14 @@ struct AddAlarmView: View {
     let sounds: [(name: String, file: String)] = [
         (name: "Nokia", file: "nokia.caf"),
         (name: "1985 Ring", file: "1985_ring2.caf"),
-        (name: "Sony", file: "sony.caf")
+        (name: "Sony", file: "sony.caf"),
+        (name: "bells", file: "bells.caf"),
+        (name: "bird-sound", file: "bird-sound.caf"),
+        (name: "childhood", file: "childhood.caf"),
+        (name: "morning-birds", file: "morning-birds.caf"),
+        (name: "pure", file: "pure.caf"),
+        (name: "rings", file: "rings.caf"),
+        (name: "soft", file: "soft.caf")
     ]
 
     var onSave: (Date, String, Bool, TimeInterval, String) -> Void
@@ -111,30 +119,33 @@ struct AddAlarmView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.07, green: 0.07, blue: 0.09).ignoresSafeArea()
+            // ✅ UPDATED — dynamic background
+            Color("AppBackground").ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 20) {
 
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(Color(white: 0.3))
+                        .fill(Color("SecondaryText").opacity(0.4))
                         .frame(width: 40, height: 5)
                         .padding(.top, 12)
 
                     Text(isEditing ? "Edit Alarm" : "New Alarm")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        // ✅ UPDATED
+                        .foregroundStyle(Color("PrimaryText"))
 
                     Text("Rings at \(fireDate.formatted(date: useSpecificDate ? .abbreviated : .omitted, time: .shortened))")
                         .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(.orange)
 
+                    // ✅ UPDATED — Set specific date card
                     ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(Color(white: 0.13))
+                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                         HStack {
                             Image(systemName: "calendar").foregroundStyle(.orange)
                             Text("Set specific date")
                                 .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Color("PrimaryText"))
                             Spacer()
                             Toggle("", isOn: $useSpecificDate).tint(.orange)
                         }
@@ -142,62 +153,65 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
+                    // ✅ UPDATED — Picker card
                     ZStack {
-                        RoundedRectangle(cornerRadius: 20).fill(Color(white: 0.13))
+                        RoundedRectangle(cornerRadius: 20).fill(Color("CardBackground"))
                         if useSpecificDate {
                             DatePicker("", selection: $selectedDate,
                                 in: Date().addingTimeInterval(60)...,
                                 displayedComponents: [.date, .hourAndMinute])
                             .datePickerStyle(.wheel)
                             .labelsHidden()
-                            .colorScheme(.dark)
+                            .colorScheme(colorScheme)
                             .padding(8)
                         } else {
                             HStack(spacing: 0) {
                                 Picker("Hour", selection: $selectedHour) {
                                     ForEach(1...12, id: \.self) { h in
-                                        Text(String(format: "%d", h)).tag(h).foregroundStyle(.white)
+                                        Text(String(format: "%d", h)).tag(h)
                                     }
                                 }
                                 .pickerStyle(.wheel).frame(maxWidth: .infinity)
                                 Text(":").font(.system(size: 24, weight: .bold)).foregroundStyle(.orange)
                                 Picker("Minute", selection: $selectedMinute) {
                                     ForEach(0...59, id: \.self) { m in
-                                        Text(String(format: "%02d", m)).tag(m).foregroundStyle(.white)
+                                        Text(String(format: "%02d", m)).tag(m)
                                     }
                                 }
                                 .pickerStyle(.wheel).frame(maxWidth: .infinity)
                                 Picker("AM/PM", selection: $selectedAMPM) {
-                                    Text("AM").tag(0).foregroundStyle(.white)
-                                    Text("PM").tag(1).foregroundStyle(.white)
+                                    Text("AM").tag(0)
+                                    Text("PM").tag(1)
                                 }
                                 .pickerStyle(.wheel).frame(maxWidth: 70)
                             }
-                            .colorScheme(.dark).padding(8)
+                            .colorScheme(colorScheme).padding(8)
                         }
                     }
                     .padding(.horizontal, 20)
 
+                    // ✅ UPDATED — Title card
                     ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(Color(white: 0.13))
+                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                         HStack {
                             Image(systemName: "tag").foregroundStyle(.orange)
                             TextField("Alarm title", text: $title)
-                                .foregroundStyle(.white).tint(.orange)
+                                .foregroundStyle(Color("PrimaryText")).tint(.orange)
                         }
                         .padding(16)
                     }
                     .frame(height: 54)
                     .padding(.horizontal, 20)
 
+                    // ✅ UPDATED — Voice card
                     ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(Color(white: 0.13))
+                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Image(systemName: "mic.fill").foregroundStyle(.orange)
                                 Text("Voice Message")
                                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(Color("PrimaryText"))
                                 Spacer()
                                 if hasRecording {
                                     Text("Recorded ✓")
@@ -205,9 +219,10 @@ struct AddAlarmView: View {
                                         .foregroundStyle(.green)
                                 }
                             }
-                            Divider().background(Color(white: 0.25))
+                            Divider()
                             Text("Record your voice — it will play when alarm fires")
-                                .font(.system(size: 12, design: .rounded)).foregroundStyle(.gray)
+                                .font(.system(size: 12, design: .rounded))
+                                .foregroundStyle(Color("SecondaryText"))
                             Button { isRecording ? stopRecording() : startRecording() } label: {
                                 HStack {
                                     Image(systemName: isRecording ? "stop.circle.fill" : "mic.circle.fill")
@@ -221,13 +236,14 @@ struct AddAlarmView: View {
                             }
                             if isJustRecorded {
                                 VStack(alignment: .leading, spacing: 10) {
-                                    Divider().background(Color(white: 0.25))
+                                    Divider()
                                     HStack {
                                         Image(systemName: "pencil").foregroundStyle(.orange)
                                         TextField("Name your recording...", text: $recordingName)
-                                            .foregroundStyle(.white).tint(.orange)
+                                            .foregroundStyle(Color("PrimaryText")).tint(.orange)
                                     }
-                                    .padding(10).background(Color(white: 0.2))
+                                    .padding(10)
+                                    .background(Color("AppBackground"))
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
                                     HStack(spacing: 12) {
                                         Button { playRecording() } label: {
@@ -235,8 +251,10 @@ struct AddAlarmView: View {
                                                 Image(systemName: "play.circle.fill")
                                                 Text("Preview").font(.system(size: 14, weight: .semibold, design: .rounded))
                                             }
-                                            .foregroundStyle(.white).padding(.horizontal, 16).padding(.vertical, 10)
-                                            .background(Color(white: 0.25)).clipShape(RoundedRectangle(cornerRadius: 12))
+                                            .foregroundStyle(Color("PrimaryText"))
+                                            .padding(.horizontal, 16).padding(.vertical, 10)
+                                            .background(Color("AppBackground"))
+                                            .clipShape(RoundedRectangle(cornerRadius: 12))
                                         }
                                         Button { saveRecordingWithName() } label: {
                                             HStack {
@@ -257,7 +275,8 @@ struct AddAlarmView: View {
                                 HStack {
                                     Image(systemName: "waveform").foregroundStyle(.orange)
                                     Text(recordingName.isEmpty ? "Voice Recording" : recordingName)
-                                        .font(.system(size: 14, weight: .medium, design: .rounded)).foregroundStyle(.white)
+                                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                                        .foregroundStyle(Color("PrimaryText"))
                                     Spacer()
                                     Button { playRecording() } label: {
                                         Image(systemName: "play.circle.fill")
@@ -272,10 +291,14 @@ struct AddAlarmView: View {
                                         }
                                         UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
                                     } label: {
-                                        Text("Re-record").font(.system(size: 12, weight: .medium, design: .rounded)).foregroundStyle(.orange)
+                                        Text("Re-record")
+                                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                                            .foregroundStyle(.orange)
                                     }
                                 }
-                                .padding(10).background(Color(white: 0.2)).clipShape(RoundedRectangle(cornerRadius: 10))
+                                .padding(10)
+                                .background(Color("AppBackground"))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
                                 .transition(.move(edge: .top).combined(with: .opacity))
                             }
                         }
@@ -285,47 +308,66 @@ struct AddAlarmView: View {
                     .animation(.easeInOut(duration: 0.3), value: isJustRecorded)
                     .animation(.easeInOut(duration: 0.3), value: hasRecording)
 
+                    // ✅ UPDATED — Sound card
                     ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(Color(white: 0.13))
+                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Image(systemName: "bell.fill").foregroundStyle(.orange)
-                                Text("Sound").font(.system(size: 16, weight: .semibold, design: .rounded)).foregroundStyle(.white)
+                                Text("Sound")
+                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(Color("PrimaryText"))
                             }
-                            Divider().background(Color(white: 0.25))
-                            ForEach(sounds, id: \.file) { sound in
-                                Button { selectedSound = sound.file } label: {
-                                    HStack {
-                                        Text(sound.name).font(.system(size: 15, weight: .medium, design: .rounded)).foregroundStyle(.white)
-                                        Spacer()
-                                        if selectedSound == sound.file {
-                                            Image(systemName: "checkmark.circle.fill").foregroundStyle(.orange)
+                            Divider()
+                            // ✅ UPDATED — scrollable sound list
+                            ScrollView {
+                                VStack(spacing: 0) {
+                                    ForEach(sounds, id: \.file) { sound in
+                                        Button { selectedSound = sound.file } label: {
+                                            HStack {
+                                                Text(sound.name)
+                                                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                                                    .foregroundStyle(Color("PrimaryText"))
+                                                Spacer()
+                                                if selectedSound == sound.file {
+                                                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.orange)
+                                                }
+                                            }
+                                            .padding(.vertical, 10)
                                         }
+                                        Divider()
                                     }
-                                    .padding(.vertical, 6)
                                 }
                             }
+                            // ✅ ADDED — fixed height so it doesn't take full screen
+                            .frame(height: 180)
                         }
                         .padding(16)
                     }
                     .padding(.horizontal, 20)
 
+                    // ✅ UPDATED — Snooze card
                     ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(Color(white: 0.13))
+                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                         VStack(spacing: 12) {
                             HStack {
                                 Image(systemName: "moon.zzz.fill").foregroundStyle(.orange)
-                                Text("Snooze").font(.system(size: 16, weight: .semibold, design: .rounded)).foregroundStyle(.white)
+                                Text("Snooze")
+                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(Color("PrimaryText"))
                                 Spacer()
                                 Toggle("", isOn: $snoozeEnabled).tint(.orange)
                             }
                             if snoozeEnabled {
-                                Divider().background(Color(white: 0.25))
+                                Divider()
                                 HStack {
-                                    Text("Duration").font(.system(size: 14, design: .rounded)).foregroundStyle(.gray)
+                                    Text("Duration")
+                                        .font(.system(size: 14, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
                                     Spacer()
                                     Stepper("\(snoozeDuration) min", value: $snoozeDuration, in: 1...30)
-                                        .foregroundStyle(.white).font(.system(size: 14, weight: .medium, design: .rounded))
+                                        .foregroundStyle(Color("PrimaryText"))
+                                        .font(.system(size: 14, weight: .medium, design: .rounded))
                                 }
                             }
                         }
@@ -333,11 +375,14 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
+                    // ✅ UPDATED — Calendar card
                     ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(Color(white: 0.13))
+                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                         HStack {
                             Image(systemName: "calendar.badge.plus").foregroundStyle(.orange)
-                            Text("Add to Calendar").font(.system(size: 16, weight: .semibold, design: .rounded)).foregroundStyle(.white)
+                            Text("Add to Calendar")
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color("PrimaryText"))
                             Spacer()
                             Toggle("", isOn: $addToCalendar).tint(.orange)
                         }
@@ -346,9 +391,7 @@ struct AddAlarmView: View {
                     .padding(.horizontal, 20)
 
                     Button {
-                        // ✅ ADDED — haptic on set alarm
                         UINotificationFeedbackGenerator().notificationOccurred(.success)
-
                         let savedDate = fireDate
                         let savedTitle = title
                         let savedRecordingName = recordingName

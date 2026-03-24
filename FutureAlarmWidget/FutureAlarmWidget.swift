@@ -25,13 +25,11 @@ struct FutureAlarmProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<FutureAlarmEntry>) -> Void) {
         let entry = entry()
-        // ✅ refresh widget every 15 minutes
         let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date()
         let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
         completion(timeline)
     }
 
-    // ✅ read alarm data from App Group
     private func entry() -> FutureAlarmEntry {
         let userDefaults = UserDefaults(suiteName: "group.com.maniraj48.MyAlarmApp2026")
         let alarmDate = userDefaults?.object(forKey: "widgetNextAlarmDate") as? Date
@@ -43,10 +41,13 @@ struct FutureAlarmProvider: TimelineProvider {
 // MARK: - Small Widget View
 struct SmallWidgetView: View {
     let entry: FutureAlarmEntry
+    // ✅ ADDED — detect system color scheme
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         ZStack {
-            Color(red: 0.07, green: 0.07, blue: 0.09)
+            // ✅ UPDATED — dynamic background
+            Color("AppBackground")
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                     Image(systemName: "alarm.fill")
@@ -64,11 +65,13 @@ struct SmallWidgetView: View {
                             .minute(.twoDigits)
                     ))
                     .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    // ✅ UPDATED — dynamic text
+                    .foregroundStyle(Color("PrimaryText"))
 
                     Text(dayText(for: alarmDate))
                         .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundStyle(.gray)
+                        // ✅ UPDATED — dynamic text
+                        .foregroundStyle(Color("SecondaryText"))
 
                     Text(entry.alarmLabel)
                         .font(.system(size: 11, weight: .medium, design: .rounded))
@@ -77,10 +80,11 @@ struct SmallWidgetView: View {
                 } else {
                     Text("No Alarm")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(.gray)
+                        // ✅ UPDATED — dynamic text
+                        .foregroundStyle(Color("SecondaryText"))
                     Text("Tap to set one")
                         .font(.system(size: 11, design: .rounded))
-                        .foregroundStyle(.gray.opacity(0.6))
+                        .foregroundStyle(Color("SecondaryText").opacity(0.6))
                 }
             }
             .padding(14)
@@ -104,12 +108,14 @@ struct SmallWidgetView: View {
 // MARK: - Medium Widget View
 struct MediumWidgetView: View {
     let entry: FutureAlarmEntry
+    // ✅ ADDED — detect system color scheme
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         ZStack {
-            Color(red: 0.07, green: 0.07, blue: 0.09)
+            // ✅ UPDATED — dynamic background
+            Color("AppBackground")
             HStack(spacing: 0) {
-                // left side
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 6) {
                         Image(systemName: "alarm.fill")
@@ -127,24 +133,26 @@ struct MediumWidgetView: View {
                                 .minute(.twoDigits)
                         ))
                         .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        // ✅ UPDATED — dynamic text
+                        .foregroundStyle(Color("PrimaryText"))
 
                         Text(entry.alarmLabel)
                             .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.8))
+                            // ✅ UPDATED — dynamic text
+                            .foregroundStyle(Color("PrimaryText").opacity(0.8))
                             .lineLimit(1)
                     } else {
                         Text("No Alarm")
                             .font(.system(size: 24, weight: .bold, design: .rounded))
-                            .foregroundStyle(.gray)
+                            // ✅ UPDATED — dynamic text
+                            .foregroundStyle(Color("SecondaryText"))
                         Text("Tap to set one")
                             .font(.system(size: 12, design: .rounded))
-                            .foregroundStyle(.gray.opacity(0.6))
+                            .foregroundStyle(Color("SecondaryText").opacity(0.6))
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                // right side
                 if let alarmDate = entry.alarmDate {
                     VStack(alignment: .trailing, spacing: 6) {
                         Text(dayText(for: alarmDate))
@@ -152,7 +160,8 @@ struct MediumWidgetView: View {
                             .foregroundStyle(.orange)
                         Text(hoursAway(for: alarmDate))
                             .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundStyle(.gray)
+                            // ✅ UPDATED — dynamic text
+                            .foregroundStyle(Color("SecondaryText"))
                             .multilineTextAlignment(.trailing)
                     }
                     .frame(width: 100, alignment: .trailing)
@@ -175,7 +184,6 @@ struct MediumWidgetView: View {
         }
     }
 
-    // ✅ shows how many hours away alarm is
     private func hoursAway(for date: Date) -> String {
         let diff = date.timeIntervalSince(Date())
         if diff <= 0 { return "Now!" }
@@ -215,7 +223,8 @@ struct FutureAlarmWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: FutureAlarmProvider()) { entry in
             FutureAlarmWidgetEntryView(entry: entry)
-                .containerBackground(Color(red: 0.07, green: 0.07, blue: 0.09), for: .widget)
+                // ✅ UPDATED — dynamic container background
+                .containerBackground(Color("AppBackground"), for: .widget)
         }
         .configurationDisplayName("Future Alarm")
         .description("See your next alarm at a glance.")

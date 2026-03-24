@@ -70,7 +70,14 @@
 				Models/AlarmMetadata.swift,
 				Services/TimerIntents.swift,
 				sounds/1985_ring2.caf,
+				sounds/bells.caf,
+				"sounds/bird-sound.caf",
+				sounds/childhood.caf,
+				"sounds/morning-birds.caf",
 				sounds/nokia.caf,
+				sounds/pure.caf,
+				sounds/rings.caf,
+				sounds/soft.caf,
 				sounds/sony.caf,
 			);
 			target = AB05AE7F2F50302C009916D8 /* CountdownLiveActivityExtension */;
@@ -86,6 +93,13 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+			);
+			target = AB9FFD352F71E09D00307894 /* FutureAlarmWidgetExtension */;
+		};
+		ABD824F22F7349E20013B9F5 /* Exceptions for "MyAlarmApp" folder in "FutureAlarmWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Assets.xcassets,
 			);
 			target = AB9FFD352F71E09D00307894 /* FutureAlarmWidgetExtension */;
 		};
@@ -105,6 +119,7 @@
 			exceptions = (
 				AB9FCCDA2F4F7AC700410048 /* Exceptions for "MyAlarmApp" folder in "MyAlarmApp" target */,
 				AB05AE9B2F503300009916D8 /* Exceptions for "MyAlarmApp" folder in "CountdownLiveActivityExtension" target */,
+				ABD824F22F7349E20013B9F5 /* Exceptions for "MyAlarmApp" folder in "FutureAlarmWidgetExtension" target */,
 			);
 			path = MyAlarmApp;
 			sourceTree = "<group>";
