@@ -5,10 +5,8 @@ struct CalendarView: View {
     @State private var selectedDate: Date = Date()
     @State private var currentMonth: Date = Date()
     @State private var showAddAlarm = false
-    // ✅ ADDED — view mode switcher
     @State private var viewMode: ViewMode = .monthly
 
-    // ✅ ADDED — view modes
     enum ViewMode: String, CaseIterable {
         case daily = "Day"
         case weekly = "Week"
@@ -50,20 +48,17 @@ struct CalendarView: View {
         return days
     }
 
-    // ✅ ADDED — days for weekly view (7 days from start of selected week)
     private var daysInWeek: [Date] {
         let weekday = calendar.component(.weekday, from: selectedDate) - 1
         guard let weekStart = calendar.date(byAdding: .day, value: -weekday, to: selectedDate) else { return [] }
         return (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: weekStart) }
     }
 
-    // ✅ ADDED — hourly slots for daily view
     private var hoursOfDay: [Date] {
         guard let dayStart = calendar.date(from: calendar.dateComponents([.year, .month, .day], from: selectedDate)) else { return [] }
         return (0..<24).compactMap { calendar.date(byAdding: .hour, value: $0, to: dayStart) }
     }
 
-    // ✅ ADDED — alarms for a specific hour slot
     private func alarmsForHour(_ hour: Date) -> [AlarmService.AlarmListItem] {
         alarmService.alarms.filter { item in
             guard let date = item.fireDate else { return false }
@@ -74,7 +69,8 @@ struct CalendarView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.07, green: 0.07, blue: 0.09)
+            // ✅ UPDATED — dynamic background
+            Color("AppBackground")
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -83,9 +79,9 @@ struct CalendarView: View {
                 HStack {
                     Text("Calendar")
                         .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        // ✅ UPDATED — dynamic text
+                        .foregroundStyle(Color("PrimaryText"))
                     Spacer()
-                    // ✅ ADDED — Add alarm button in header
                     Button {
                         showAddAlarm = true
                     } label: {
@@ -101,7 +97,7 @@ struct CalendarView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 12)
 
-                // ✅ ADDED — View mode switcher (Day / Week / Month)
+                // ✅ UPDATED — dynamic segment background
                 HStack(spacing: 0) {
                     ForEach(ViewMode.allCases, id: \.self) { mode in
                         Button {
@@ -109,7 +105,7 @@ struct CalendarView: View {
                         } label: {
                             Text(mode.rawValue)
                                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                .foregroundStyle(viewMode == mode ? .black : .gray)
+                                .foregroundStyle(viewMode == mode ? .black : Color("SecondaryText"))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 9)
                                 .background(viewMode == mode ? Color.orange : Color.clear)
@@ -118,12 +114,12 @@ struct CalendarView: View {
                     }
                 }
                 .padding(4)
-                .background(Color(white: 0.15))
+                // ✅ UPDATED — dynamic segment background
+                .background(Color("CardBackground"))
                 .clipShape(RoundedRectangle(cornerRadius: 15))
                 .padding(.horizontal, 20)
                 .padding(.bottom, 16)
 
-                // ✅ UPDATED — swipe left/right to switch between Day/Week/Month
                 Group {
                     switch viewMode {
                     case .monthly: monthlyView
@@ -135,7 +131,6 @@ struct CalendarView: View {
                     DragGesture(minimumDistance: 50)
                         .onEnded { value in
                             if value.translation.width < -50 {
-                                // ✅ swipe left → next mode
                                 withAnimation(.spring(response: 0.3)) {
                                     switch viewMode {
                                     case .daily: viewMode = .weekly
@@ -144,7 +139,6 @@ struct CalendarView: View {
                                     }
                                 }
                             } else if value.translation.width > 50 {
-                                // ✅ swipe right → previous mode
                                 withAnimation(.spring(response: 0.3)) {
                                     switch viewMode {
                                     case .daily: viewMode = .monthly
@@ -160,7 +154,6 @@ struct CalendarView: View {
         .onAppear {
             alarmService.loadAlarms()
         }
-        // ✅ ADDED — sheet to add alarm for selected date
         .sheet(isPresented: $showAddAlarm, onDismiss: {
             alarmService.loadAlarms()
         }) {
@@ -179,10 +172,9 @@ struct CalendarView: View {
         }
     }
 
-    // MARK: - Monthly View (existing, unchanged)
+    // MARK: - Monthly View
     var monthlyView: some View {
         VStack(spacing: 0) {
-            // Month Navigation
             HStack {
                 Button {
                     withAnimation {
@@ -196,7 +188,8 @@ struct CalendarView: View {
                 Spacer()
                 Text(currentMonth.formatted(.dateTime.month(.wide).year()))
                     .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    // ✅ UPDATED
+                    .foregroundStyle(Color("PrimaryText"))
                 Spacer()
                 Button {
                     withAnimation {
@@ -211,19 +204,17 @@ struct CalendarView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
 
-            // Weekday Headers
             HStack(spacing: 0) {
                 ForEach(weekdays, id: \.self) { day in
                     Text(day)
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.gray)
+                        .foregroundStyle(Color("SecondaryText"))
                         .frame(maxWidth: .infinity)
                 }
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 8)
 
-            // Calendar Grid
             LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(0..<daysInMonth.count, id: \.self) { index in
                     if let date = daysInMonth[index] {
@@ -236,14 +227,13 @@ struct CalendarView: View {
             .padding(.horizontal, 12)
             .padding(.bottom, 20)
 
-            // Alarms for selected date + Add button
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text(selectedDate.formatted(.dateTime.weekday(.wide).month().day()))
                         .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        // ✅ UPDATED
+                        .foregroundStyle(Color("PrimaryText"))
                     Spacer()
-                    // ✅ ADDED — add alarm for selected date
                     Button {
                         showAddAlarm = true
                     } label: {
@@ -264,7 +254,8 @@ struct CalendarView: View {
                 if alarmsForSelectedDate.isEmpty {
                     Text("No alarms on this day")
                         .font(.system(size: 15, weight: .medium, design: .rounded))
-                        .foregroundStyle(.gray)
+                        // ✅ UPDATED
+                        .foregroundStyle(Color("SecondaryText"))
                         .frame(maxWidth: .infinity)
                         .padding(.top, 20)
                 } else {
@@ -282,10 +273,9 @@ struct CalendarView: View {
         }
     }
 
-    // ✅ ADDED — Weekly View
+    // MARK: - Weekly View
     var weeklyView: some View {
         VStack(spacing: 0) {
-            // Week navigation
             HStack {
                 Button {
                     withAnimation {
@@ -299,7 +289,8 @@ struct CalendarView: View {
                 Spacer()
                 Text(weekRangeTitle)
                     .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    // ✅ UPDATED
+                    .foregroundStyle(Color("PrimaryText"))
                 Spacer()
                 Button {
                     withAnimation {
@@ -314,7 +305,6 @@ struct CalendarView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
 
-            // Days of week row
             HStack(spacing: 0) {
                 ForEach(daysInWeek, id: \.self) { date in
                     let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
@@ -332,10 +322,11 @@ struct CalendarView: View {
                         VStack(spacing: 4) {
                             Text(date.formatted(.dateTime.weekday(.narrow)))
                                 .font(.system(size: 11, weight: .medium, design: .rounded))
-                                .foregroundStyle(isSelected ? .orange : .gray)
+                                .foregroundStyle(isSelected ? .orange : Color("SecondaryText"))
                             Text("\(calendar.component(.day, from: date))")
                                 .font(.system(size: 16, weight: isToday ? .bold : .medium, design: .rounded))
-                                .foregroundStyle(isSelected ? .black : isToday ? .orange : .white)
+                                // ✅ UPDATED
+                                .foregroundStyle(isSelected ? .black : isToday ? .orange : Color("PrimaryText"))
                                 .frame(width: 34, height: 34)
                                 .background(isSelected ? Color.orange : Color.clear)
                                 .clipShape(Circle())
@@ -351,14 +342,13 @@ struct CalendarView: View {
             .padding(.bottom, 16)
 
             Divider()
-                .background(Color.white.opacity(0.08))
                 .padding(.bottom, 16)
 
-            // Alarms for selected day + Add button
             HStack {
                 Text(selectedDate.formatted(.dateTime.weekday(.wide).month().day()))
                     .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    // ✅ UPDATED
+                    .foregroundStyle(Color("PrimaryText"))
                 Spacer()
                 Button {
                     showAddAlarm = true
@@ -381,7 +371,8 @@ struct CalendarView: View {
             if alarmsForSelectedDate.isEmpty {
                 Text("No alarms this day")
                     .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundStyle(.gray)
+                    // ✅ UPDATED
+                    .foregroundStyle(Color("SecondaryText"))
                     .frame(maxWidth: .infinity)
                     .padding(.top, 30)
             } else {
@@ -398,10 +389,9 @@ struct CalendarView: View {
         }
     }
 
-    // ✅ ADDED — Daily View with hourly timeline
+    // MARK: - Daily View
     var dailyView: some View {
         VStack(spacing: 0) {
-            // Day navigation
             HStack {
                 Button {
                     withAnimation {
@@ -415,7 +405,8 @@ struct CalendarView: View {
                 Spacer()
                 Text(selectedDate.formatted(.dateTime.weekday(.wide).month().day().year()))
                     .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    // ✅ UPDATED
+                    .foregroundStyle(Color("PrimaryText"))
                 Spacer()
                 Button {
                     withAnimation {
@@ -430,7 +421,6 @@ struct CalendarView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 12)
 
-            // Add alarm for this day
             HStack {
                 Spacer()
                 Button {
@@ -451,29 +441,25 @@ struct CalendarView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 12)
 
-            // Hourly timeline
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(hoursOfDay, id: \.self) { hour in
                         let hourAlarms = alarmsForHour(hour)
                         HStack(alignment: .top, spacing: 12) {
-                            // Hour label
                             Text(hour.formatted(.dateTime.hour()))
                                 .font(.system(size: 12, weight: .medium, design: .monospaced))
-                                .foregroundStyle(.gray)
+                                // ✅ UPDATED
+                                .foregroundStyle(Color("SecondaryText"))
                                 .frame(width: 50, alignment: .trailing)
                                 .padding(.top, 10)
 
-                            // Divider line
                             VStack(spacing: 0) {
                                 Divider()
-                                    .background(Color.white.opacity(0.08))
                                     .padding(.top, 14)
                                 Spacer()
                             }
                             .frame(width: 1, height: hourAlarms.isEmpty ? 44 : CGFloat(44 + hourAlarms.count * 64))
 
-                            // Alarms in this hour slot
                             VStack(spacing: 6) {
                                 if hourAlarms.isEmpty {
                                     Color.clear.frame(height: 44)
@@ -493,7 +479,6 @@ struct CalendarView: View {
         }
     }
 
-    // ✅ ADDED — helper for week range title
     private var weekRangeTitle: String {
         let days = daysInWeek
         guard let first = days.first, let last = days.last else { return "" }
@@ -502,7 +487,6 @@ struct CalendarView: View {
         return "\(f.string(from: first)) – \(f.string(from: last))"
     }
 
-    // MARK: Day Cell (unchanged)
     @ViewBuilder
     func dayCell(date: Date) -> some View {
         let formatter: DateFormatter = {
@@ -523,7 +507,8 @@ struct CalendarView: View {
             VStack(spacing: 4) {
                 Text("\(calendar.component(.day, from: date))")
                     .font(.system(size: 16, weight: isToday ? .bold : .medium, design: .rounded))
-                    .foregroundStyle(isSelected ? .black : isToday ? .orange : .white)
+                    // ✅ UPDATED
+                    .foregroundStyle(isSelected ? .black : isToday ? .orange : Color("PrimaryText"))
                     .frame(width: 36, height: 36)
                     .background(isSelected ? Color.orange : Color.clear)
                     .clipShape(Circle())
@@ -534,7 +519,6 @@ struct CalendarView: View {
         }
     }
 
-    // MARK: Alarm Row (unchanged)
     @ViewBuilder
     func calendarAlarmRow(item: AlarmService.AlarmListItem) -> some View {
         HStack(spacing: 16) {
@@ -549,19 +533,22 @@ struct CalendarView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.label)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
+                    // ✅ UPDATED
+                    .foregroundStyle(Color("PrimaryText"))
                 Text(item.fireDate?.formatted(
                     Date.FormatStyle()
                         .hour(.defaultDigits(amPM: .abbreviated))
                         .minute(.twoDigits)
                 ) ?? "")
                 .font(.system(size: 12, weight: .medium, design: .monospaced))
-                .foregroundStyle(.gray)
+                // ✅ UPDATED
+                .foregroundStyle(Color("SecondaryText"))
             }
             Spacer()
         }
         .padding(14)
-        .background(Color(white: 0.13))
+        // ✅ UPDATED
+        .background(Color("CardBackground"))
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
