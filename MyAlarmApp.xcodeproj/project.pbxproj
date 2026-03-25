@@ -116,16 +116,6 @@
 			path = MyAlarmApp;
 			sourceTree = "<group>";
 		};
-		AB9FFD392F71E09D00307894 /* FutureAlarmWidget */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = FutureAlarmWidget;
-			sourceTree = "<group>";
-		};
-		ABA409512F746C82006867F4 /* FutureAlarmWidget */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = FutureAlarmWidget;
-			sourceTree = "<group>";
-		};
 		ABA409672F746F70006867F4 /* FutureAlarmWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -180,8 +170,6 @@
 				AB9FFD482F71E12500307894 /* FutureAlarmWidgetExtension.entitlements */,
 				AB9FCCC12F4F797000410048 /* MyAlarmApp */,
 				AB05AE862F50302C009916D8 /* CountdownLiveActivity */,
-				AB9FFD392F71E09D00307894 /* FutureAlarmWidget */,
-				ABA409512F746C82006867F4 /* FutureAlarmWidget */,
 				ABA409672F746F70006867F4 /* FutureAlarmWidget */,
 				AB05AE812F50302C009916D8 /* Frameworks */,
 				AB9FCCC02F4F797000410048 /* Products */,
