@@ -10,9 +10,9 @@
 		AB05AE832F50302C009916D8 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AB05AE822F50302C009916D8 /* WidgetKit.framework */; };
 		AB05AE852F50302C009916D8 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AB05AE842F50302C009916D8 /* SwiftUI.framework */; };
 		AB05AE922F50302C009916D8 /* CountdownLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AB05AE802F50302C009916D8 /* CountdownLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		AB9FFD372F71E09D00307894 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AB05AE822F50302C009916D8 /* WidgetKit.framework */; };
-		AB9FFD382F71E09D00307894 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AB05AE842F50302C009916D8 /* SwiftUI.framework */; };
-		AB9FFD432F71E09E00307894 /* FutureAlarmWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AB9FFD362F71E09D00307894 /* FutureAlarmWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		ABA409652F746F70006867F4 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AB05AE822F50302C009916D8 /* WidgetKit.framework */; };
+		ABA409662F746F70006867F4 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AB05AE842F50302C009916D8 /* SwiftUI.framework */; };
+		ABA409712F746F70006867F4 /* FutureAlarmWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = ABA409642F746F70006867F4 /* FutureAlarmWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -23,11 +23,11 @@
 			remoteGlobalIDString = AB05AE7F2F50302C009916D8;
 			remoteInfo = CountdownLiveActivityExtension;
 		};
-		AB9FFD412F71E09E00307894 /* PBXContainerItemProxy */ = {
+		ABA4096F2F746F70006867F4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = AB9FCCB72F4F797000410048 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = AB9FFD352F71E09D00307894;
+			remoteGlobalIDString = ABA409632F746F70006867F4;
 			remoteInfo = FutureAlarmWidgetExtension;
 		};
 /* End PBXContainerItemProxy section */
@@ -39,7 +39,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				AB9FFD432F71E09E00307894 /* FutureAlarmWidgetExtension.appex in Embed Foundation Extensions */,
+				ABA409712F746F70006867F4 /* FutureAlarmWidgetExtension.appex in Embed Foundation Extensions */,
 				AB05AE922F50302C009916D8 /* CountdownLiveActivityExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
@@ -52,8 +52,8 @@
 		AB05AE822F50302C009916D8 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		AB05AE842F50302C009916D8 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		AB9FCCBF2F4F797000410048 /* MyAlarmApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MyAlarmApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		AB9FFD362F71E09D00307894 /* FutureAlarmWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FutureAlarmWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB9FFD482F71E12500307894 /* FutureAlarmWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FutureAlarmWidgetExtension.entitlements; sourceTree = "<group>"; };
+		ABA409642F746F70006867F4 /* FutureAlarmWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FutureAlarmWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -89,19 +89,12 @@
 			);
 			target = AB9FCCBE2F4F797000410048 /* MyAlarmApp */;
 		};
-		AB9FFD472F71E09E00307894 /* Exceptions for "FutureAlarmWidget" folder in "FutureAlarmWidgetExtension" target */ = {
+		ABA409752F746F70006867F4 /* Exceptions for "FutureAlarmWidget" folder in "FutureAlarmWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = AB9FFD352F71E09D00307894 /* FutureAlarmWidgetExtension */;
-		};
-		ABD824F22F7349E20013B9F5 /* Exceptions for "MyAlarmApp" folder in "FutureAlarmWidgetExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Assets.xcassets,
-			);
-			target = AB9FFD352F71E09D00307894 /* FutureAlarmWidgetExtension */;
+			target = ABA409632F746F70006867F4 /* FutureAlarmWidgetExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -119,15 +112,24 @@
 			exceptions = (
 				AB9FCCDA2F4F7AC700410048 /* Exceptions for "MyAlarmApp" folder in "MyAlarmApp" target */,
 				AB05AE9B2F503300009916D8 /* Exceptions for "MyAlarmApp" folder in "CountdownLiveActivityExtension" target */,
-				ABD824F22F7349E20013B9F5 /* Exceptions for "MyAlarmApp" folder in "FutureAlarmWidgetExtension" target */,
 			);
 			path = MyAlarmApp;
 			sourceTree = "<group>";
 		};
 		AB9FFD392F71E09D00307894 /* FutureAlarmWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			path = FutureAlarmWidget;
+			sourceTree = "<group>";
+		};
+		ABA409512F746C82006867F4 /* FutureAlarmWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = FutureAlarmWidget;
+			sourceTree = "<group>";
+		};
+		ABA409672F746F70006867F4 /* FutureAlarmWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				AB9FFD472F71E09E00307894 /* Exceptions for "FutureAlarmWidget" folder in "FutureAlarmWidgetExtension" target */,
+				ABA409752F746F70006867F4 /* Exceptions for "FutureAlarmWidget" folder in "FutureAlarmWidgetExtension" target */,
 			);
 			path = FutureAlarmWidget;
 			sourceTree = "<group>";
@@ -151,12 +153,12 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		AB9FFD332F71E09D00307894 /* Frameworks */ = {
+		ABA409612F746F70006867F4 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AB9FFD382F71E09D00307894 /* SwiftUI.framework in Frameworks */,
-				AB9FFD372F71E09D00307894 /* WidgetKit.framework in Frameworks */,
+				ABA409662F746F70006867F4 /* SwiftUI.framework in Frameworks */,
+				ABA409652F746F70006867F4 /* WidgetKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -179,6 +181,8 @@
 				AB9FCCC12F4F797000410048 /* MyAlarmApp */,
 				AB05AE862F50302C009916D8 /* CountdownLiveActivity */,
 				AB9FFD392F71E09D00307894 /* FutureAlarmWidget */,
+				ABA409512F746C82006867F4 /* FutureAlarmWidget */,
+				ABA409672F746F70006867F4 /* FutureAlarmWidget */,
 				AB05AE812F50302C009916D8 /* Frameworks */,
 				AB9FCCC02F4F797000410048 /* Products */,
 			);
@@ -189,7 +193,7 @@
 			children = (
 				AB9FCCBF2F4F797000410048 /* MyAlarmApp.app */,
 				AB05AE802F50302C009916D8 /* CountdownLiveActivityExtension.appex */,
-				AB9FFD362F71E09D00307894 /* FutureAlarmWidgetExtension.appex */,
+				ABA409642F746F70006867F4 /* FutureAlarmWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -232,7 +236,7 @@
 			);
 			dependencies = (
 				AB05AE912F50302C009916D8 /* PBXTargetDependency */,
-				AB9FFD422F71E09E00307894 /* PBXTargetDependency */,
+				ABA409702F746F70006867F4 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				AB9FCCC12F4F797000410048 /* MyAlarmApp */,
@@ -244,26 +248,26 @@
 			productReference = AB9FCCBF2F4F797000410048 /* MyAlarmApp.app */;
 			productType = "com.apple.product-type.application";
 		};
-		AB9FFD352F71E09D00307894 /* FutureAlarmWidgetExtension */ = {
+		ABA409632F746F70006867F4 /* FutureAlarmWidgetExtension */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = AB9FFD442F71E09E00307894 /* Build configuration list for PBXNativeTarget "FutureAlarmWidgetExtension" */;
+			buildConfigurationList = ABA409722F746F70006867F4 /* Build configuration list for PBXNativeTarget "FutureAlarmWidgetExtension" */;
 			buildPhases = (
-				AB9FFD322F71E09D00307894 /* Sources */,
-				AB9FFD332F71E09D00307894 /* Frameworks */,
-				AB9FFD342F71E09D00307894 /* Resources */,
+				ABA409602F746F70006867F4 /* Sources */,
+				ABA409612F746F70006867F4 /* Frameworks */,
+				ABA409622F746F70006867F4 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				AB9FFD392F71E09D00307894 /* FutureAlarmWidget */,
+				ABA409672F746F70006867F4 /* FutureAlarmWidget */,
 			);
 			name = FutureAlarmWidgetExtension;
 			packageProductDependencies = (
 			);
 			productName = FutureAlarmWidgetExtension;
-			productReference = AB9FFD362F71E09D00307894 /* FutureAlarmWidgetExtension.appex */;
+			productReference = ABA409642F746F70006867F4 /* FutureAlarmWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -282,7 +286,7 @@
 					AB9FCCBE2F4F797000410048 = {
 						CreatedOnToolsVersion = 26.2;
 					};
-					AB9FFD352F71E09D00307894 = {
+					ABA409632F746F70006867F4 = {
 						CreatedOnToolsVersion = 26.2;
 					};
 				};
@@ -303,7 +307,7 @@
 			targets = (
 				AB9FCCBE2F4F797000410048 /* MyAlarmApp */,
 				AB05AE7F2F50302C009916D8 /* CountdownLiveActivityExtension */,
-				AB9FFD352F71E09D00307894 /* FutureAlarmWidgetExtension */,
+				ABA409632F746F70006867F4 /* FutureAlarmWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -323,7 +327,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		AB9FFD342F71E09D00307894 /* Resources */ = {
+		ABA409622F746F70006867F4 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -347,7 +351,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		AB9FFD322F71E09D00307894 /* Sources */ = {
+		ABA409602F746F70006867F4 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -362,10 +366,10 @@
 			target = AB05AE7F2F50302C009916D8 /* CountdownLiveActivityExtension */;
 			targetProxy = AB05AE902F50302C009916D8 /* PBXContainerItemProxy */;
 		};
-		AB9FFD422F71E09E00307894 /* PBXTargetDependency */ = {
+		ABA409702F746F70006867F4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = AB9FFD352F71E09D00307894 /* FutureAlarmWidgetExtension */;
-			targetProxy = AB9FFD412F71E09E00307894 /* PBXContainerItemProxy */;
+			target = ABA409632F746F70006867F4 /* FutureAlarmWidgetExtension */;
+			targetProxy = ABA4096F2F746F70006867F4 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -555,6 +559,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = MyAlarmApp/MyAlarmApp.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
@@ -576,6 +581,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.speshtalent.FutureAlarm26;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -592,6 +598,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = MyAlarmApp/MyAlarmApp.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
@@ -613,6 +620,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.speshtalent.FutureAlarm26;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -623,12 +631,13 @@
 			};
 			name = Release;
 		};
-		AB9FFD452F71E09E00307894 /* Debug */ = {
+		ABA409732F746F70006867F4 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = FutureAlarmWidgetExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
@@ -644,6 +653,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.speshtalent.FutureAlarm26.FutureAlarmWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -654,12 +664,13 @@
 			};
 			name = Debug;
 		};
-		AB9FFD462F71E09E00307894 /* Release */ = {
+		ABA409742F746F70006867F4 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = FutureAlarmWidgetExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
@@ -675,6 +686,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.speshtalent.FutureAlarm26.FutureAlarmWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -715,11 +727,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		AB9FFD442F71E09E00307894 /* Build configuration list for PBXNativeTarget "FutureAlarmWidgetExtension" */ = {
+		ABA409722F746F70006867F4 /* Build configuration list for PBXNativeTarget "FutureAlarmWidgetExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				AB9FFD452F71E09E00307894 /* Debug */,
-				AB9FFD462F71E09E00307894 /* Release */,
+				ABA409732F746F70006867F4 /* Debug */,
+				ABA409742F746F70006867F4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

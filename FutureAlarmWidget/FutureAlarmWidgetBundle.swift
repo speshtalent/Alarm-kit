@@ -1,10 +1,3 @@
-//
-//  FutureAlarmWidgetBundle.swift
-//  FutureAlarmWidget
-//
-//  Created by Maniraj on 3/23/26.
-//
-
 import WidgetKit
 import SwiftUI
 
@@ -12,5 +5,7 @@ import SwiftUI
 struct FutureAlarmWidgetBundle: WidgetBundle {
     var body: some Widget {
         FutureAlarmWidget()
+        CountdownWidget()
+        TimeOnlyWidget()
     }
 }

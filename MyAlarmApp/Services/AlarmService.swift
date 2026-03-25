@@ -223,7 +223,7 @@ final class AlarmService: ObservableObject {
 
     // ✅ ADDED — save next alarm to App Group for widget
     func saveNextAlarmForWidget() {
-        let userDefaults = UserDefaults(suiteName: "group.com.maniraj48.MyAlarmApp2026")
+        let userDefaults = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
         if let nextAlarm = alarms.filter({ $0.isEnabled && ($0.fireDate ?? .distantPast) > Date() }).first {
             userDefaults?.set(nextAlarm.fireDate, forKey: "widgetNextAlarmDate")
             userDefaults?.set(nextAlarm.label, forKey: "widgetNextAlarmLabel")
