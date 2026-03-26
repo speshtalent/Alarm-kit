@@ -22,12 +22,38 @@ final class AlarmService: ObservableObject {
         }
     }
 
+    // ✅ NEW — grouped alarm for display (1 row per recurring group)
+    struct AlarmGroup: Identifiable {
+        let id: UUID              // group ID (first alarm ID or single alarm ID)
+        let label: String
+        var isEnabled: Bool
+        let alarmIDs: [UUID]      // all alarm IDs in this group
+        let fireDate: Date?       // earliest fire date
+        let repeatDays: Set<Int>  // empty = one-time
+
+        var repeatLabel: String {
+            if repeatDays.isEmpty { return "" }
+            let weekDays: [(label: String, value: Int)] = [
+                ("Mon", 2), ("Tue", 3), ("Wed", 4),
+                ("Thu", 5), ("Fri", 6), ("Sat", 7), ("Sun", 1)
+            ]
+            if repeatDays.count == 7 { return "Every day" }
+            if repeatDays == Set([2, 3, 4, 5, 6]) { return "Weekdays" }
+            if repeatDays == Set([7, 1]) { return "Weekends" }
+            return weekDays.filter { repeatDays.contains($0.value) }.map { $0.label }.joined(separator: ", ")
+        }
+    }
+
     static let shared = AlarmService()
 
     @Published var alarms: [AlarmListItem] = []
+    @Published var alarmGroups: [AlarmGroup] = []
 
-    private let labelsStoreKey = "AlarmLabelsByID"
-    private let disabledAlarmsKey = "DisabledAlarmIDs"
+    private let labelsStoreKey       = "AlarmLabelsByID"
+    private let disabledAlarmsKey    = "DisabledAlarmIDs"
+    private let groupIDsKey          = "AlarmGroupIDs"          // groupID -> [alarmID]
+    private let alarmToGroupKey      = "AlarmToGroupID"         // alarmID -> groupID
+    private let groupRepeatDaysKey   = "GroupRepeatDays"        // groupID -> [Int]
 
     private init() {}
 
@@ -44,10 +70,7 @@ final class AlarmService: ObservableObject {
     func scheduleAlarm(date: Date, label: String, sound: String = "nokia.caf") async throws -> UUID {
         let scheduleDate = max(date, Date().addingTimeInterval(1))
         let id = Alarm.ID()
-
-        let alert = AlarmPresentation.Alert(
-            title: LocalizedStringResource(stringLiteral: label)
-        )
+        let alert = AlarmPresentation.Alert(title: LocalizedStringResource(stringLiteral: label))
         let presentation = AlarmPresentation(alert: alert)
         let attributes = AlarmAttributes(
             presentation: presentation,
@@ -62,30 +85,37 @@ final class AlarmService: ObservableObject {
             secondaryIntent: nil,
             sound: .named(sound)
         )
-
         let alarm = try await AlarmManager.shared.schedule(id: id, configuration: configuration)
         saveLabel(label, for: id)
         upsertAlarmInList(alarm, label: label)
         return id
     }
 
+    // ✅ Cancel all alarms in the same group
     func cancelAlarm(id: UUID) {
-        if let item = alarms.first(where: { $0.id == id }),
-           let fireDate = item.fireDate {
-            let key = fireDate.timeIntervalSince1970.description
-            CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
-            print("✅ Removing calendar event for key: \(key)")
+        let groupID = getGroupID(for: id) ?? id
+        let groupAlarmIDs = getAlarmIDs(forGroup: groupID)
+        let idsToCancel = groupAlarmIDs.isEmpty ? [id] : groupAlarmIDs
+
+        for alarmID in idsToCancel {
+            if let item = alarms.first(where: { $0.id == alarmID }), let fireDate = item.fireDate {
+                let key = fireDate.timeIntervalSince1970.description
+                CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
+            }
+            deleteVoiceFile(for: alarmID.uuidString)
+            do {
+                try AlarmManager.shared.cancel(id: alarmID)
+            } catch {
+                print("Cancel alarm error:", error)
+            }
+            removeLabel(for: alarmID)
+            removeFromDisabled(id: alarmID)
+            alarms.removeAll { $0.alarm.id == alarmID }
         }
-        deleteVoiceFile(for: id.uuidString)
-        do {
-            try AlarmManager.shared.cancel(id: id)
-        } catch {
-            print("Cancel alarm error:", error)
-        }
-        removeLabel(for: id)
-        removeFromDisabled(id: id)
-        alarms.removeAll { $0.alarm.id == id }
-        // ✅ ADDED — update widget after cancel
+
+        // Clean up group data
+        removeGroup(groupID: groupID)
+        rebuildGroups()
         saveNextAlarmForWidget()
     }
 
@@ -102,7 +132,6 @@ final class AlarmService: ObservableObject {
             } catch {
                 print("Disable alarm error:", error)
             }
-            // ✅ ADDED — update widget after toggle OFF
             saveNextAlarmForWidget()
         } else {
             guard let fireDate = item.fireDate, fireDate > Date() else {
@@ -122,10 +151,18 @@ final class AlarmService: ObservableObject {
                 } catch {
                     print("Re-enable alarm error:", error)
                 }
-                // ✅ ADDED — update widget after toggle ON
                 saveNextAlarmForWidget()
             }
         }
+    }
+
+    // ✅ Toggle entire group
+    func toggleGroup(groupID: UUID) {
+        let groupAlarmIDs = getAlarmIDs(forGroup: groupID)
+        for alarmID in groupAlarmIDs {
+            toggleAlarm(id: alarmID)
+        }
+        rebuildGroups()
     }
 
     func loadAlarms() {
@@ -149,6 +186,56 @@ final class AlarmService: ObservableObject {
             print("Load alarms error:", error)
             alarms = []
         }
+        rebuildGroups()
+    }
+
+    // ✅ Rebuild groups from UserDefaults for display
+    func rebuildGroups() {
+        let groupIDsDict = loadGroupIDs()      // groupID -> [alarmID strings]
+        let repeatDaysDict = loadGroupRepeatDays() // groupID -> [Int]
+        let labels = loadLabels()
+
+        var groups: [AlarmGroup] = []
+
+        for (groupIDStr, alarmIDStrs) in groupIDsDict {
+            guard let groupID = UUID(uuidString: groupIDStr) else { continue }
+            let alarmIDs = alarmIDStrs.compactMap { UUID(uuidString: $0) }
+            let repeatDays = Set(repeatDaysDict[groupIDStr] ?? [])
+
+            // Find matching alarms
+            let groupAlarms = alarms.filter { alarmIDs.contains($0.id) }
+            guard !groupAlarms.isEmpty else { continue }
+
+            let earliest = groupAlarms.compactMap { $0.fireDate }.min()
+            let label = labels[groupIDStr] ?? groupAlarms.first?.label ?? "Alarm"
+            let isEnabled = groupAlarms.contains { $0.isEnabled }
+
+            groups.append(AlarmGroup(
+                id: groupID,
+                label: label,
+                isEnabled: isEnabled,
+                alarmIDs: alarmIDs,
+                fireDate: earliest,
+                repeatDays: repeatDays
+            ))
+        }
+
+        // ✅ Add single alarms that are NOT in any group
+        let groupedAlarmIDs = Set(groupIDsDict.values.flatMap { $0 }.compactMap { UUID(uuidString: $0) })
+        for alarm in alarms where !groupedAlarmIDs.contains(alarm.id) {
+            groups.append(AlarmGroup(
+                id: alarm.id,
+                label: alarm.label,
+                isEnabled: alarm.isEnabled,
+                alarmIDs: [alarm.id],
+                fireDate: alarm.fireDate,
+                repeatDays: []
+            ))
+        }
+
+        alarmGroups = groups.sorted { lhs, rhs in
+            (lhs.fireDate ?? .distantFuture) < (rhs.fireDate ?? .distantFuture)
+        }
     }
 
     func scheduleFutureAlarm(
@@ -156,7 +243,8 @@ final class AlarmService: ObservableObject {
         title: String,
         snoozeEnabled: Bool = true,
         snoozeDuration: TimeInterval = 300,
-        sound: String = "nokia.caf"
+        sound: String = "nokia.caf",
+        repeatDays: Set<Int> = []
     ) async -> UUID? {
         do {
             let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
@@ -166,7 +254,7 @@ final class AlarmService: ObservableObject {
             let alarmID = UUID()
             var finalSound = sound
 
-            if tempExists {
+            if tempExists && repeatDays.isEmpty {
                 let voiceFileName = "alarm_voice_\(alarmID.uuidString).caf"
                 let destURL = libraryURL.appendingPathComponent("Sounds/\(voiceFileName)")
                 try? FileManager.default.removeItem(at: destURL)
@@ -176,10 +264,44 @@ final class AlarmService: ObservableObject {
             }
             UserDefaults.standard.set(true, forKey: "hasEverSetAlarm")
 
-            let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
-            // ✅ ADDED — update widget after scheduling
-            saveNextAlarmForWidget()
-            return id
+            if repeatDays.isEmpty {
+                let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
+                // ✅ Save as single-alarm group
+                saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: [])
+                rebuildGroups()
+                saveNextAlarmForWidget()
+                return id
+            } else {
+                let calendar = Calendar.current
+                let timeComponents = calendar.dateComponents([.hour, .minute], from: date)
+                let groupID = UUID()
+                var scheduledIDs: [UUID] = []
+
+                for weekday in repeatDays.sorted() {
+                    let nextDate = nextDate(forWeekday: weekday, time: timeComponents)
+                    let recurringID = UUID()
+
+                    var recurringSound = sound
+                    if tempExists {
+                        let voiceFileName = "alarm_voice_\(recurringID.uuidString).caf"
+                        let destURL = libraryURL.appendingPathComponent("Sounds/\(voiceFileName)")
+                        try? FileManager.default.removeItem(at: destURL)
+                        try? FileManager.default.copyItem(at: tempURL, to: destURL)
+                        recurringSound = voiceFileName
+                        print("✅ Voice file copied for recurring alarm: \(voiceFileName)")
+                    }
+
+                    _ = try await scheduleAlarmWithID(id: recurringID, date: nextDate, label: title, sound: recurringSound)
+                    scheduledIDs.append(recurringID)
+                    print("✅ Recurring alarm set for weekday \(weekday) at \(nextDate)")
+                }
+
+                // ✅ Save group
+                saveGroup(groupID: groupID, alarmIDs: scheduledIDs, label: title, repeatDays: repeatDays)
+                rebuildGroups()
+                saveNextAlarmForWidget()
+                return scheduledIDs.first
+            }
         } catch {
             print("Schedule alarm error:", error)
             return nil
@@ -189,10 +311,7 @@ final class AlarmService: ObservableObject {
     @discardableResult
     func scheduleAlarmWithID(id: UUID, date: Date, label: String, sound: String = "nokia.caf") async throws -> UUID {
         let scheduleDate = max(date, Date().addingTimeInterval(1))
-
-        let alert = AlarmPresentation.Alert(
-            title: LocalizedStringResource(stringLiteral: label)
-        )
+        let alert = AlarmPresentation.Alert(title: LocalizedStringResource(stringLiteral: label))
         let presentation = AlarmPresentation(alert: alert)
         let attributes = AlarmAttributes(
             presentation: presentation,
@@ -207,7 +326,6 @@ final class AlarmService: ObservableObject {
             secondaryIntent: nil,
             sound: .named(sound)
         )
-
         let alarm = try await AlarmManager.shared.schedule(id: id, configuration: configuration)
         saveLabel(label, for: id)
         upsertAlarmInList(alarm, label: label)
@@ -221,10 +339,8 @@ final class AlarmService: ObservableObject {
         print("🗑️ Deleted voice file for alarm: \(alarmID)")
     }
 
-    // ✅ ADDED — save next alarm to App Group for widget
     func saveNextAlarmForWidget() {
         let userDefaults = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
-
         let nextAlarm = alarms
             .filter { $0.isEnabled }
             .compactMap { item -> (Date, String)? in
@@ -245,13 +361,94 @@ final class AlarmService: ObservableObject {
             userDefaults?.synchronize()
             print("✅ Widget cleared — no active alarms")
         }
-
         WidgetCenter.shared.reloadAllTimelines()
     }
 
+    // MARK: - Group persistence
+    private func saveGroup(groupID: UUID, alarmIDs: [UUID], label: String, repeatDays: Set<Int>) {
+        var groups = loadGroupIDs()
+        groups[groupID.uuidString] = alarmIDs.map { $0.uuidString }
+        UserDefaults.standard.set(groups, forKey: groupIDsKey)
+
+        // Save label for group
+        var labels = loadLabels()
+        labels[groupID.uuidString] = label
+        UserDefaults.standard.set(labels, forKey: labelsStoreKey)
+
+        // Save repeat days
+        var repeatDict = loadGroupRepeatDays()
+        repeatDict[groupID.uuidString] = Array(repeatDays)
+        UserDefaults.standard.set(repeatDict, forKey: groupRepeatDaysKey)
+
+        // Map each alarmID -> groupID
+        var alarmToGroup = loadAlarmToGroup()
+        for alarmID in alarmIDs {
+            alarmToGroup[alarmID.uuidString] = groupID.uuidString
+        }
+        UserDefaults.standard.set(alarmToGroup, forKey: alarmToGroupKey)
+    }
+
+    private func removeGroup(groupID: UUID) {
+        var groups = loadGroupIDs()
+        let alarmIDStrs = groups[groupID.uuidString] ?? []
+        groups.removeValue(forKey: groupID.uuidString)
+        UserDefaults.standard.set(groups, forKey: groupIDsKey)
+
+        var repeatDict = loadGroupRepeatDays()
+        repeatDict.removeValue(forKey: groupID.uuidString)
+        UserDefaults.standard.set(repeatDict, forKey: groupRepeatDaysKey)
+
+        var alarmToGroup = loadAlarmToGroup()
+        for idStr in alarmIDStrs {
+            alarmToGroup.removeValue(forKey: idStr)
+        }
+        UserDefaults.standard.set(alarmToGroup, forKey: alarmToGroupKey)
+    }
+
+    func getGroupID(for alarmID: UUID) -> UUID? {
+        let dict = loadAlarmToGroup()
+        guard let groupIDStr = dict[alarmID.uuidString] else { return nil }
+        return UUID(uuidString: groupIDStr)
+    }
+
+    func getAlarmIDs(forGroup groupID: UUID) -> [UUID] {
+        let dict = loadGroupIDs()
+        return (dict[groupID.uuidString] ?? []).compactMap { UUID(uuidString: $0) }
+    }
+
+    func getRepeatDays(forGroup groupID: UUID) -> Set<Int> {
+        let dict = loadGroupRepeatDays()
+        return Set(dict[groupID.uuidString] ?? [])
+    }
+
+    private func loadGroupIDs() -> [String: [String]] {
+        UserDefaults.standard.dictionary(forKey: groupIDsKey) as? [String: [String]] ?? [:]
+    }
+
+    private func loadAlarmToGroup() -> [String: String] {
+        UserDefaults.standard.dictionary(forKey: alarmToGroupKey) as? [String: String] ?? [:]
+    }
+
+    private func loadGroupRepeatDays() -> [String: [Int]] {
+        UserDefaults.standard.dictionary(forKey: groupRepeatDaysKey) as? [String: [Int]] ?? [:]
+    }
+
+    // MARK: - Helpers
+    private func nextDate(forWeekday weekday: Int, time: DateComponents) -> Date {
+        let calendar = Calendar.current
+        var components = DateComponents()
+        components.weekday = weekday
+        components.hour = time.hour
+        components.minute = time.minute
+        components.second = 0
+        guard let next = calendar.nextDate(after: Date(), matching: components, matchingPolicy: .nextTime) else {
+            return Date().addingTimeInterval(3600)
+        }
+        return next
+    }
+
     private func loadDisabledIDs() -> Set<String> {
-        let array = UserDefaults.standard.stringArray(forKey: disabledAlarmsKey) ?? []
-        return Set(array)
+        Set(UserDefaults.standard.stringArray(forKey: disabledAlarmsKey) ?? [])
     }
 
     private func saveDisabledState(id: UUID, disabled: Bool) {

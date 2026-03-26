@@ -23,25 +23,43 @@ struct AddAlarmView: View {
     @State private var audioRecorder: AVAudioRecorder?
     @State private var audioPlayer: AVAudioPlayer?
 
+    @State private var playingSound: String? = nil
+    @State private var soundPlayer: AVAudioPlayer? = nil
+
+    // ✅ NEW — recurring days (1=Sun, 2=Mon ... 7=Sat)
+    @State private var repeatDays: Set<Int> = []
+
+    // ✅ NEW — past time warning alert
+    @State private var showPastTimeAlert = false
+
     private var editingAlarmID: String?
+    var hideDateToggle: Bool = false
 
     let sounds: [(name: String, file: String)] = [
         (name: "Nokia", file: "nokia.caf"),
         (name: "1985 Ring", file: "1985_ring2.caf"),
         (name: "Sony", file: "sony.caf"),
-        (name: "bells", file: "bells.caf"),
-        (name: "bird-sound", file: "bird-sound.caf"),
-        (name: "childhood", file: "childhood.caf"),
-        (name: "morning-birds", file: "morning-birds.caf"),
-        (name: "pure", file: "pure.caf"),
-        (name: "rings", file: "rings.caf"),
-        (name: "soft", file: "soft.caf")
+        (name: "Bells", file: "bells.caf"),
+        (name: "Bird Sound", file: "bird-sound.caf"),
+        (name: "Childhood", file: "childhood.caf"),
+        (name: "Morning Birds", file: "morning-birds.caf"),
+        (name: "Pure", file: "pure.caf"),
+        (name: "Rings", file: "rings.caf"),
+        (name: "Soft", file: "soft.caf")
     ]
 
-    var onSave: (Date, String, Bool, TimeInterval, String) -> Void
+    // Mon=2, Tue=3, Wed=4, Thu=5, Fri=6, Sat=7, Sun=1
+    let weekDays: [(label: String, value: Int)] = [
+        ("Mon", 2), ("Tue", 3), ("Wed", 4),
+        ("Thu", 5), ("Fri", 6), ("Sat", 7), ("Sun", 1)
+    ]
 
-    init(preselectedDate: Date? = nil, editingItem: AlarmService.AlarmListItem? = nil, onSave: @escaping (Date, String, Bool, TimeInterval, String) -> Void) {
+    var onSave: (Date, String, Bool, TimeInterval, String, Set<Int>) -> Void
+
+    init(preselectedDate: Date? = nil, editingItem: AlarmService.AlarmListItem? = nil, hideDateToggle: Bool = false, repeatDaysToLoad: Set<Int> = [], onSave: @escaping (Date, String, Bool, TimeInterval, String, Set<Int>) -> Void) {
+        self.hideDateToggle = hideDateToggle
         self.onSave = onSave
+        _repeatDays = State(initialValue: repeatDaysToLoad)
 
         if let item = editingItem, let fireDate = item.fireDate {
             _title = State(initialValue: item.label)
@@ -108,7 +126,7 @@ struct AddAlarmView: View {
             components.minute = selectedMinute
             components.second = 0
             var date = Calendar.current.date(from: components) ?? Date()
-            if date <= Date() {
+            if date <= Date() && repeatDays.isEmpty {
                 date = Calendar.current.date(byAdding: .day, value: 1, to: date) ?? date
             }
             return date
@@ -117,9 +135,34 @@ struct AddAlarmView: View {
 
     private var isEditing: Bool { editingAlarmID != nil }
 
+    // ✅ Check if time is in the past and no repeat days
+    private var isTimeInPast: Bool {
+        guard !useSpecificDate else {
+            return fireDate <= Date() && repeatDays.isEmpty
+        }
+        // Check raw time without the auto-next-day adjustment
+        var hour24 = selectedHour % 12
+        if selectedAMPM == 1 { hour24 += 12 }
+        var components = Calendar.current.dateComponents(in: TimeZone.current, from: Date())
+        components.hour = hour24
+        components.minute = selectedMinute
+        components.second = 0
+        let rawDate = Calendar.current.date(from: components) ?? Date()
+        return rawDate <= Date() && repeatDays.isEmpty
+    }
+
+    // ✅ Repeat label for display
+    private var repeatLabel: String {
+        if repeatDays.isEmpty { return "Never" }
+        if repeatDays.count == 7 { return "Every day" }
+        if repeatDays == Set([2, 3, 4, 5, 6]) { return "Weekdays" }
+        if repeatDays == Set([7, 1]) { return "Weekends" }
+        let ordered = weekDays.filter { repeatDays.contains($0.value) }.map { $0.label }
+        return ordered.joined(separator: ", ")
+    }
+
     var body: some View {
         ZStack {
-            // ✅ UPDATED — dynamic background
             Color("AppBackground").ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 20) {
@@ -131,29 +174,30 @@ struct AddAlarmView: View {
 
                     Text(isEditing ? "Edit Alarm" : "New Alarm")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
-                        // ✅ UPDATED
                         .foregroundStyle(Color("PrimaryText"))
 
                     Text("Rings at \(fireDate.formatted(date: useSpecificDate ? .abbreviated : .omitted, time: .shortened))")
                         .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(.orange)
 
-                    // ✅ UPDATED — Set specific date card
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
-                        HStack {
-                            Image(systemName: "calendar").foregroundStyle(.orange)
-                            Text("Set specific date")
-                                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Color("PrimaryText"))
-                            Spacer()
-                            Toggle("", isOn: $useSpecificDate).tint(.orange)
+                    // Set specific date card
+                    if !hideDateToggle {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
+                            HStack {
+                                Image(systemName: "calendar").foregroundStyle(.orange)
+                                Text("Set specific date")
+                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(Color("PrimaryText"))
+                                Spacer()
+                                Toggle("", isOn: $useSpecificDate).tint(.orange)
+                            }
+                            .padding(16)
                         }
-                        .padding(16)
+                        .padding(.horizontal, 20)
                     }
-                    .padding(.horizontal, 20)
 
-                    // ✅ UPDATED — Picker card
+                    // Picker card
                     ZStack {
                         RoundedRectangle(cornerRadius: 20).fill(Color("CardBackground"))
                         if useSpecificDate {
@@ -190,26 +234,73 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // ✅ UPDATED — Title card
+                    // ✅ NEW — Repeat card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
-                        HStack {
-                            Image(systemName: "tag").foregroundStyle(.orange)
-                            TextField("Alarm title", text: $title)
-                                .foregroundStyle(Color("PrimaryText")).tint(.orange)
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "repeat").foregroundStyle(.orange)
+                                Text("Repeat")
+                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(Color("PrimaryText"))
+                                Spacer()
+                                Text(repeatLabel)
+                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.orange)
+                            }
+                            Divider()
+                            HStack(spacing: 6) {
+                                ForEach(weekDays, id: \.value) { day in
+                                    let isSelected = repeatDays.contains(day.value)
+                                    Button {
+                                        if isSelected {
+                                            repeatDays.remove(day.value)
+                                        } else {
+                                            repeatDays.insert(day.value)
+                                        }
+                                    } label: {
+                                        Text(day.label)
+                                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                                            .foregroundStyle(isSelected ? .black : Color("SecondaryText"))
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 8)
+                                            .background(isSelected ? Color.orange : Color("AppBackground"))
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    }
+                                }
+                            }
                         }
                         .padding(16)
                     }
-                    .frame(height: 54)
                     .padding(.horizontal, 20)
 
-                    // ✅ UPDATED — Voice card
+                    // Title card with header
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Alarm name/label")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color("SecondaryText"))
+                            .padding(.horizontal, 4)
+
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
+                            HStack {
+                                Image(systemName: "tag").foregroundStyle(.orange)
+                                TextField("Alarm name/label", text: $title)
+                                    .foregroundStyle(Color("PrimaryText")).tint(.orange)
+                            }
+                            .padding(16)
+                        }
+                        .frame(height: 54)
+                    }
+                    .padding(.horizontal, 20)
+
+                    // Voice card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Image(systemName: "mic.fill").foregroundStyle(.orange)
-                                Text("Voice Message")
+                                Text("Custom Sound")
                                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                                     .foregroundStyle(Color("PrimaryText"))
                                 Spacer()
@@ -308,7 +399,7 @@ struct AddAlarmView: View {
                     .animation(.easeInOut(duration: 0.3), value: isJustRecorded)
                     .animation(.easeInOut(duration: 0.3), value: hasRecording)
 
-                    // ✅ UPDATED — Sound card
+                    // Sound card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                         VStack(alignment: .leading, spacing: 8) {
@@ -319,34 +410,47 @@ struct AddAlarmView: View {
                                     .foregroundStyle(Color("PrimaryText"))
                             }
                             Divider()
-                            // ✅ UPDATED — scrollable sound list
                             ScrollView {
                                 VStack(spacing: 0) {
                                     ForEach(sounds, id: \.file) { sound in
-                                        Button { selectedSound = sound.file } label: {
-                                            HStack {
+                                        HStack(spacing: 12) {
+                                            Button {
+                                                if playingSound == sound.file {
+                                                    stopSoundPreview()
+                                                } else {
+                                                    playSoundPreview(sound.file)
+                                                }
+                                            } label: {
+                                                Image(systemName: playingSound == sound.file ? "stop.circle.fill" : "play.circle.fill")
+                                                    .foregroundStyle(playingSound == sound.file ? .red : .orange)
+                                                    .font(.system(size: 24))
+                                            }
+                                            Button {
+                                                selectedSound = sound.file
+                                            } label: {
                                                 Text(sound.name)
                                                     .font(.system(size: 15, weight: .medium, design: .rounded))
                                                     .foregroundStyle(Color("PrimaryText"))
-                                                Spacer()
-                                                if selectedSound == sound.file {
-                                                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.orange)
-                                                }
                                             }
-                                            .padding(.vertical, 10)
+                                            Spacer()
+                                            if selectedSound == sound.file {
+                                                Image(systemName: "checkmark.circle.fill")
+                                                    .foregroundStyle(.orange)
+                                                    .font(.system(size: 18))
+                                            }
                                         }
+                                        .padding(.vertical, 10)
                                         Divider()
                                     }
                                 }
                             }
-                            // ✅ ADDED — fixed height so it doesn't take full screen
-                            .frame(height: 180)
+                            .frame(height: 200)
                         }
                         .padding(16)
                     }
                     .padding(.horizontal, 20)
 
-                    // ✅ UPDATED — Snooze card
+                    // Snooze card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                         VStack(spacing: 12) {
@@ -375,7 +479,7 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // ✅ UPDATED — Calendar card
+                    // Calendar card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                         HStack {
@@ -390,37 +494,14 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
+                    // ✅ Set Alarm button with past time check
                     Button {
-                        UINotificationFeedbackGenerator().notificationOccurred(.success)
-                        let savedDate = fireDate
-                        let savedTitle = title
-                        let savedRecordingName = recordingName
-                        onSave(savedDate, savedTitle, snoozeEnabled, TimeInterval(snoozeDuration * 60), selectedSound)
-
-                        if hasRecording {
-                            Task {
-                                try? await Task.sleep(nanoseconds: 500_000_000)
-                                if let newAlarm = AlarmService.shared.alarms.first(where: {
-                                    guard let fd = $0.fireDate else { return false }
-                                    return abs(fd.timeIntervalSince(savedDate)) < 2
-                                }) {
-                                    let tempName = UserDefaults.standard.string(forKey: "voiceRecordingName_temp") ?? savedRecordingName
-                                    UserDefaults.standard.set(tempName, forKey: self.voiceNameKey(for: newAlarm.id.uuidString))
-                                    UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
-                                    print("✅ Voice name saved for alarm: \(newAlarm.id.uuidString)")
-                                }
-                            }
+                        // ✅ Task 13 — block past time if no repeat days
+                        if isTimeInPast {
+                            showPastTimeAlert = true
+                            return
                         }
-
-                        if addToCalendar {
-                            Task {
-                                await CalendarService.shared.addAlarmToCalendar(
-                                    title: savedTitle, date: savedDate,
-                                    alarmID: savedDate.timeIntervalSince1970.description
-                                )
-                            }
-                        }
-                        dismiss()
+                        saveAlarm()
                     } label: {
                         Text(isEditing ? "Update Alarm" : "Set Alarm")
                             .font(.system(size: 17, weight: .bold, design: .rounded))
@@ -435,6 +516,12 @@ struct AddAlarmView: View {
                 }
             }
         }
+        // ✅ Past time warning alert
+        .alert("Time Already Passed", isPresented: $showPastTimeAlert) {
+            Button("Change Time", role: .cancel) {}
+        } message: {
+            Text("This time has already passed today. Please pick a future time or select repeat days to create a recurring alarm.")
+        }
         .onAppear {
             if let id = editingAlarmID {
                 let url = voiceURL(for: id)
@@ -447,8 +534,47 @@ struct AddAlarmView: View {
                 recordingName = ""
             }
         }
+        .onDisappear {
+            stopSoundPreview()
+        }
     }
 
+    // ✅ Extracted save logic
+    private func saveAlarm() {
+        stopSoundPreview()
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        let savedDate = fireDate
+        let savedTitle = title
+        let savedRecordingName = recordingName
+        onSave(savedDate, savedTitle, snoozeEnabled, TimeInterval(snoozeDuration * 60), selectedSound, repeatDays)
+
+        if hasRecording {
+            Task {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                if let newAlarm = AlarmService.shared.alarms.first(where: {
+                    guard let fd = $0.fireDate else { return false }
+                    return abs(fd.timeIntervalSince(savedDate)) < 2
+                }) {
+                    let tempName = UserDefaults.standard.string(forKey: "voiceRecordingName_temp") ?? savedRecordingName
+                    UserDefaults.standard.set(tempName, forKey: self.voiceNameKey(for: newAlarm.id.uuidString))
+                    UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
+                    print("✅ Voice name saved for alarm: \(newAlarm.id.uuidString)")
+                }
+            }
+        }
+
+        if addToCalendar {
+            Task {
+                await CalendarService.shared.addAlarmToCalendar(
+                    title: savedTitle, date: savedDate,
+                    alarmID: savedDate.timeIntervalSince1970.description
+                )
+            }
+        }
+        dismiss()
+    }
+
+    // MARK: - Recording functions
     private func startRecording() {
         AVAudioApplication.requestRecordPermission { granted in
             guard granted else {
@@ -501,5 +627,35 @@ struct AddAlarmView: View {
         try? FileManager.default.removeItem(at: tempRecordingURL)
         hasRecording = false; isJustRecorded = false; recordingName = ""
         UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
+    }
+
+    // MARK: - Sound preview functions
+    private func playSoundPreview(_ file: String) {
+        stopSoundPreview()
+        let fileName = (file as NSString).deletingPathExtension
+        let fileExt = (file as NSString).pathExtension
+        guard let url = Bundle.main.url(forResource: fileName, withExtension: fileExt) else {
+            print("❌ Sound file not found in bundle: \(file)")
+            return
+        }
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+            soundPlayer = try AVAudioPlayer(contentsOf: url)
+            soundPlayer?.play()
+            playingSound = file
+            let duration = soundPlayer?.duration ?? 3.0
+            DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
+                if playingSound == file { playingSound = nil }
+            }
+        } catch {
+            print("❌ Failed to play sound: \(error)")
+        }
+    }
+
+    private func stopSoundPreview() {
+        soundPlayer?.stop()
+        soundPlayer = nil
+        playingSound = nil
     }
 }
