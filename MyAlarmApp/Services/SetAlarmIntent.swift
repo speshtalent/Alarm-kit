@@ -1,16 +1,14 @@
 import Foundation
 import AppIntents
 
-struct SetAlarmIntent: AppIntent, ProvidesDialog {
-    var value: Never?
-    
+struct SetAlarmIntent: AppIntent {
     static var title: LocalizedStringResource = "Set Alarm"
-    static var description = IntentDescription("Creates an AlarmKit alarm for a specific date and label.")
+    static var description = IntentDescription("Creates an alarm for a specific date and time.")
 
-    @Parameter(title: "Date", kind: .date)
+    @Parameter(title: "Date")
     var date: Date
 
-    @Parameter(title: "Time", kind: .time)
+    @Parameter(title: "Time")
     var time: Date
 
     @Parameter(title: "Label")
@@ -35,9 +33,11 @@ struct SetAlarmIntent: AppIntent, ProvidesDialog {
 
         let fireDate = Self.combineDateAndTime(date: date, time: time)
 
-        // Shared service is used by SwiftUI and this intent so behavior stays identical.
         await AlarmService.shared.requestAuthorizationIfNeeded()
-        _ = try await AlarmService.shared.scheduleAlarm(date: fireDate, label: finalLabel)
+        _ = await AlarmService.shared.scheduleFutureAlarm(
+            date: fireDate,
+            title: finalLabel
+        )
         AlarmService.shared.loadAlarms()
 
         let formatted = fireDate.formatted(
@@ -47,7 +47,7 @@ struct SetAlarmIntent: AppIntent, ProvidesDialog {
                 .minute(.twoDigits)
         )
 
-        return .result(dialog: IntentDialog("Your alarm titled '\(finalLabel)' is set for \(formatted)."))
+        return .result(dialog: IntentDialog("Got it! '\(finalLabel)' alarm set for \(formatted)."))
     }
 
     private static func combineDateAndTime(date: Date, time: Date) -> Date {
@@ -74,7 +74,9 @@ struct AlarmAppShortcutsProvider: AppShortcutsProvider {
             phrases: [
                 "Set an alarm with \(.applicationName)",
                 "Create alarm with \(.applicationName)",
-                "Use \(.applicationName) to set an alarm"
+                "Use \(.applicationName) to set an alarm",
+                "Remind me with \(.applicationName)",
+                "Wake me up with \(.applicationName)"
             ],
             shortTitle: "Set Alarm",
             systemImageName: "alarm"
