@@ -224,16 +224,28 @@ final class AlarmService: ObservableObject {
     // ✅ ADDED — save next alarm to App Group for widget
     func saveNextAlarmForWidget() {
         let userDefaults = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
-        if let nextAlarm = alarms.filter({ $0.isEnabled && ($0.fireDate ?? .distantPast) > Date() }).first {
-            userDefaults?.set(nextAlarm.fireDate, forKey: "widgetNextAlarmDate")
-            userDefaults?.set(nextAlarm.label, forKey: "widgetNextAlarmLabel")
-            print("✅ Widget data saved: \(nextAlarm.label)")
+
+        let nextAlarm = alarms
+            .filter { $0.isEnabled }
+            .compactMap { item -> (Date, String)? in
+                guard let fireDate = item.fireDate, fireDate > Date() else { return nil }
+                return (fireDate, item.label)
+            }
+            .sorted { $0.0 < $1.0 }
+            .first
+
+        if let (fireDate, label) = nextAlarm {
+            userDefaults?.set(fireDate.timeIntervalSince1970, forKey: "widgetNextAlarmDate")
+            userDefaults?.set(label, forKey: "widgetNextAlarmLabel")
+            userDefaults?.synchronize()
+            print("✅ Widget saved: \(label) at \(fireDate)")
         } else {
             userDefaults?.removeObject(forKey: "widgetNextAlarmDate")
             userDefaults?.removeObject(forKey: "widgetNextAlarmLabel")
-            print("✅ Widget data cleared — no alarms")
+            userDefaults?.synchronize()
+            print("✅ Widget cleared — no active alarms")
         }
-        // ✅ ADDED — force widget to refresh immediately
+
         WidgetCenter.shared.reloadAllTimelines()
     }
 

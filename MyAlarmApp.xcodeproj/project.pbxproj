@@ -554,8 +554,10 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MyAlarmApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Future Alarm";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Future Alarm needs calendar access to add your alarms to your calendar.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Future Alarm needs microphone access to record voice messages for alarms.";
+				INFOPLIST_KEY_NSSiriUsageDescription = "Future Alarm uses Siri to set alarms with your voice.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -593,8 +595,10 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MyAlarmApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Future Alarm";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Future Alarm needs calendar access to add your alarms to your calendar.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Future Alarm needs microphone access to record voice messages for alarms.";
+				INFOPLIST_KEY_NSSiriUsageDescription = "Future Alarm uses Siri to set alarms with your voice.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
