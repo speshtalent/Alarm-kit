@@ -9,7 +9,7 @@ struct ContentView: View {
     @State private var showAddAlarm = false
     @State private var showAddTimer = false
     @State private var selectedTab: Int = 0
-    @State private var alarmToEdit: AlarmService.AlarmListItem? = nil
+    @State private var groupToEdit: AlarmService.AlarmGroup? = nil
 
     @StateObject private var alarmService = AlarmService.shared
     @StateObject private var timerService = TimerService.shared
@@ -32,7 +32,6 @@ struct ContentView: View {
             .onAppear {
                 let appearance = UITabBarAppearance()
                 appearance.configureWithOpaqueBackground()
-                // ✅ UPDATED — dynamic tab bar color
                 appearance.backgroundColor = UIColor(named: "AppBackground")
                 UITabBar.appearance().standardAppearance = appearance
                 UITabBar.appearance().scrollEdgeAppearance = appearance
@@ -52,16 +51,13 @@ struct ContentView: View {
 
     var alarmsTimersTab: some View {
         ZStack {
-            // ✅ UPDATED — dynamic background
-            Color("AppBackground")
-                .ignoresSafeArea()
+            Color("AppBackground").ignoresSafeArea()
 
             VStack(spacing: 0) {
 
                 HStack {
                     Text(mode == .alarms ? "Alarms" : "Timers")
                         .font(.system(size: 34, weight: .bold, design: .rounded))
-                        // ✅ UPDATED — dynamic text
                         .foregroundStyle(Color("PrimaryText"))
                     Spacer()
                     Button {
@@ -95,7 +91,6 @@ struct ContentView: View {
                     }
                 }
                 .padding(4)
-                // ✅ UPDATED — dynamic segment background
                 .background(Color("CardBackground"))
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
@@ -103,31 +98,40 @@ struct ContentView: View {
 
                 List {
                     if mode == .alarms {
-                        if alarmService.alarms.isEmpty {
+                        if alarmService.alarmGroups.isEmpty {
                             emptyState(icon: "alarm", text: "No alarms yet")
-                                // ✅ UPDATED — dynamic list background
                                 .listRowBackground(Color("AppBackground"))
                                 .listRowSeparator(.hidden)
                         } else {
-                            ForEach(alarmService.alarms) { item in
-                                AlarmRow(item: item) {
+                            // ✅ Show 1 row per group
+                            ForEach(alarmService.alarmGroups) { group in
+                                AlarmGroupRow(group: group) {
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    alarmService.toggleAlarm(id: item.id)
+                                    // Toggle all alarms in group
+                                    for alarmID in group.alarmIDs {
+                                        alarmService.toggleAlarm(id: alarmID)
+                                    }
+                                    alarmService.rebuildGroups()
                                 }
-                                // ✅ UPDATED — dynamic list background
                                 .listRowBackground(Color("AppBackground"))
                                 .listRowSeparator(.hidden)
                                 .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                                .onTapGesture {
+                                    groupToEdit = group
+                                }
                                 .swipeActions(edge: .leading) {}
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                     Button(role: .destructive) {
                                         UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                                        alarmService.cancelAlarm(id: item.id)
+                                        // ✅ Delete all alarms in group
+                                        if let firstID = group.alarmIDs.first {
+                                            alarmService.cancelAlarm(id: firstID)
+                                        }
                                     } label: {
                                         Label("Delete", systemImage: "trash")
                                     }
                                     Button {
-                                        alarmToEdit = item
+                                        groupToEdit = group
                                     } label: {
                                         Label("Edit", systemImage: "pencil")
                                     }
@@ -135,13 +139,15 @@ struct ContentView: View {
                                 }
                                 .contextMenu {
                                     Button {
-                                        alarmToEdit = item
+                                        groupToEdit = group
                                     } label: {
                                         Label("Edit", systemImage: "pencil")
                                     }
                                     Button(role: .destructive) {
                                         UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                                        alarmService.cancelAlarm(id: item.id)
+                                        if let firstID = group.alarmIDs.first {
+                                            alarmService.cancelAlarm(id: firstID)
+                                        }
                                     } label: {
                                         Label("Delete", systemImage: "trash")
                                     }
@@ -181,7 +187,6 @@ struct ContentView: View {
                     }
                 }
                 .listStyle(.plain)
-                // ✅ UPDATED — dynamic list background
                 .background(Color("AppBackground"))
                 .scrollContentBackground(.hidden)
             }
@@ -189,29 +194,39 @@ struct ContentView: View {
         .sheet(isPresented: $showAddAlarm, onDismiss: {
             alarmService.loadAlarms()
         }) {
-            AddAlarmView { date, title, snoozeEnabled, snoozeDuration, sound in
+            AddAlarmView { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays in
                 Task {
                     _ = await alarmService.scheduleFutureAlarm(
                         date: date, title: title,
                         snoozeEnabled: snoozeEnabled,
                         snoozeDuration: snoozeDuration,
-                        sound: sound
+                        sound: sound,
+                        repeatDays: repeatDays
                     )
                     await MainActor.run { alarmService.loadAlarms() }
                 }
             }
         }
-        .sheet(item: $alarmToEdit, onDismiss: {
+        // ✅ Edit group sheet
+        .sheet(item: $groupToEdit, onDismiss: {
             alarmService.loadAlarms()
-        }) { item in
-            AddAlarmView(editingItem: item) { date, title, snoozeEnabled, snoozeDuration, sound in
+        }) { group in
+            AddAlarmView(
+                editingItem: alarmService.alarms.first(where: { group.alarmIDs.contains($0.id) }),
+                repeatDaysToLoad: group.repeatDays
+            ) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays in
                 Task {
-                    alarmService.cancelAlarm(id: item.id)
+                    // Cancel all alarms in old group
+                    if let firstID = group.alarmIDs.first {
+                        alarmService.cancelAlarm(id: firstID)
+                    }
+                    // Schedule new
                     _ = await alarmService.scheduleFutureAlarm(
                         date: date, title: title,
                         snoozeEnabled: snoozeEnabled,
                         snoozeDuration: snoozeDuration,
-                        sound: sound
+                        sound: sound,
+                        repeatDays: repeatDays
                     )
                     await MainActor.run { alarmService.loadAlarms() }
                 }
@@ -262,7 +277,6 @@ struct ContentView: View {
                 .foregroundStyle(.orange.opacity(0.4))
             Text(text)
                 .font(.system(size: 16, weight: .medium, design: .rounded))
-                // ✅ UPDATED — dynamic text
                 .foregroundStyle(Color("SecondaryText"))
         }
         .frame(maxWidth: .infinity)
@@ -270,47 +284,58 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Alarm Row
-struct AlarmRow: View {
-    let item: AlarmService.AlarmListItem
+// MARK: - Alarm Group Row (1 row per recurring group)
+struct AlarmGroupRow: View {
+    let group: AlarmService.AlarmGroup
     let onToggle: () -> Void
+
+    private var subtitleText: String {
+        let timeStr = group.fireDate.flatMap { date -> String? in
+            let f = DateFormatter()
+            f.dateFormat = "EEE, MMM d • h:mm a"
+            return f.string(from: date)
+        } ?? ""
+
+        if group.repeatLabel.isEmpty {
+            return timeStr
+        } else {
+            let f = DateFormatter()
+            f.dateFormat = "h:mm a"
+            let timeOnly = group.fireDate.flatMap { f.string(from: $0) } ?? ""
+            return "\(group.repeatLabel) • \(timeOnly)"
+        }
+    }
 
     var body: some View {
         HStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(item.isEnabled ? .orange.opacity(0.15) : .gray.opacity(0.1))
+                    .fill(group.isEnabled ? .orange.opacity(0.15) : .gray.opacity(0.1))
                     .frame(width: 48, height: 48)
-                Image(systemName: "alarm")
-                    .foregroundStyle(item.isEnabled ? .orange : .gray)
+                Image(systemName: group.repeatDays.isEmpty ? "alarm" : "repeat")
+                    .foregroundStyle(group.isEnabled ? .orange : .gray)
                     .font(.system(size: 20))
             }
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.label)
+                Text(group.label)
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    // ✅ UPDATED — dynamic text
-                    .foregroundStyle(item.isEnabled ? Color("PrimaryText") : Color("SecondaryText"))
-                Text(item.fireDate.flatMap { date -> String? in
-                    let formatter = DateFormatter()
-                    formatter.dateFormat = "EEE h:mm a"
-                    return formatter.string(from: date)
-                } ?? item.id.uuidString.prefix(8).uppercased())
-                .font(.system(size: 12, weight: .medium, design: .monospaced))
-                .foregroundStyle(Color("SecondaryText"))
+                    .foregroundStyle(group.isEnabled ? Color("PrimaryText") : Color("SecondaryText"))
+                Text(subtitleText)
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color("SecondaryText"))
             }
             Spacer()
             Toggle("", isOn: Binding(
-                get: { item.isEnabled },
+                get: { group.isEnabled },
                 set: { _ in onToggle() }
             ))
             .tint(.orange)
             .labelsHidden()
         }
         .padding(16)
-        // ✅ UPDATED — dynamic card background
         .background(Color("CardBackground"))
         .clipShape(RoundedRectangle(cornerRadius: 18))
-        .opacity(item.isEnabled ? 1.0 : 0.6)
+        .opacity(group.isEnabled ? 1.0 : 0.6)
     }
 }
 
@@ -344,18 +369,17 @@ struct TimerRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(durationText)
                     .font(.system(size: 20, weight: .bold, design: .rounded))
-                    // ✅ UPDATED — dynamic text
                     .foregroundStyle(Color("PrimaryText"))
                 Text("Timer")
                     .font(.system(size: 13, weight: .medium, design: .rounded))
-                    // ✅ UPDATED — dynamic text
                     .foregroundStyle(Color("SecondaryText"))
             }
             Spacer()
         }
         .padding(16)
-        // ✅ UPDATED — dynamic card background
         .background(Color("CardBackground"))
         .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 }
+
+

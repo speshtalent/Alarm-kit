@@ -9,6 +9,16 @@ struct OnboardingView: View {
         ZStack {
             Color(red: 0.07, green: 0.07, blue: 0.09)
                 .ignoresSafeArea()
+                .gesture(
+                    DragGesture(minimumDistance: 50)
+                        .onEnded { value in
+                            if value.translation.width < -50 {
+                                if currentPage < 5 { navigate(to: currentPage + 1) }
+                            } else if value.translation.width > 50 {
+                                if currentPage > 0 { navigate(to: currentPage - 1) }
+                            }
+                        }
+                )
  
             VStack(spacing: 0) {
  
@@ -45,22 +55,6 @@ struct OnboardingView: View {
                 .opacity(opacity)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 // ✅ ADDED — swipe left to go next, swipe right to go back
-                .gesture(
-                    DragGesture(minimumDistance: 50)
-                        .onEnded { value in
-                            if value.translation.width < -50 {
-                                // swipe left — next
-                                if currentPage < 5 {
-                                    navigate(to: currentPage + 1)
-                                }
-                            } else if value.translation.width > 50 {
-                                // swipe right — back
-                                if currentPage > 0 {
-                                    navigate(to: currentPage - 1)
-                                }
-                            }
-                        }
-                )
  
                 // MARK: Dots
                 HStack(spacing: 8) {
