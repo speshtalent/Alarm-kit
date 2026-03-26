@@ -8,6 +8,7 @@ struct ContentView: View {
     @State private var mode: Mode = .alarms
     @State private var showAddAlarm = false
     @State private var showAddTimer = false
+    @State private var showSettings = false  // ✅ NEW
     @State private var selectedTab: Int = 0
     @State private var groupToEdit: AlarmService.AlarmGroup? = nil
 
@@ -15,8 +16,18 @@ struct ContentView: View {
     @StateObject private var timerService = TimerService.shared
 
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
+    @AppStorage("appColorScheme") private var appColorScheme: String = "system"  // ✅ NEW
 
     var quickActionMode: Binding<String?>
+
+    // ✅ NEW — convert stored string to ColorScheme
+    private var preferredColorScheme: ColorScheme? {
+        switch appColorScheme {
+        case "light": return .light
+        case "dark": return .dark
+        default: return nil
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -47,6 +58,7 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.4), value: hasSeenOnboarding)
+        .preferredColorScheme(preferredColorScheme)  // ✅ NEW
     }
 
     var alarmsTimersTab: some View {
@@ -60,6 +72,19 @@ struct ContentView: View {
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .foregroundStyle(Color("PrimaryText"))
                     Spacer()
+                    // ✅ NEW — gear icon
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(Color("SecondaryText"))
+                            .frame(width: 36, height: 36)
+                            .background(Color("CardBackground"))
+                            .clipShape(Circle())
+                    }
+                    .padding(.trailing, 8)
+
                     Button {
                         mode == .alarms ? (showAddAlarm = true) : (showAddTimer = true)
                     } label: {
@@ -103,11 +128,9 @@ struct ContentView: View {
                                 .listRowBackground(Color("AppBackground"))
                                 .listRowSeparator(.hidden)
                         } else {
-                            // ✅ Show 1 row per group
                             ForEach(alarmService.alarmGroups) { group in
                                 AlarmGroupRow(group: group) {
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    // Toggle all alarms in group
                                     for alarmID in group.alarmIDs {
                                         alarmService.toggleAlarm(id: alarmID)
                                     }
@@ -123,7 +146,6 @@ struct ContentView: View {
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                     Button(role: .destructive) {
                                         UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                                        // ✅ Delete all alarms in group
                                         if let firstID = group.alarmIDs.first {
                                             alarmService.cancelAlarm(id: firstID)
                                         }
@@ -191,6 +213,11 @@ struct ContentView: View {
                 .scrollContentBackground(.hidden)
             }
         }
+        // ✅ NEW — settings sheet
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
+                .preferredColorScheme(preferredColorScheme)
+        }
         .sheet(isPresented: $showAddAlarm, onDismiss: {
             alarmService.loadAlarms()
         }) {
@@ -207,7 +234,6 @@ struct ContentView: View {
                 }
             }
         }
-        // ✅ Edit group sheet
         .sheet(item: $groupToEdit, onDismiss: {
             alarmService.loadAlarms()
         }) { group in
@@ -216,11 +242,9 @@ struct ContentView: View {
                 repeatDaysToLoad: group.repeatDays
             ) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays in
                 Task {
-                    // Cancel all alarms in old group
                     if let firstID = group.alarmIDs.first {
                         alarmService.cancelAlarm(id: firstID)
                     }
-                    // Schedule new
                     _ = await alarmService.scheduleFutureAlarm(
                         date: date, title: title,
                         snoozeEnabled: snoozeEnabled,
@@ -262,9 +286,7 @@ struct ContentView: View {
                 await MainActor.run { timerService.loadTimers(); selectedTab = 0; mode = .timers }
             }
         case "settings":
-            if let url = URL(string: UIApplication.openSettingsURLString) {
-                UIApplication.shared.open(url)
-            }
+            showSettings = true  // ✅ UPDATED — opens in-app settings
         default: break
         }
     }
@@ -284,20 +306,108 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Alarm Group Row (1 row per recurring group)
+// MARK: - ✅ NEW Settings View
+struct SettingsView: View {
+    @AppStorage("appColorScheme") private var appColorScheme: String = "system"
+
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "Version \(version) (\(build))"
+    }
+
+    var body: some View {
+        ZStack {
+            Color("AppBackground").ignoresSafeArea()
+            VStack(spacing: 20) {
+
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color("SecondaryText").opacity(0.4))
+                    .frame(width: 40, height: 5)
+                    .padding(.top, 12)
+
+                Text("Settings")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color("PrimaryText"))
+
+                // Appearance card
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
+                    VStack(spacing: 0) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "circle.lefthalf.filled")
+                                .foregroundStyle(.orange)
+                            Text("Appearance")
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color("PrimaryText"))
+                            Spacer()
+                        }
+                        .padding(16)
+
+                        Divider()
+
+                        appearanceRow(title: "System Default", value: "system")
+                        Divider()
+                        appearanceRow(title: "Light Mode", value: "light")
+                        Divider()
+                        appearanceRow(title: "Dark Mode", value: "dark")
+                    }
+                }
+                .padding(.horizontal, 20)
+
+                // Version card
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
+                    HStack {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundStyle(.orange)
+                        Text("Version")
+                            .font(.system(size: 15, weight: .medium, design: .rounded))
+                            .foregroundStyle(Color("PrimaryText"))
+                        Spacer()
+                        Text(appVersion)
+                            .font(.system(size: 14, design: .rounded))
+                            .foregroundStyle(Color("SecondaryText"))
+                    }
+                    .padding(16)
+                }
+                .padding(.horizontal, 20)
+
+                Spacer()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func appearanceRow(title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .foregroundStyle(Color("PrimaryText"))
+            Spacer()
+            if appColorScheme == value {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.orange)
+            }
+        }
+        .padding(16)
+        .contentShape(Rectangle())
+        .onTapGesture { appColorScheme = value }
+    }
+}
+
+// MARK: - Alarm Group Row
 struct AlarmGroupRow: View {
     let group: AlarmService.AlarmGroup
     let onToggle: () -> Void
 
     private var subtitleText: String {
-        let timeStr = group.fireDate.flatMap { date -> String? in
-            let f = DateFormatter()
-            f.dateFormat = "EEE, MMM d • h:mm a"
-            return f.string(from: date)
-        } ?? ""
-
         if group.repeatLabel.isEmpty {
-            return timeStr
+            return group.fireDate.flatMap { date -> String? in
+                let f = DateFormatter()
+                f.dateFormat = "EEE, MMM d • h:mm a"
+                return f.string(from: date)
+            } ?? ""
         } else {
             let f = DateFormatter()
             f.dateFormat = "h:mm a"
@@ -381,5 +491,3 @@ struct TimerRow: View {
         .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 }
-
-
