@@ -646,6 +646,8 @@ private struct Screen6: View {
     }
 }
  
+#if DEBUG && targetEnvironment(simulator)
 #Preview {
     OnboardingView()
 }
+#endif

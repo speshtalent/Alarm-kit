@@ -368,9 +368,8 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
-				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CountdownLiveActivity/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = CountdownLiveActivity;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -398,9 +397,8 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
-				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CountdownLiveActivity/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = CountdownLiveActivity;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -456,6 +454,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 7;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -482,6 +481,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
@@ -519,6 +519,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 7;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -538,6 +539,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
 		};
@@ -549,10 +551,9 @@
 				CODE_SIGN_ENTITLEMENTS = MyAlarmApp/MyAlarmApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MyAlarmApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Future Alarm";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Future Alarm needs calendar access to add your alarms to your calendar.";
@@ -590,10 +591,9 @@
 				CODE_SIGN_ENTITLEMENTS = MyAlarmApp/MyAlarmApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MyAlarmApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Future Alarm";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Future Alarm needs calendar access to add your alarms to your calendar.";
@@ -631,9 +631,8 @@
 				CODE_SIGN_ENTITLEMENTS = FutureAlarmWidgetExtension.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
-				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FutureAlarmWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FutureAlarmWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -664,9 +663,8 @@
 				CODE_SIGN_ENTITLEMENTS = FutureAlarmWidgetExtension.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
-				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FutureAlarmWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FutureAlarmWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";

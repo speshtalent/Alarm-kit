@@ -72,9 +72,11 @@ extension CountdownLiveActivityAttributes.ContentState {
      }
 }
 
+#if DEBUG && targetEnvironment(simulator)
 #Preview("Notification", as: .content, using: CountdownLiveActivityAttributes.preview) {
    CountdownLiveActivityLiveActivity()
 } contentStates: {
     CountdownLiveActivityAttributes.ContentState.smiley
     CountdownLiveActivityAttributes.ContentState.starEyes
 }
+#endif

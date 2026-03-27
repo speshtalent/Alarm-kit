@@ -34,6 +34,36 @@
             endingLineNumber = "4"
             landmarkName = "SetAlarmIntent"
             landmarkType = "14">
+            <Locations>
+               <Location
+                  uuid = "71790F91-A287-4C89-AAC9-FB4201D8CD3D - 6e300f8fb0f846c0"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "one-time initialization function for title"
+                  moduleName = "MyAlarmApp.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/rakdev/Desktop/iOS%20Apps/Alarm-kit/MyAlarmApp/Services/SetAlarmIntent.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "5"
+                  endingLineNumber = "5">
+               </Location>
+               <Location
+                  uuid = "71790F91-A287-4C89-AAC9-FB4201D8CD3D - 9a8993fd2f8570d1"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "MyAlarmApp.SetAlarmIntent.title.unsafeMutableAddressor : Foundation.LocalizedStringResource"
+                  moduleName = "MyAlarmApp.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/rakdev/Desktop/iOS%20Apps/Alarm-kit/MyAlarmApp/Services/SetAlarmIntent.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "5"
+                  endingLineNumber = "5">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

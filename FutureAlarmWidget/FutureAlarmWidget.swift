@@ -494,6 +494,7 @@ struct TimeOnlyWidget: Widget {
 }
 
 // MARK: - Previews
+#if DEBUG && targetEnvironment(simulator)
 #Preview("Small", as: .systemSmall) {
     FutureAlarmWidget()
 } timeline: {
@@ -523,3 +524,4 @@ struct TimeOnlyWidget: Widget {
 } timeline: {
     FutureAlarmEntry(date: .now, alarmDate: Date().addingTimeInterval(8.5 * 3600), alarmLabel: "Morning Coffee")
 }
+#endif
