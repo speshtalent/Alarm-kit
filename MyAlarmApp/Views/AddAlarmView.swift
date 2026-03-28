@@ -5,6 +5,9 @@ struct AddAlarmView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
+    // ✅ Read 24hr setting
+    @AppStorage("use24HourFormat") private var use24HourFormat: Bool = false
+
     @State private var selectedHour: Int
     @State private var selectedMinute: Int
     @State private var selectedDate: Date
@@ -26,10 +29,7 @@ struct AddAlarmView: View {
     @State private var playingSound: String? = nil
     @State private var soundPlayer: AVAudioPlayer? = nil
 
-    // ✅ NEW — recurring days (1=Sun, 2=Mon ... 7=Sat)
     @State private var repeatDays: Set<Int> = []
-
-    // ✅ NEW — past time warning alert
     @State private var showPastTimeAlert = false
 
     private var editingAlarmID: String?
@@ -48,7 +48,6 @@ struct AddAlarmView: View {
         (name: "Soft", file: "soft.caf")
     ]
 
-    // Mon=2, Tue=3, Wed=4, Thu=5, Fri=6, Sat=7, Sun=1
     let weekDays: [(label: String, value: Int)] = [
         ("Mon", 2), ("Tue", 3), ("Wed", 4),
         ("Thu", 5), ("Fri", 6), ("Sat", 7), ("Sun", 1)
@@ -65,7 +64,7 @@ struct AddAlarmView: View {
             _title = State(initialValue: item.label)
             _selectedDate = State(initialValue: fireDate)
             let hour24 = Calendar.current.component(.hour, from: fireDate)
-            _selectedHour = State(initialValue: hour24 % 12 == 0 ? 12 : hour24 % 12)
+            _selectedHour = State(initialValue: hour24)
             _selectedAMPM = State(initialValue: hour24 < 12 ? 0 : 1)
             _selectedMinute = State(initialValue: Calendar.current.component(.minute, from: fireDate))
             _useSpecificDate = State(initialValue: true)
@@ -74,7 +73,7 @@ struct AddAlarmView: View {
             _title = State(initialValue: "Alarm")
             _selectedDate = State(initialValue: date)
             let hour24 = Calendar.current.component(.hour, from: date)
-            _selectedHour = State(initialValue: hour24 % 12 == 0 ? 12 : hour24 % 12)
+            _selectedHour = State(initialValue: hour24)
             _selectedAMPM = State(initialValue: hour24 < 12 ? 0 : 1)
             _selectedMinute = State(initialValue: Calendar.current.component(.minute, from: date))
             _useSpecificDate = State(initialValue: true)
@@ -83,7 +82,7 @@ struct AddAlarmView: View {
             _title = State(initialValue: "Alarm")
             _selectedDate = State(initialValue: Date())
             let hour24 = Calendar.current.component(.hour, from: Date())
-            _selectedHour = State(initialValue: hour24 % 12 == 0 ? 12 : hour24 % 12)
+            _selectedHour = State(initialValue: hour24)
             _selectedAMPM = State(initialValue: hour24 < 12 ? 0 : 1)
             _selectedMinute = State(initialValue: Calendar.current.component(.minute, from: Date()))
             _useSpecificDate = State(initialValue: false)
@@ -119,8 +118,16 @@ struct AddAlarmView: View {
             components.second = 0
             return Calendar.current.date(from: components) ?? selectedDate
         } else {
-            var hour24 = selectedHour % 12
-            if selectedAMPM == 1 { hour24 += 12 }
+            // ✅ 24hr: selectedHour is already 0-23
+            // 12hr: convert from 12hr + AMPM to 24hr
+            let hour24: Int
+            if use24HourFormat {
+                hour24 = selectedHour
+            } else {
+                var h = selectedHour % 12
+                if selectedAMPM == 1 { h += 12 }
+                hour24 = h
+            }
             var components = Calendar.current.dateComponents(in: TimeZone.current, from: Date())
             components.hour = hour24
             components.minute = selectedMinute
@@ -135,14 +142,18 @@ struct AddAlarmView: View {
 
     private var isEditing: Bool { editingAlarmID != nil }
 
-    // ✅ Check if time is in the past and no repeat days
     private var isTimeInPast: Bool {
         guard !useSpecificDate else {
             return fireDate <= Date() && repeatDays.isEmpty
         }
-        // Check raw time without the auto-next-day adjustment
-        var hour24 = selectedHour % 12
-        if selectedAMPM == 1 { hour24 += 12 }
+        let hour24: Int
+        if use24HourFormat {
+            hour24 = selectedHour
+        } else {
+            var h = selectedHour % 12
+            if selectedAMPM == 1 { h += 12 }
+            hour24 = h
+        }
         var components = Calendar.current.dateComponents(in: TimeZone.current, from: Date())
         components.hour = hour24
         components.minute = selectedMinute
@@ -151,7 +162,6 @@ struct AddAlarmView: View {
         return rawDate <= Date() && repeatDays.isEmpty
     }
 
-    // ✅ Repeat label for display
     private var repeatLabel: String {
         if repeatDays.isEmpty { return "Never" }
         if repeatDays.count == 7 { return "Every day" }
@@ -197,7 +207,7 @@ struct AddAlarmView: View {
                         .padding(.horizontal, 20)
                     }
 
-                    // Picker card
+                    // ✅ Picker card — changes based on 24hr setting
                     ZStack {
                         RoundedRectangle(cornerRadius: 20).fill(Color("CardBackground"))
                         if useSpecificDate {
@@ -208,7 +218,26 @@ struct AddAlarmView: View {
                             .labelsHidden()
                             .colorScheme(colorScheme)
                             .padding(8)
+                        } else if use24HourFormat {
+                            // ✅ 24 hour picker — 0 to 23, no AM/PM
+                            HStack(spacing: 0) {
+                                Picker("Hour", selection: $selectedHour) {
+                                    ForEach(0...23, id: \.self) { h in
+                                        Text(String(format: "%02d", h)).tag(h)
+                                    }
+                                }
+                                .pickerStyle(.wheel).frame(maxWidth: .infinity)
+                                Text(":").font(.system(size: 24, weight: .bold)).foregroundStyle(.orange)
+                                Picker("Minute", selection: $selectedMinute) {
+                                    ForEach(0...59, id: \.self) { m in
+                                        Text(String(format: "%02d", m)).tag(m)
+                                    }
+                                }
+                                .pickerStyle(.wheel).frame(maxWidth: .infinity)
+                            }
+                            .colorScheme(colorScheme).padding(8)
                         } else {
+                            // ✅ 12 hour picker — 1 to 12 + AM/PM
                             HStack(spacing: 0) {
                                 Picker("Hour", selection: $selectedHour) {
                                     ForEach(1...12, id: \.self) { h in
@@ -234,7 +263,7 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // ✅ NEW — Repeat card
+                    // Repeat card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                         VStack(alignment: .leading, spacing: 12) {
@@ -494,9 +523,7 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // ✅ Set Alarm button with past time check
                     Button {
-                        // ✅ Task 13 — block past time if no repeat days
                         if isTimeInPast {
                             showPastTimeAlert = true
                             return
@@ -516,7 +543,6 @@ struct AddAlarmView: View {
                 }
             }
         }
-        // ✅ Past time warning alert
         .alert("Time Already Passed", isPresented: $showPastTimeAlert) {
             Button("Change Time", role: .cancel) {}
         } message: {
@@ -539,7 +565,6 @@ struct AddAlarmView: View {
         }
     }
 
-    // ✅ Extracted save logic
     private func saveAlarm() {
         stopSoundPreview()
         UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -574,13 +599,9 @@ struct AddAlarmView: View {
         dismiss()
     }
 
-    // MARK: - Recording functions
     private func startRecording() {
         AVAudioApplication.requestRecordPermission { granted in
-            guard granted else {
-                print("❌ Microphone permission denied")
-                return
-            }
+            guard granted else { return }
             DispatchQueue.main.async {
                 try? FileManager.default.removeItem(at: self.tempRecordingURL)
                 let settings: [String: Any] = [
@@ -594,7 +615,6 @@ struct AddAlarmView: View {
                 self.audioRecorder = try? AVAudioRecorder(url: self.tempRecordingURL, settings: settings)
                 self.audioRecorder?.record()
                 self.isRecording = true
-                print("🎙️ Recording started!")
             }
         }
     }
@@ -629,15 +649,11 @@ struct AddAlarmView: View {
         UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
     }
 
-    // MARK: - Sound preview functions
     private func playSoundPreview(_ file: String) {
         stopSoundPreview()
         let fileName = (file as NSString).deletingPathExtension
         let fileExt = (file as NSString).pathExtension
-        guard let url = Bundle.main.url(forResource: fileName, withExtension: fileExt) else {
-            print("❌ Sound file not found in bundle: \(file)")
-            return
-        }
+        guard let url = Bundle.main.url(forResource: fileName, withExtension: fileExt) else { return }
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
             try AVAudioSession.sharedInstance().setActive(true)
@@ -648,9 +664,7 @@ struct AddAlarmView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
                 if playingSound == file { playingSound = nil }
             }
-        } catch {
-            print("❌ Failed to play sound: \(error)")
-        }
+        } catch {}
     }
 
     private func stopSoundPreview() {

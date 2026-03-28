@@ -22,14 +22,13 @@ final class AlarmService: ObservableObject {
         }
     }
 
-    // ✅ NEW — grouped alarm for display (1 row per recurring group)
     struct AlarmGroup: Identifiable {
-        let id: UUID              // group ID (first alarm ID or single alarm ID)
+        let id: UUID
         let label: String
         var isEnabled: Bool
-        let alarmIDs: [UUID]      // all alarm IDs in this group
-        let fireDate: Date?       // earliest fire date
-        let repeatDays: Set<Int>  // empty = one-time
+        let alarmIDs: [UUID]
+        let fireDate: Date?
+        let repeatDays: Set<Int>
 
         var repeatLabel: String {
             if repeatDays.isEmpty { return "" }
@@ -49,11 +48,14 @@ final class AlarmService: ObservableObject {
     @Published var alarms: [AlarmListItem] = []
     @Published var alarmGroups: [AlarmGroup] = []
 
-    private let labelsStoreKey       = "AlarmLabelsByID"
-    private let disabledAlarmsKey    = "DisabledAlarmIDs"
-    private let groupIDsKey          = "AlarmGroupIDs"          // groupID -> [alarmID]
-    private let alarmToGroupKey      = "AlarmToGroupID"         // alarmID -> groupID
-    private let groupRepeatDaysKey   = "GroupRepeatDays"        // groupID -> [Int]
+    private let labelsStoreKey     = "AlarmLabelsByID"
+    private let disabledAlarmsKey  = "DisabledAlarmIDs"
+    private let groupIDsKey        = "AlarmGroupIDs"
+    private let alarmToGroupKey    = "AlarmToGroupID"
+    private let groupRepeatDaysKey = "GroupRepeatDays"
+
+    // ✅ iCloud KV store key
+    private let iCloudAlarmsKey = "iCloudSavedAlarms"
 
     private init() {}
 
@@ -91,7 +93,6 @@ final class AlarmService: ObservableObject {
         return id
     }
 
-    // ✅ Cancel all alarms in the same group
     func cancelAlarm(id: UUID) {
         let groupID = getGroupID(for: id) ?? id
         let groupAlarmIDs = getAlarmIDs(forGroup: groupID)
@@ -113,10 +114,11 @@ final class AlarmService: ObservableObject {
             alarms.removeAll { $0.alarm.id == alarmID }
         }
 
-        // Clean up group data
         removeGroup(groupID: groupID)
         rebuildGroups()
         saveNextAlarmForWidget()
+        // ✅ Sync to iCloud after cancel
+        syncToiCloud()
     }
 
     func toggleAlarm(id: UUID) {
@@ -156,7 +158,6 @@ final class AlarmService: ObservableObject {
         }
     }
 
-    // ✅ Toggle entire group
     func toggleGroup(groupID: UUID) {
         let groupAlarmIDs = getAlarmIDs(forGroup: groupID)
         for alarmID in groupAlarmIDs {
@@ -189,10 +190,9 @@ final class AlarmService: ObservableObject {
         rebuildGroups()
     }
 
-    // ✅ Rebuild groups from UserDefaults for display
     func rebuildGroups() {
-        let groupIDsDict = loadGroupIDs()      // groupID -> [alarmID strings]
-        let repeatDaysDict = loadGroupRepeatDays() // groupID -> [Int]
+        let groupIDsDict = loadGroupIDs()
+        let repeatDaysDict = loadGroupRepeatDays()
         let labels = loadLabels()
 
         var groups: [AlarmGroup] = []
@@ -201,8 +201,6 @@ final class AlarmService: ObservableObject {
             guard let groupID = UUID(uuidString: groupIDStr) else { continue }
             let alarmIDs = alarmIDStrs.compactMap { UUID(uuidString: $0) }
             let repeatDays = Set(repeatDaysDict[groupIDStr] ?? [])
-
-            // Find matching alarms
             let groupAlarms = alarms.filter { alarmIDs.contains($0.id) }
             guard !groupAlarms.isEmpty else { continue }
 
@@ -220,7 +218,6 @@ final class AlarmService: ObservableObject {
             ))
         }
 
-        // ✅ Add single alarms that are NOT in any group
         let groupedAlarmIDs = Set(groupIDsDict.values.flatMap { $0 }.compactMap { UUID(uuidString: $0) })
         for alarm in alarms where !groupedAlarmIDs.contains(alarm.id) {
             groups.append(AlarmGroup(
@@ -266,10 +263,11 @@ final class AlarmService: ObservableObject {
 
             if repeatDays.isEmpty {
                 let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
-                // ✅ Save as single-alarm group
                 saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: [])
                 rebuildGroups()
                 saveNextAlarmForWidget()
+                // ✅ Sync to iCloud after scheduling
+                syncToiCloud()
                 return id
             } else {
                 let calendar = Calendar.current
@@ -296,10 +294,11 @@ final class AlarmService: ObservableObject {
                     print("✅ Recurring alarm set for weekday \(weekday) at \(nextDate)")
                 }
 
-                // ✅ Save group
                 saveGroup(groupID: groupID, alarmIDs: scheduledIDs, label: title, repeatDays: repeatDays)
                 rebuildGroups()
                 saveNextAlarmForWidget()
+                // ✅ Sync to iCloud after scheduling
+                syncToiCloud()
                 return scheduledIDs.first
             }
         } catch {
@@ -364,23 +363,121 @@ final class AlarmService: ObservableObject {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
+    // MARK: - ✅ iCloud Sync
+
+    // Save all current alarm groups to iCloud KV store
+    func syncToiCloud() {
+        let store = NSUbiquitousKeyValueStore.default
+        var iCloudData: [[String: Any]] = []
+
+        for group in alarmGroups {
+            guard let fireDate = group.fireDate else { continue }
+            var entry: [String: Any] = [
+                "groupID":    group.id.uuidString,
+                "label":      group.label,
+                "fireDate":   fireDate.timeIntervalSince1970,
+                "repeatDays": Array(group.repeatDays),
+                "isEnabled":  group.isEnabled,
+                "alarmIDs":   group.alarmIDs.map { $0.uuidString },
+                "sound":      "nokia.caf"  // default — voice not backed up
+            ]
+            // Get sound from first alarm label
+            if let firstID = group.alarmIDs.first {
+                let labels = loadLabels()
+                entry["label"] = labels[firstID.uuidString] ?? group.label
+            }
+            iCloudData.append(entry)
+        }
+
+        if let jsonData = try? JSONSerialization.data(withJSONObject: iCloudData),
+           let jsonString = String(data: jsonData, encoding: .utf8) {
+            store.set(jsonString, forKey: iCloudAlarmsKey)
+            store.synchronize()
+            print("✅ iCloud sync: \(iCloudData.count) alarm groups saved")
+        }
+    }
+
+    // ✅ Restore alarms from iCloud — returns true if alarms were restored
+    func restoreFromiCloud() async -> Bool {
+        let store = NSUbiquitousKeyValueStore.default
+        store.synchronize()
+
+        guard let jsonString = store.string(forKey: iCloudAlarmsKey),
+              let jsonData = jsonString.data(using: .utf8),
+              let iCloudData = try? JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]],
+              !iCloudData.isEmpty else {
+            print("ℹ️ No iCloud alarm data found")
+            return false
+        }
+
+        // Check if AlarmKit already has alarms (not a fresh install)
+        let existingAlarms = try? AlarmManager.shared.alarms
+        if let existing = existingAlarms, !existing.isEmpty {
+            print("ℹ️ Alarms already exist — skipping iCloud restore")
+            return false
+        }
+
+        print("🔄 Restoring \(iCloudData.count) alarm groups from iCloud...")
+        var restoredCount = 0
+
+        for entry in iCloudData {
+            guard
+                let label        = entry["label"] as? String,
+                let fireInterval = entry["fireDate"] as? TimeInterval,
+                let repeatDaysArr = entry["repeatDays"] as? [Int],
+                let isEnabled    = entry["isEnabled"] as? Bool
+            else { continue }
+
+            let fireDate   = Date(timeIntervalSince1970: fireInterval)
+            let repeatDays = Set(repeatDaysArr)
+            let sound      = entry["sound"] as? String ?? "nokia.caf"
+
+            // Skip if voice recording — restore with default sound instead
+            let isVoice   = sound.hasPrefix("alarm_voice_")
+            let finalSound = isVoice ? "nokia.caf" : sound
+
+            // Skip past alarms that have no repeat days
+            if fireDate <= Date() && repeatDays.isEmpty {
+                print("⏭ Skipping past alarm: \(label)")
+                continue
+            }
+
+            _ = await scheduleFutureAlarm(
+                date: fireDate,
+                title: label,
+                sound: finalSound,
+                repeatDays: repeatDays
+            )
+
+            if !isEnabled {
+                // Toggle off if it was disabled
+                if let lastAlarm = alarms.last {
+                    toggleAlarm(id: lastAlarm.id)
+                }
+            }
+
+            restoredCount += 1
+            print("✅ Restored alarm: \(label)")
+        }
+
+        print("✅ iCloud restore complete: \(restoredCount) alarms restored")
+        return restoredCount > 0
+    }
+
     // MARK: - Group persistence
     private func saveGroup(groupID: UUID, alarmIDs: [UUID], label: String, repeatDays: Set<Int>) {
         var groups = loadGroupIDs()
         groups[groupID.uuidString] = alarmIDs.map { $0.uuidString }
         UserDefaults.standard.set(groups, forKey: groupIDsKey)
 
-        // Save label for group
         var labels = loadLabels()
         labels[groupID.uuidString] = label
         UserDefaults.standard.set(labels, forKey: labelsStoreKey)
 
-        // Save repeat days
         var repeatDict = loadGroupRepeatDays()
         repeatDict[groupID.uuidString] = Array(repeatDays)
         UserDefaults.standard.set(repeatDict, forKey: groupRepeatDaysKey)
 
-        // Map each alarmID -> groupID
         var alarmToGroup = loadAlarmToGroup()
         for alarmID in alarmIDs {
             alarmToGroup[alarmID.uuidString] = groupID.uuidString
@@ -433,7 +530,6 @@ final class AlarmService: ObservableObject {
         UserDefaults.standard.dictionary(forKey: groupRepeatDaysKey) as? [String: [Int]] ?? [:]
     }
 
-    // MARK: - Helpers
     private func nextDate(forWeekday weekday: Int, time: DateComponents) -> Date {
         let calendar = Calendar.current
         var components = DateComponents()
