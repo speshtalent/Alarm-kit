@@ -7,8 +7,9 @@ import StoreKit
 struct MyAlarmAppApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var quickActionMode: String? = nil
-    // ✅ UPDATED — only need one state now
     @State private var showFeedbackAlert = false
+    // ✅ NEW — iCloud restore popup
+    @State private var showVoiceRestoredAlert = false
 
     init() {
         #if DEBUG
@@ -63,7 +64,6 @@ struct MyAlarmAppApp: App {
         }
     }
 
-    // ✅ UPDATED — goes straight to native Apple review popup
     private func showNativeReview() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             if let scene = UIApplication.shared.connectedScenes
@@ -74,18 +74,39 @@ struct MyAlarmAppApp: App {
         }
     }
 
+    // ✅ NEW — restore alarms from iCloud on first launch after reinstall
+    private func restoreFromiCloudIfNeeded() {
+        Task { @MainActor in
+            let restored = await AlarmService.shared.restoreFromiCloud()
+            if restored {
+                AlarmService.shared.loadAlarms()
+                // ✅ Show popup about voice recordings being lost
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    showVoiceRestoredAlert = true
+                }
+            }
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView(quickActionMode: $quickActionMode)
                 .onAppear {
                     setupQuickActions()
+                    // ✅ NEW — try restore from iCloud on launch
+                    restoreFromiCloudIfNeeded()
                     print("✅ App launched")
                 }
 
-                // ✅ UPDATED — simple alert → native Apple review directly
+                // ✅ NEW — voice recording lost popup after iCloud restore
+                .alert("Alarms Restored 🔔", isPresented: $showVoiceRestoredAlert) {
+                    Button("OK", role: .cancel) { }
+                } message: {
+                    Text("Your alarms have been restored from iCloud. Note: Voice recordings could not be restored as they are stored locally on your device.")
+                }
+
                 .alert("Enjoying Future Alarm? 🔔", isPresented: $showFeedbackAlert) {
                     Button("Yes, Rate Us ⭐") {
-                        // ✅ goes straight to native Apple review with stars + message
                         showNativeReview()
                     }
                     Button("Not Now", role: .cancel) { }

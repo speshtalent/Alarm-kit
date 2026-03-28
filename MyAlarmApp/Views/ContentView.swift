@@ -8,7 +8,7 @@ struct ContentView: View {
     @State private var mode: Mode = .alarms
     @State private var showAddAlarm = false
     @State private var showAddTimer = false
-    @State private var showSettings = false  // ✅ NEW
+    @State private var showSettings = false
     @State private var selectedTab: Int = 0
     @State private var groupToEdit: AlarmService.AlarmGroup? = nil
 
@@ -16,11 +16,11 @@ struct ContentView: View {
     @StateObject private var timerService = TimerService.shared
 
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
-    @AppStorage("appColorScheme") private var appColorScheme: String = "system"  // ✅ NEW
+    @AppStorage("appColorScheme") private var appColorScheme: String = "system"
+    @AppStorage("use24HourFormat") private var use24HourFormat: Bool = false
 
     var quickActionMode: Binding<String?>
 
-    // ✅ NEW — convert stored string to ColorScheme
     private var preferredColorScheme: ColorScheme? {
         switch appColorScheme {
         case "light": return .light
@@ -58,7 +58,7 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.4), value: hasSeenOnboarding)
-        .preferredColorScheme(preferredColorScheme)  // ✅ NEW
+        .preferredColorScheme(preferredColorScheme)
     }
 
     var alarmsTimersTab: some View {
@@ -72,7 +72,6 @@ struct ContentView: View {
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .foregroundStyle(Color("PrimaryText"))
                     Spacer()
-                    // ✅ NEW — gear icon
                     Button {
                         showSettings = true
                     } label: {
@@ -129,7 +128,7 @@ struct ContentView: View {
                                 .listRowSeparator(.hidden)
                         } else {
                             ForEach(alarmService.alarmGroups) { group in
-                                AlarmGroupRow(group: group) {
+                                AlarmGroupRow(group: group, use24Hour: use24HourFormat) {
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                     for alarmID in group.alarmIDs {
                                         alarmService.toggleAlarm(id: alarmID)
@@ -213,7 +212,6 @@ struct ContentView: View {
                 .scrollContentBackground(.hidden)
             }
         }
-        // ✅ NEW — settings sheet
         .sheet(isPresented: $showSettings) {
             SettingsView()
                 .preferredColorScheme(preferredColorScheme)
@@ -286,7 +284,7 @@ struct ContentView: View {
                 await MainActor.run { timerService.loadTimers(); selectedTab = 0; mode = .timers }
             }
         case "settings":
-            showSettings = true  // ✅ UPDATED — opens in-app settings
+            showSettings = true
         default: break
         }
     }
@@ -306,9 +304,11 @@ struct ContentView: View {
     }
 }
 
-// MARK: - ✅ NEW Settings View
+// MARK: - Settings View
 struct SettingsView: View {
     @AppStorage("appColorScheme") private var appColorScheme: String = "system"
+    @AppStorage("use24HourFormat") private var use24HourFormat: Bool = false
+    @State private var showFeatureRequest = false
 
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -319,62 +319,110 @@ struct SettingsView: View {
     var body: some View {
         ZStack {
             Color("AppBackground").ignoresSafeArea()
-            VStack(spacing: 20) {
+            ScrollView {
+                VStack(spacing: 16) {
 
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color("SecondaryText").opacity(0.4))
-                    .frame(width: 40, height: 5)
-                    .padding(.top, 12)
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color("SecondaryText").opacity(0.4))
+                        .frame(width: 40, height: 5)
+                        .padding(.top, 12)
 
-                Text("Settings")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color("PrimaryText"))
+                    Text("Settings")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color("PrimaryText"))
+                        .padding(.bottom, 4)
 
-                // Appearance card
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
-                    VStack(spacing: 0) {
+                    // ✅ Appearance card
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
+                        VStack(spacing: 0) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "circle.lefthalf.filled")
+                                    .foregroundStyle(.orange)
+                                Text("Appearance")
+                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(Color("PrimaryText"))
+                                Spacer()
+                            }
+                            .padding(16)
+                            Divider()
+                            appearanceRow(title: "System Default", value: "system")
+                            Divider()
+                            appearanceRow(title: "Light Mode", value: "light")
+                            Divider()
+                            appearanceRow(title: "Dark Mode", value: "dark")
+                        }
+                    }
+                    .padding(.horizontal, 20)
+
+                    // ✅ Time Format card
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
+                        VStack(spacing: 0) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "clock.fill")
+                                    .foregroundStyle(.orange)
+                                Text("Time Format")
+                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(Color("PrimaryText"))
+                                Spacer()
+                            }
+                            .padding(16)
+                            Divider()
+                            HStack {
+                                Text("24 Hour")
+                                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                                    .foregroundStyle(Color("PrimaryText"))
+                                Spacer()
+                                Toggle("", isOn: $use24HourFormat).tint(.orange)
+                            }
+                            .padding(16)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+
+                    // ✅ Feature Request card — compact
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                         HStack(spacing: 8) {
-                            Image(systemName: "circle.lefthalf.filled")
+                            Image(systemName: "lightbulb.fill")
                                 .foregroundStyle(.orange)
-                            Text("Appearance")
-                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            Text("Request a Feature")
+                                .font(.system(size: 15, weight: .medium, design: .rounded))
                                 .foregroundStyle(Color("PrimaryText"))
                             Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(Color("SecondaryText"))
+                                .font(.system(size: 13))
                         }
                         .padding(16)
-
-                        Divider()
-
-                        appearanceRow(title: "System Default", value: "system")
-                        Divider()
-                        appearanceRow(title: "Light Mode", value: "light")
-                        Divider()
-                        appearanceRow(title: "Dark Mode", value: "dark")
                     }
-                }
-                .padding(.horizontal, 20)
+                    .padding(.horizontal, 20)
+                    .onTapGesture { showFeatureRequest = true }
 
-                // Version card
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
-                    HStack {
-                        Image(systemName: "info.circle.fill")
-                            .foregroundStyle(.orange)
-                        Text("Version")
-                            .font(.system(size: 15, weight: .medium, design: .rounded))
-                            .foregroundStyle(Color("PrimaryText"))
-                        Spacer()
-                        Text(appVersion)
-                            .font(.system(size: 14, design: .rounded))
-                            .foregroundStyle(Color("SecondaryText"))
+                    // ✅ Version card — compact
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
+                        HStack(spacing: 8) {
+                            Image(systemName: "info.circle.fill")
+                                .foregroundStyle(.orange)
+                            Text("Version")
+                                .font(.system(size: 15, weight: .medium, design: .rounded))
+                                .foregroundStyle(Color("PrimaryText"))
+                            Spacer()
+                            Text(appVersion)
+                                .font(.system(size: 14, design: .rounded))
+                                .foregroundStyle(Color("SecondaryText"))
+                        }
+                        .padding(16)
                     }
-                    .padding(16)
+                    .padding(.horizontal, 20)
                 }
-                .padding(.horizontal, 20)
-
-                Spacer()
+                .padding(.bottom, 40)
             }
+        }
+        .sheet(isPresented: $showFeatureRequest) {
+            FeatureRequestView()
         }
     }
 
@@ -396,22 +444,106 @@ struct SettingsView: View {
     }
 }
 
+// MARK: - Feature Request View
+struct FeatureRequestView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var requestText = ""
+    @State private var showNoMailAlert = false
+
+    private let supportEmail = "support@futurealarm.app"
+
+    var body: some View {
+        ZStack {
+            Color("AppBackground").ignoresSafeArea()
+            VStack(spacing: 20) {
+
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color("SecondaryText").opacity(0.4))
+                    .frame(width: 40, height: 5)
+                    .padding(.top, 12)
+
+                Text("Request a Feature")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color("PrimaryText"))
+
+                Text("Tell us what you'd like to see in Future Alarm!")
+                    .font(.system(size: 14, design: .rounded))
+                    .foregroundStyle(Color("SecondaryText"))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+
+                ZStack(alignment: .topLeading) {
+                    RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
+                    if requestText.isEmpty {
+                        Text("Describe your feature idea...")
+                            .font(.system(size: 15, design: .rounded))
+                            .foregroundStyle(Color("SecondaryText").opacity(0.5))
+                            .padding(16)
+                    }
+                    TextEditor(text: $requestText)
+                        .font(.system(size: 15, design: .rounded))
+                        .foregroundStyle(Color("PrimaryText"))
+                        .scrollContentBackground(.hidden)
+                        .background(Color.clear)
+                        .padding(12)
+                        .frame(height: 160)
+                }
+                .frame(height: 160)
+                .padding(.horizontal, 20)
+
+                Button {
+                    sendFeatureRequest()
+                } label: {
+                    Text("Send Request")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(requestText.isEmpty ? Color.orange.opacity(0.4) : Color.orange)
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                }
+                .disabled(requestText.isEmpty)
+                .padding(.horizontal, 20)
+
+                Spacer()
+            }
+        }
+        .alert("Mail Not Set Up", isPresented: $showNoMailAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Please set up the Mail app on your iPhone to send feature requests.")
+        }
+    }
+
+    private func sendFeatureRequest() {
+        let subject = "Feature Request — Future Alarm"
+        let body = requestText
+        let urlString = "mailto:\(supportEmail)?subject=\(subject)&body=\(body)"
+            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        if let url = URL(string: urlString), UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url)
+        } else {
+            showNoMailAlert = true
+        }
+    }
+}
+
 // MARK: - Alarm Group Row
 struct AlarmGroupRow: View {
     let group: AlarmService.AlarmGroup
+    let use24Hour: Bool
     let onToggle: () -> Void
 
     private var subtitleText: String {
+        let f = DateFormatter()
+        f.dateFormat = use24Hour ? "EEE, MMM d • HH:mm" : "EEE, MMM d • h:mm a"
+
         if group.repeatLabel.isEmpty {
-            return group.fireDate.flatMap { date -> String? in
-                let f = DateFormatter()
-                f.dateFormat = "EEE, MMM d • h:mm a"
-                return f.string(from: date)
-            } ?? ""
+            return group.fireDate.flatMap { f.string(from: $0) } ?? ""
         } else {
-            let f = DateFormatter()
-            f.dateFormat = "h:mm a"
-            let timeOnly = group.fireDate.flatMap { f.string(from: $0) } ?? ""
+            let tf = DateFormatter()
+            tf.dateFormat = use24Hour ? "HH:mm" : "h:mm a"
+            let timeOnly = group.fireDate.flatMap { tf.string(from: $0) } ?? ""
             return "\(group.repeatLabel) • \(timeOnly)"
         }
     }
