@@ -53,9 +53,7 @@ final class AlarmService: ObservableObject {
     private let groupIDsKey        = "AlarmGroupIDs"
     private let alarmToGroupKey    = "AlarmToGroupID"
     private let groupRepeatDaysKey = "GroupRepeatDays"
-
-    // ✅ iCloud KV store key
-    private let iCloudAlarmsKey = "iCloudSavedAlarms"
+    private let iCloudAlarmsKey    = "iCloudSavedAlarms"
 
     private init() {}
 
@@ -117,7 +115,6 @@ final class AlarmService: ObservableObject {
         removeGroup(groupID: groupID)
         rebuildGroups()
         saveNextAlarmForWidget()
-        // ✅ Sync to iCloud after cancel
         syncToiCloud()
     }
 
@@ -266,7 +263,6 @@ final class AlarmService: ObservableObject {
                 saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: [])
                 rebuildGroups()
                 saveNextAlarmForWidget()
-                // ✅ Sync to iCloud after scheduling
                 syncToiCloud()
                 return id
             } else {
@@ -297,7 +293,6 @@ final class AlarmService: ObservableObject {
                 saveGroup(groupID: groupID, alarmIDs: scheduledIDs, label: title, repeatDays: repeatDays)
                 rebuildGroups()
                 saveNextAlarmForWidget()
-                // ✅ Sync to iCloud after scheduling
                 syncToiCloud()
                 return scheduledIDs.first
             }
@@ -340,32 +335,49 @@ final class AlarmService: ObservableObject {
 
     func saveNextAlarmForWidget() {
         let userDefaults = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
-        let nextAlarm = alarms
+        
+        // ✅ Sync 24hr setting to App Group so widget can read it
+        let use24Hour = UserDefaults.standard.bool(forKey: "use24HourFormat")
+        userDefaults?.set(use24Hour, forKey: "use24HourFormat")
+
+        // ✅ Save next single alarm (existing)
+        let futureAlarms = alarms
             .filter { $0.isEnabled }
             .compactMap { item -> (Date, String)? in
                 guard let fireDate = item.fireDate, fireDate > Date() else { return nil }
                 return (fireDate, item.label)
             }
             .sorted { $0.0 < $1.0 }
-            .first
 
-        if let (fireDate, label) = nextAlarm {
+        if let (fireDate, label) = futureAlarms.first {
             userDefaults?.set(fireDate.timeIntervalSince1970, forKey: "widgetNextAlarmDate")
             userDefaults?.set(label, forKey: "widgetNextAlarmLabel")
-            userDefaults?.synchronize()
             print("✅ Widget saved: \(label) at \(fireDate)")
         } else {
             userDefaults?.removeObject(forKey: "widgetNextAlarmDate")
             userDefaults?.removeObject(forKey: "widgetNextAlarmLabel")
-            userDefaults?.synchronize()
             print("✅ Widget cleared — no active alarms")
         }
+
+        // ✅ NEW — Save list of upcoming alarms for lock screen widget (max 5)
+        let upcomingList = futureAlarms.prefix(5).map { (date, label) -> [String: Any] in
+            return [
+                "date": date.timeIntervalSince1970,
+                "label": label
+            ]
+        }
+        if let jsonData = try? JSONSerialization.data(withJSONObject: upcomingList),
+           let jsonString = String(data: jsonData, encoding: .utf8) {
+            userDefaults?.set(jsonString, forKey: "widgetUpcomingAlarms")
+        } else {
+            userDefaults?.removeObject(forKey: "widgetUpcomingAlarms")
+        }
+
+        userDefaults?.synchronize()
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    // MARK: - ✅ iCloud Sync
-
-    // Save all current alarm groups to iCloud KV store
+    // MARK: - iCloud Sync
     func syncToiCloud() {
         let store = NSUbiquitousKeyValueStore.default
         var iCloudData: [[String: Any]] = []
@@ -379,9 +391,8 @@ final class AlarmService: ObservableObject {
                 "repeatDays": Array(group.repeatDays),
                 "isEnabled":  group.isEnabled,
                 "alarmIDs":   group.alarmIDs.map { $0.uuidString },
-                "sound":      "nokia.caf"  // default — voice not backed up
+                "sound":      "nokia.caf"
             ]
-            // Get sound from first alarm label
             if let firstID = group.alarmIDs.first {
                 let labels = loadLabels()
                 entry["label"] = labels[firstID.uuidString] ?? group.label
@@ -397,7 +408,6 @@ final class AlarmService: ObservableObject {
         }
     }
 
-    // ✅ Restore alarms from iCloud — returns true if alarms were restored
     func restoreFromiCloud() async -> Bool {
         let store = NSUbiquitousKeyValueStore.default
         store.synchronize()
@@ -410,7 +420,6 @@ final class AlarmService: ObservableObject {
             return false
         }
 
-        // Check if AlarmKit already has alarms (not a fresh install)
         let existingAlarms = try? AlarmManager.shared.alarms
         if let existing = existingAlarms, !existing.isEmpty {
             print("ℹ️ Alarms already exist — skipping iCloud restore")
@@ -422,21 +431,18 @@ final class AlarmService: ObservableObject {
 
         for entry in iCloudData {
             guard
-                let label        = entry["label"] as? String,
-                let fireInterval = entry["fireDate"] as? TimeInterval,
+                let label         = entry["label"] as? String,
+                let fireInterval  = entry["fireDate"] as? TimeInterval,
                 let repeatDaysArr = entry["repeatDays"] as? [Int],
-                let isEnabled    = entry["isEnabled"] as? Bool
+                let isEnabled     = entry["isEnabled"] as? Bool
             else { continue }
 
             let fireDate   = Date(timeIntervalSince1970: fireInterval)
             let repeatDays = Set(repeatDaysArr)
             let sound      = entry["sound"] as? String ?? "nokia.caf"
-
-            // Skip if voice recording — restore with default sound instead
-            let isVoice   = sound.hasPrefix("alarm_voice_")
+            let isVoice    = sound.hasPrefix("alarm_voice_")
             let finalSound = isVoice ? "nokia.caf" : sound
 
-            // Skip past alarms that have no repeat days
             if fireDate <= Date() && repeatDays.isEmpty {
                 print("⏭ Skipping past alarm: \(label)")
                 continue
@@ -450,7 +456,6 @@ final class AlarmService: ObservableObject {
             )
 
             if !isEnabled {
-                // Toggle off if it was disabled
                 if let lastAlarm = alarms.last {
                     toggleAlarm(id: lastAlarm.id)
                 }

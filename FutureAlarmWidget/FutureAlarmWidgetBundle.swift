@@ -7,5 +7,6 @@ struct FutureAlarmWidgetBundle: WidgetBundle {
         FutureAlarmWidget()
         CountdownWidget()
         TimeOnlyWidget()
+        LockScreenWidget()  // ✅ NEW — lock screen widget
     }
 }
