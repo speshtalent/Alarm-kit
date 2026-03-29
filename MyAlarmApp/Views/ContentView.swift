@@ -374,7 +374,11 @@ struct SettingsView: View {
                                     .font(.system(size: 15, weight: .medium, design: .rounded))
                                     .foregroundStyle(Color("PrimaryText"))
                                 Spacer()
-                                Toggle("", isOn: $use24HourFormat).tint(.orange)
+                                Toggle("", isOn: $use24HourFormat)
+                                    .tint(.orange)
+                                    .onChange(of: use24HourFormat) {
+                                        AlarmService.shared.saveNextAlarmForWidget()
+                                    }
                             }
                             .padding(16)
                         }
