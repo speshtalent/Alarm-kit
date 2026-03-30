@@ -213,8 +213,8 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView()
-                .preferredColorScheme(preferredColorScheme)
+            SettingsView(preferredColorScheme: preferredColorScheme)
+                .id(appColorScheme)
         }
         .sheet(isPresented: $showAddAlarm, onDismiss: {
             alarmService.loadAlarms()
@@ -309,6 +309,17 @@ struct SettingsView: View {
     @AppStorage("appColorScheme") private var appColorScheme: String = "system"
     @AppStorage("use24HourFormat") private var use24HourFormat: Bool = false
     @State private var showFeatureRequest = false
+    @Environment(\.dismiss) private var dismiss
+
+    var preferredColorScheme: ColorScheme?
+
+    private var currentColorScheme: ColorScheme? {
+        switch appColorScheme {
+        case "light": return .light
+        case "dark": return .dark
+        default: return nil
+        }
+    }
 
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -332,7 +343,7 @@ struct SettingsView: View {
                         .foregroundStyle(Color("PrimaryText"))
                         .padding(.bottom, 4)
 
-                    // ✅ Appearance card
+                    // ✅ Appearance card — 3 options with dismiss
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                         VStack(spacing: 0) {
@@ -355,7 +366,7 @@ struct SettingsView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // ✅ Time Format card
+                    // Time Format card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                         VStack(spacing: 0) {
@@ -385,7 +396,7 @@ struct SettingsView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // ✅ Feature Request card — compact
+                    // Feature Request card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                         HStack(spacing: 8) {
@@ -404,7 +415,7 @@ struct SettingsView: View {
                     .padding(.horizontal, 20)
                     .onTapGesture { showFeatureRequest = true }
 
-                    // ✅ Version card — compact
+                    // Version card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                         HStack(spacing: 8) {
@@ -425,8 +436,10 @@ struct SettingsView: View {
                 .padding(.bottom, 40)
             }
         }
+        .preferredColorScheme(currentColorScheme)
         .sheet(isPresented: $showFeatureRequest) {
             FeatureRequestView()
+                .preferredColorScheme(currentColorScheme)
         }
     }
 
@@ -444,7 +457,15 @@ struct SettingsView: View {
         }
         .padding(16)
         .contentShape(Rectangle())
-        .onTapGesture { appColorScheme = value }
+        .onTapGesture {
+            appColorScheme = value
+            let style: UIUserInterfaceStyle = value == "light" ? .light : value == "dark" ? .dark : .unspecified
+            UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap { $0.windows }
+                .forEach { $0.overrideUserInterfaceStyle = style }
+            dismiss() // ✅ closes sheet so it reopens with correct color
+        }
     }
 }
 
@@ -541,7 +562,6 @@ struct AlarmGroupRow: View {
     private var subtitleText: String {
         let f = DateFormatter()
         f.dateFormat = use24Hour ? "EEE, MMM d • HH:mm" : "EEE, MMM d • h:mm a"
-
         if group.repeatLabel.isEmpty {
             return group.fireDate.flatMap { f.string(from: $0) } ?? ""
         } else {
