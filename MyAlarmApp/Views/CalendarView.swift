@@ -164,214 +164,209 @@ struct CalendarView: View {
 
     // MARK: - Monthly View
     var monthlyView: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button {
-                    withAnimation {
-                        currentMonth = calendar.date(byAdding: .month, value: -1, to: currentMonth) ?? currentMonth
+        ScrollView {
+            VStack(spacing: 0) {
+                HStack {
+                    Button {
+                        withAnimation {
+                            currentMonth = calendar.date(byAdding: .month, value: -1, to: currentMonth) ?? currentMonth
+                        }
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .foregroundStyle(.orange)
+                            .font(.system(size: 18, weight: .semibold))
                     }
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .foregroundStyle(.orange)
-                        .font(.system(size: 18, weight: .semibold))
-                }
-                Spacer()
-                Text(currentMonth.formatted(.dateTime.month(.wide).year()))
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color("PrimaryText"))
-                Spacer()
-                Button {
-                    withAnimation {
-                        currentMonth = calendar.date(byAdding: .month, value: 1, to: currentMonth) ?? currentMonth
+                    Spacer()
+                    Text(currentMonth.formatted(.dateTime.month(.wide).year()))
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color("PrimaryText"))
+                    Spacer()
+                    Button {
+                        withAnimation {
+                            currentMonth = calendar.date(byAdding: .month, value: 1, to: currentMonth) ?? currentMonth
+                        }
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(.orange)
+                            .font(.system(size: 18, weight: .semibold))
                     }
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .foregroundStyle(.orange)
-                        .font(.system(size: 18, weight: .semibold))
                 }
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 16)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 16)
 
-            HStack(spacing: 0) {
-                ForEach(weekdays, id: \.self) { day in
-                    Text(day)
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                HStack(spacing: 0) {
+                    ForEach(weekdays, id: \.self) { day in
+                        Text(day)
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color("SecondaryText"))
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
+
+                LazyVGrid(columns: columns, spacing: 8) {
+                    ForEach(0..<daysInMonth.count, id: \.self) { index in
+                        if let date = daysInMonth[index] {
+                            dayCell(date: date)
+                        } else {
+                            Color.clear.frame(height: 44)
+                        }
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 20)
+
+                HStack {
+                    Text(selectedDate.formatted(.dateTime.weekday(.wide).month().day()))
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color("PrimaryText"))
+                    Spacer()
+                    Button {
+                        showAddAlarm = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus")
+                            Text("Add Alarm")
+                        }
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.orange)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.orange.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
+
+                if alarmsForSelectedDate.isEmpty {
+                    Text("No alarms on this day")
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundStyle(Color("SecondaryText"))
                         .frame(maxWidth: .infinity)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.bottom, 8)
-
-            LazyVGrid(columns: columns, spacing: 8) {
-                ForEach(0..<daysInMonth.count, id: \.self) { index in
-                    if let date = daysInMonth[index] {
-                        dayCell(date: date)
-                    } else {
-                        Color.clear.frame(height: 44)
+                        .padding(.top, 20)
+                } else {
+                    VStack(spacing: 10) {
+                        ForEach(alarmsForSelectedDate) { item in
+                            calendarAlarmRow(item: item)
+                                .padding(.horizontal, 16)
+                        }
                     }
+                    .padding(.bottom, 20)
                 }
-            }
-            .padding(.horizontal, 12)
-            .padding(.bottom, 20)
-
-            HStack {
-                Text(selectedDate.formatted(.dateTime.weekday(.wide).month().day()))
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color("PrimaryText"))
-                Spacer()
-                Button {
-                    showAddAlarm = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "plus")
-                        Text("Add Alarm")
-                    }
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.orange)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.orange.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
-
-            if alarmsForSelectedDate.isEmpty {
-                Text("No alarms on this day")
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color("SecondaryText"))
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 20)
-                Spacer()
-            } else {
-                List {
-                    ForEach(alarmsForSelectedDate) { item in
-                        calendarAlarmRow(item: item)
-                            .listRowBackground(Color("AppBackground"))
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-                    }
-                }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
             }
         }
     }
 
     // MARK: - Weekly View
     var weeklyView: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button {
-                    withAnimation {
-                        selectedDate = calendar.date(byAdding: .weekOfYear, value: -1, to: selectedDate) ?? selectedDate
-                    }
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .foregroundStyle(.orange)
-                        .font(.system(size: 18, weight: .semibold))
-                }
-                Spacer()
-                Text(weekRangeTitle)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color("PrimaryText"))
-                Spacer()
-                Button {
-                    withAnimation {
-                        selectedDate = calendar.date(byAdding: .weekOfYear, value: 1, to: selectedDate) ?? selectedDate
-                    }
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .foregroundStyle(.orange)
-                        .font(.system(size: 18, weight: .semibold))
-                }
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 16)
-
-            HStack(spacing: 0) {
-                ForEach(daysInWeek, id: \.self) { date in
-                    let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
-                    let isToday = calendar.isDateInToday(date)
-                    let formatter: DateFormatter = {
-                        let f = DateFormatter()
-                        f.dateFormat = "yyyy-MM-dd"
-                        return f
-                    }()
-                    let hasAlarm = alarmDates.contains(formatter.string(from: date))
-
+        ScrollView {
+            VStack(spacing: 0) {
+                HStack {
                     Button {
-                        withAnimation(.spring(response: 0.3)) { selectedDate = date }
+                        withAnimation {
+                            selectedDate = calendar.date(byAdding: .weekOfYear, value: -1, to: selectedDate) ?? selectedDate
+                        }
                     } label: {
-                        VStack(spacing: 4) {
-                            Text(date.formatted(.dateTime.weekday(.narrow)))
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
-                                .foregroundStyle(isSelected ? .orange : Color("SecondaryText"))
-                            Text("\(calendar.component(.day, from: date))")
-                                .font(.system(size: 16, weight: isToday ? .bold : .medium, design: .rounded))
-                                .foregroundStyle(isSelected ? .black : isToday ? .orange : Color("PrimaryText"))
-                                .frame(width: 34, height: 34)
-                                .background(isSelected ? Color.orange : Color.clear)
-                                .clipShape(Circle())
-                            Circle()
-                                .fill(hasAlarm ? Color.orange : Color.clear)
-                                .frame(width: 5, height: 5)
+                        Image(systemName: "chevron.left")
+                            .foregroundStyle(.orange)
+                            .font(.system(size: 18, weight: .semibold))
+                    }
+                    Spacer()
+                    Text(weekRangeTitle)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color("PrimaryText"))
+                    Spacer()
+                    Button {
+                        withAnimation {
+                            selectedDate = calendar.date(byAdding: .weekOfYear, value: 1, to: selectedDate) ?? selectedDate
+                        }
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(.orange)
+                            .font(.system(size: 18, weight: .semibold))
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 16)
+
+                HStack(spacing: 0) {
+                    ForEach(daysInWeek, id: \.self) { date in
+                        let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
+                        let isToday = calendar.isDateInToday(date)
+                        let formatter: DateFormatter = {
+                            let f = DateFormatter()
+                            f.dateFormat = "yyyy-MM-dd"
+                            return f
+                        }()
+                        let hasAlarm = alarmDates.contains(formatter.string(from: date))
+
+                        Button {
+                            withAnimation(.spring(response: 0.3)) { selectedDate = date }
+                        } label: {
+                            VStack(spacing: 4) {
+                                Text(date.formatted(.dateTime.weekday(.narrow)))
+                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                                    .foregroundStyle(isSelected ? .orange : Color("SecondaryText"))
+                                Text("\(calendar.component(.day, from: date))")
+                                    .font(.system(size: 16, weight: isToday ? .bold : .medium, design: .rounded))
+                                    .foregroundStyle(isSelected ? .black : isToday ? .orange : Color("PrimaryText"))
+                                    .frame(width: 34, height: 34)
+                                    .background(isSelected ? Color.orange : Color.clear)
+                                    .clipShape(Circle())
+                                Circle()
+                                    .fill(hasAlarm ? Color.orange : Color.clear)
+                                    .frame(width: 5, height: 5)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 16)
+
+                Divider().padding(.bottom, 8)
+
+                HStack {
+                    Text(selectedDate.formatted(.dateTime.weekday(.wide).month().day()))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color("PrimaryText"))
+                    Spacer()
+                    Button {
+                        showAddAlarm = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus")
+                            Text("Add Alarm")
+                        }
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.orange)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.orange.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
+
+                if alarmsForSelectedDate.isEmpty {
+                    Text("No alarms this day")
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color("SecondaryText"))
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 30)
+                } else {
+                    VStack(spacing: 10) {
+                        ForEach(alarmsForSelectedDate) { item in
+                            calendarAlarmRow(item: item)
+                                .padding(.horizontal, 16)
                         }
                     }
-                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 20)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.bottom, 16)
-
-            Divider().padding(.bottom, 8)
-
-            HStack {
-                Text(selectedDate.formatted(.dateTime.weekday(.wide).month().day()))
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color("PrimaryText"))
-                Spacer()
-                Button {
-                    showAddAlarm = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "plus")
-                        Text("Add Alarm")
-                    }
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.orange)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.orange.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
-
-            if alarmsForSelectedDate.isEmpty {
-                Text("No alarms this day")
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color("SecondaryText"))
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 30)
-                Spacer()
-            } else {
-                List {
-                    ForEach(alarmsForSelectedDate) { item in
-                        calendarAlarmRow(item: item)
-                            .listRowBackground(Color("AppBackground"))
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-                    }
-                }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-            }
-            Spacer()
         }
     }
 
@@ -503,7 +498,6 @@ struct CalendarView: View {
         }
     }
 
-    // ✅ Alarm row — tap to edit, swipe left for Edit + Delete
     @ViewBuilder
     func calendarAlarmRow(item: AlarmService.AlarmListItem) -> some View {
         HStack(spacing: 16) {
