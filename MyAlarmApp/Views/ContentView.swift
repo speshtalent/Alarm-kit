@@ -322,6 +322,8 @@ struct SettingsView: View {
         ("Pro", "AppIcon3", "AppIcon3"),
         ("Elite", "AppIcon4", "AppIcon4"),
         ("Neon", "AppIcon5", "AppIcon5"),
+        ("Storm", "AppIcon6", "AppIcon6"),  // ✅ new
+        ("Blaze", "AppIcon7", "AppIcon7"),  // ✅ new
     ]
 
     // ✅ System Default toggle binding
@@ -635,7 +637,7 @@ struct FeatureRequestView: View {
     @State private var requestText = ""
     @State private var showNoMailAlert = false
 
-    private let supportEmail = "support@futurealarm.app"
+    private let supportEmail = "robin@speshtalent.com"
 
     var body: some View {
         ZStack {
