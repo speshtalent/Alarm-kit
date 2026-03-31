@@ -637,7 +637,7 @@ struct FeatureRequestView: View {
     @State private var requestText = ""
     @State private var showNoMailAlert = false
 
-    private let supportEmail = "support@futurealarm.app"
+    private let supportEmail = "robin@speshtalent.com"
 
     var body: some View {
         ZStack {
