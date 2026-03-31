@@ -322,6 +322,8 @@ struct SettingsView: View {
         ("Pro", "AppIcon3", "AppIcon3"),
         ("Elite", "AppIcon4", "AppIcon4"),
         ("Neon", "AppIcon5", "AppIcon5"),
+        ("Storm", "AppIcon6", "AppIcon6"),  // ✅ new
+        ("Blaze", "AppIcon7", "AppIcon7"),  // ✅ new
     ]
 
     // ✅ System Default toggle binding
