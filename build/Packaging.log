@@ -1,185 +1,185 @@
-2026-03-27 04:50:56 +0000 [MT] Initial pipeline context: <IDEDistributionProcessingPipelineContext: 0x7de381e00; archive(resolved)="<IDEArchive: 0x7dfa83950>", distributionTask(resolved)="2", distributionDestination(resolved)="1", distributionMethod(resolved)="<IDEDistributionMethodiOSAppStoreDistribution: 0x7dfbd0a50>", team(resolved)="<IDEProvisioningBasicTeam: 0x7dfbe8040; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
+2026-03-31 03:02:17 +0000 [MT] Initial pipeline context: <IDEDistributionProcessingPipelineContext: 0xb4a232100; archive(resolved)="<IDEArchive: 0xb4a294230>", distributionTask(resolved)="2", distributionDestination(resolved)="1", distributionMethod(resolved)="<IDEDistributionMethodiOSAppStoreDistribution: 0xb4c704070>", team(resolved)="<IDEProvisioningBasicTeam: 0xb4c71b200; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
 	Chain (15, self inclusive):
-	<IDEDistributionProcessingPipelineContext: 0x7de381e00; archive = "<IDEArchive: 0x7dfa83950>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x7dfbd0a50>", team="<IDEProvisioningBasicTeam: 0x7dfbe8040; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
-	<IDEDistributionProcessingPipelineContext: 0x7de382100; archive = "<IDEArchive: 0x7dfa83950>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x7dfbd0a50>", team="<IDEProvisioningBasicTeam: 0x7dfbe8040; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
-	<IDEDistributionContext: 0x7dfbbaf80; archive = "<IDEArchive: 0x7dfa83950>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x7dfbd0a50>", team="<IDEProvisioningBasicTeam: 0x7dfbe8040; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
-	<IDEDistributionContext: 0x7dfbbaa80; archive = "<IDEArchive: 0x7dfa83950>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x7dfbd0a50>", team="<IDEProvisioningBasicTeam: 0x7dfbe8040; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
-	<IDEDistributionContext: 0x7dfbba800; archive = "<IDEArchive: 0x7dfa83950>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x7dfbd0a50>", team="<IDEProvisioningBasicTeam: 0x7dfbe8040; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
-	<IDEDistributionContext: 0x7dfbba580; archive = "<IDEArchive: 0x7dfa83950>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x7dfbd0a50>", team="<IDEProvisioningBasicTeam: 0x7dfbe8040; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
-	<IDEDistributionContext: 0x7dfbba300; archive = "<IDEArchive: 0x7dfa83950>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x7dfbd0a50>", team="<IDEProvisioningBasicTeam: 0x7dfbe8040; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
-	<IDEDistributionContext: 0x7dfbba080; archive = "<IDEArchive: 0x7dfa83950>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x7dfbd0a50>", team="<IDEProvisioningBasicTeam: 0x7dfbe8040; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
-	<IDEDistributionContext: 0x7dfbb9e00; archive = "<IDEArchive: 0x7dfa83950>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x7dfbd0a50>", team="<IDEProvisioningBasicTeam: 0x7dfbe8040; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
-	<IDEDistributionContext: 0x7dfbb8f00; archive = "<IDEArchive: 0x7dfa83950>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x7dfbd0a50>", team="<IDEProvisioningBasicTeam: 0x7dfbe8040; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
-	<IDEDistributionContext: 0x7dfbb8c80; archive = "<IDEArchive: 0x7dfa83950>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x7dfbd0a50>", team="<IDEProvisioningBasicTeam: 0x7dfbe8040; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
-	<IDEDistributionContext: 0x7dfbb8a00; archive = "<IDEArchive: 0x7dfa83950>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x7dfbd0a50>", team="<IDEProvisioningBasicTeam: 0x7dfbe8040; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
-	<IDEDistributionContext: 0x7dfbb8780; archive = "<IDEArchive: 0x7dfa83950>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x7dfbd0a50>", team="(null)">
-	<IDEDistributionContext: 0x7dfbb8000; archive = "<IDEArchive: 0x7dfa83950>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x7dfbd0a50>", team="(null)">
-	<IDEDistributionContext: 0x102ede890; archive = "<IDEArchive: 0x7dfa83950>", distributionMethod="(null)", team="(null)">
-</IDEDistributionProcessingPipelineContext: 0x7de381e00>
-2026-03-27 04:50:56 +0000 [MT] Processing step: IDEDistributionCreateDestRootStep
-2026-03-27 04:50:56 +0000 [MT] Processing step: IDEDistributionCopyItemStep
-2026-03-27 04:50:56 +0000 [MT] Running /usr/bin/ditto '-V' '/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app' '/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Root/Payload/MyAlarmApp.app'
-2026-03-27 04:50:56 +0000  >>> Copying /Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app 
-2026-03-27 04:50:56 +0000  copying file ./_CodeSignature/CodeResources ... 
-2026-03-27 04:50:56 +0000  12141 bytes for ./_CodeSignature/CodeResources
-2026-03-27 04:50:56 +0000  copying file ./pure.caf ... 
-2026-03-27 04:50:56 +0000  925792 bytes for ./pure.caf
-2026-03-27 04:50:56 +0000  copying file ./nokia.caf ... 
-2026-03-27 04:50:56 +0000  2949490 bytes for ./nokia.caf
-2026-03-27 04:50:56 +0000  copying file ./Metadata.appintents/version.json ... 
-2026-03-27 04:50:56 +0000  52 bytes for ./Metadata.appintents/version.json
-2026-03-27 04:50:56 +0000  copying file ./Metadata.appintents/nlu/nlu.lzfse ... 
-2026-03-27 04:50:56 +0000  2331 bytes for ./Metadata.appintents/nlu/nlu.lzfse
-2026-03-27 04:50:56 +0000  copying file ./Metadata.appintents/nlu/c5a33d86570d075e4c744782c9a6805a.version ... 
-2026-03-27 04:50:56 +0000  1 bytes for ./Metadata.appintents/nlu/c5a33d86570d075e4c744782c9a6805a.version
-2026-03-27 04:50:56 +0000  copying file ./Metadata.appintents/extract.actionsdata ... 
-2026-03-27 04:50:56 +0000  6542 bytes for ./Metadata.appintents/extract.actionsdata
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/_CodeSignature/CodeResources ... 
-2026-03-27 04:50:56 +0000  4632 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/_CodeSignature/CodeResources
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/pure.caf ... 
-2026-03-27 04:50:56 +0000  925792 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/pure.caf
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/nokia.caf ... 
-2026-03-27 04:50:56 +0000  2949490 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/nokia.caf
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/CountdownLiveActivityExtension ... 
-2026-03-27 04:50:56 +0000  118288 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/CountdownLiveActivityExtension
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/version.json ... 
-2026-03-27 04:50:56 +0000  52 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/version.json
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/extract.actionsdata ... 
-2026-03-27 04:50:56 +0000  3593 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/extract.actionsdata
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/bells.caf ... 
-2026-03-27 04:50:56 +0000  766720 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/bells.caf
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/morning-birds.caf ... 
-2026-03-27 04:50:56 +0000  1547776 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/morning-birds.caf
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/childhood.caf ... 
-2026-03-27 04:50:56 +0000  1481272 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/childhood.caf
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/bird-sound.caf ... 
-2026-03-27 04:50:56 +0000  1402624 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/bird-sound.caf
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/sony.caf ... 
-2026-03-27 04:50:56 +0000  1843632 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/sony.caf
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/embedded.mobileprovision ... 
-2026-03-27 04:50:56 +0000  14328 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/embedded.mobileprovision
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/rings.caf ... 
-2026-03-27 04:50:56 +0000  1297464 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/rings.caf
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/soft.caf ... 
-2026-03-27 04:50:56 +0000  1396352 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/soft.caf
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/Info.plist ... 
-2026-03-27 04:50:56 +0000  923 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/Info.plist
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/1985_ring2.caf ... 
-2026-03-27 04:50:56 +0000  1129090 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/1985_ring2.caf
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/FutureAlarmWidgetExtension.appex/_CodeSignature/CodeResources ... 
-2026-03-27 04:50:56 +0000  2040 bytes for ./PlugIns/FutureAlarmWidgetExtension.appex/_CodeSignature/CodeResources
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/FutureAlarmWidgetExtension.appex/FutureAlarmWidgetExtension ... 
-2026-03-27 04:50:56 +0000  200304 bytes for ./PlugIns/FutureAlarmWidgetExtension.appex/FutureAlarmWidgetExtension
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/FutureAlarmWidgetExtension.appex/embedded.mobileprovision ... 
-2026-03-27 04:50:56 +0000  14814 bytes for ./PlugIns/FutureAlarmWidgetExtension.appex/embedded.mobileprovision
-2026-03-27 04:50:56 +0000  copying file ./PlugIns/FutureAlarmWidgetExtension.appex/Info.plist ... 
-2026-03-27 04:50:56 +0000  918 bytes for ./PlugIns/FutureAlarmWidgetExtension.appex/Info.plist
-2026-03-27 04:50:56 +0000  copying file ./bells.caf ... 
-2026-03-27 04:50:56 +0000  766720 bytes for ./bells.caf
-2026-03-27 04:50:56 +0000  copying file ./AppIcon60x60@2x.png ... 
-2026-03-27 04:50:56 +0000  18004 bytes for ./AppIcon60x60@2x.png
-2026-03-27 04:50:56 +0000  copying file ./morning-birds.caf ... 
-2026-03-27 04:50:56 +0000  1547776 bytes for ./morning-birds.caf
-2026-03-27 04:50:56 +0000  copying file ./childhood.caf ... 
-2026-03-27 04:50:56 +0000  1481272 bytes for ./childhood.caf
-2026-03-27 04:50:56 +0000  copying file ./bird-sound.caf ... 
-2026-03-27 04:50:56 +0000  1402624 bytes for ./bird-sound.caf
-2026-03-27 04:50:56 +0000  copying file ./Assets.car ... 
-2026-03-27 04:50:56 +0000  2199752 bytes for ./Assets.car
-2026-03-27 04:50:56 +0000  copying file ./sony.caf ... 
-2026-03-27 04:50:56 +0000  1843632 bytes for ./sony.caf
-2026-03-27 04:50:56 +0000  copying file ./AppIcon76x76@2x~ipad.png ... 
-2026-03-27 04:50:56 +0000  27070 bytes for ./AppIcon76x76@2x~ipad.png
-2026-03-27 04:50:56 +0000  copying file ./MyAlarmApp ... 
-2026-03-27 04:50:56 +0000  924752 bytes for ./MyAlarmApp
-2026-03-27 04:50:56 +0000  copying file ./embedded.mobileprovision ... 
-2026-03-27 04:50:56 +0000  14812 bytes for ./embedded.mobileprovision
-2026-03-27 04:50:56 +0000  copying file ./rings.caf ... 
-2026-03-27 04:50:56 +0000  1297464 bytes for ./rings.caf
-2026-03-27 04:50:56 +0000  copying file ./soft.caf ... 
-2026-03-27 04:50:56 +0000  1396352 bytes for ./soft.caf
-2026-03-27 04:50:56 +0000  copying file ./Info.plist ... 
-2026-03-27 04:50:56 +0000  2023 bytes for ./Info.plist
-2026-03-27 04:50:56 +0000  copying file ./PkgInfo ... 
-2026-03-27 04:50:56 +0000  8 bytes for ./PkgInfo
-2026-03-27 04:50:56 +0000  copying file ./1985_ring2.caf ... 
-2026-03-27 04:50:56 +0000  1129090 bytes for ./1985_ring2.caf
-2026-03-27 04:50:56 +0000 [MT] /usr/bin/ditto exited with 0
-2026-03-27 04:50:56 +0000 [MT] Processing step: IDEDistributionEmbedProfileStep
-2026-03-27 04:50:56 +0000 [MT] Processing step: IDEDistributionInfoPlistStep
-2026-03-27 04:50:56 +0000 [MT] Skipping setting DTXcodeBuildDistribution because toolsBuildVersionName was nil.
-2026-03-27 04:50:56 +0000 [MT] Skipping setting DTXcodeBuildDistribution because toolsBuildVersionName was nil.
-2026-03-27 04:50:56 +0000 [MT] Skipping setting DTXcodeBuildDistribution because toolsBuildVersionName was nil.
-2026-03-27 04:50:56 +0000 [MT] Processing step: IDEDistributionItemRemovalStep
-2026-03-27 04:50:56 +0000 [MT] Processing step: IDEDistributionAppThinningPlistStep
-2026-03-27 04:50:56 +0000 [MT] Skipping step: IDEDistributionAppThinningPlistStep because it said so
-2026-03-27 04:50:56 +0000 [MT] Processing step: IDEDistributionSymbolsStep
-2026-03-27 04:50:56 +0000 [MT] Writing /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Symbols/BD9EB2EA-0177-3597-90DE-F5B0335E2346.symbols
-2026-03-27 04:50:56 +0000 [MT] Writing /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Symbols/2B45E7D4-6DEA-3D7F-BF6B-C9090C7238D7.symbols
-2026-03-27 04:50:56 +0000 [MT] Writing /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Symbols/056FF8A0-4231-31E1-805F-B2B4B8D4E5B6.symbols
-2026-03-27 04:50:56 +0000 [MT] Processing step: IDEDistributionCopyAppleProvidedContentStep
-2026-03-27 04:50:56 +0000 [MT] Processing step: IDEDistributionAppThinningStep
-2026-03-27 04:50:56 +0000 [MT] Skipping step: IDEDistributionAppThinningStep because it said so
-2026-03-27 04:50:56 +0000 [MT] Processing step: IDEDistributionArchThinningStep
-2026-03-27 04:50:56 +0000 [MT] Archs to thin for item /Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex are []
-2026-03-27 04:50:56 +0000 [MT] Archs to thin for item /Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex are []
-2026-03-27 04:50:56 +0000 [MT] Archs to thin for item /Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app are []
-2026-03-27 04:50:56 +0000 [MT] Processing step: IDEDistributionODRStep
-2026-03-27 04:50:56 +0000 [MT] Processing step: IDEDistributionStripXattrsStep
-2026-03-27 04:50:56 +0000 [MT] Skipping stripping extended attributes because the codesign step will strip them.
-2026-03-27 04:50:56 +0000 [MT] Skipping stripping extended attributes because the codesign step will strip them.
-2026-03-27 04:50:56 +0000 [MT] Skipping stripping extended attributes because the codesign step will strip them.
-2026-03-27 04:50:56 +0000 [MT] Processing step: IDEDistributionCodesignStep
-2026-03-27 04:50:56 +0000 [MT] Entitlements for <IDEDistributionItem: 0x7dfb33c00; bundleID='com.speshtalent.FutureAlarm26.CountdownLiveActivity', path='<DVTFilePath:0x7ddc2f100:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x7dfb33c60; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x7e05cb240; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
+	<IDEDistributionProcessingPipelineContext: 0xb4a232100; archive = "<IDEArchive: 0xb4a294230>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0xb4c704070>", team="<IDEProvisioningBasicTeam: 0xb4c71b200; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
+	<IDEDistributionProcessingPipelineContext: 0xb4a231b00; archive = "<IDEArchive: 0xb4a294230>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0xb4c704070>", team="<IDEProvisioningBasicTeam: 0xb4c71b200; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
+	<IDEDistributionContext: 0xb4a386a80; archive = "<IDEArchive: 0xb4a294230>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0xb4c704070>", team="<IDEProvisioningBasicTeam: 0xb4c71b200; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
+	<IDEDistributionContext: 0xb4a386800; archive = "<IDEArchive: 0xb4a294230>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0xb4c704070>", team="<IDEProvisioningBasicTeam: 0xb4c71b200; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
+	<IDEDistributionContext: 0xb4a386580; archive = "<IDEArchive: 0xb4a294230>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0xb4c704070>", team="<IDEProvisioningBasicTeam: 0xb4c71b200; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
+	<IDEDistributionContext: 0xb4a386300; archive = "<IDEArchive: 0xb4a294230>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0xb4c704070>", team="<IDEProvisioningBasicTeam: 0xb4c71b200; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
+	<IDEDistributionContext: 0xb4a386080; archive = "<IDEArchive: 0xb4a294230>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0xb4c704070>", team="<IDEProvisioningBasicTeam: 0xb4c71b200; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
+	<IDEDistributionContext: 0xb4a385e00; archive = "<IDEArchive: 0xb4a294230>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0xb4c704070>", team="<IDEProvisioningBasicTeam: 0xb4c71b200; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
+	<IDEDistributionContext: 0xb4a385b80; archive = "<IDEArchive: 0xb4a294230>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0xb4c704070>", team="<IDEProvisioningBasicTeam: 0xb4c71b200; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
+	<IDEDistributionContext: 0xb4a384f00; archive = "<IDEArchive: 0xb4a294230>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0xb4c704070>", team="<IDEProvisioningBasicTeam: 0xb4c71b200; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
+	<IDEDistributionContext: 0xb4a384a00; archive = "<IDEArchive: 0xb4a294230>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0xb4c704070>", team="<IDEProvisioningBasicTeam: 0xb4c71b200; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
+	<IDEDistributionContext: 0xb4a384780; archive = "<IDEArchive: 0xb4a294230>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0xb4c704070>", team="<IDEProvisioningBasicTeam: 0xb4c71b200; teamID='BK8PTBP6K2', teamName='SPESH TALENT LLC'>">
+	<IDEDistributionContext: 0xb4a384500; archive = "<IDEArchive: 0xb4a294230>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0xb4c704070>", team="(null)">
+	<IDEDistributionContext: 0x1007eb490; archive = "<IDEArchive: 0xb4a294230>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0xb4c704070>", team="(null)">
+	<IDEDistributionContext: 0x10080dcc0; archive = "<IDEArchive: 0xb4a294230>", distributionMethod="(null)", team="(null)">
+</IDEDistributionProcessingPipelineContext: 0xb4a232100>
+2026-03-31 03:02:17 +0000 [MT] Processing step: IDEDistributionCreateDestRootStep
+2026-03-31 03:02:17 +0000 [MT] Processing step: IDEDistributionCopyItemStep
+2026-03-31 03:02:17 +0000 [MT] Running /usr/bin/ditto '-V' '/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app' '/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Root/Payload/MyAlarmApp.app'
+2026-03-31 03:02:17 +0000  >>> Copying /Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app 
+2026-03-31 03:02:17 +0000  copying file ./_CodeSignature/CodeResources ... 
+2026-03-31 03:02:17 +0000  12141 bytes for ./_CodeSignature/CodeResources
+2026-03-31 03:02:17 +0000  copying file ./pure.caf ... 
+2026-03-31 03:02:17 +0000  925792 bytes for ./pure.caf
+2026-03-31 03:02:17 +0000  copying file ./nokia.caf ... 
+2026-03-31 03:02:17 +0000  2949490 bytes for ./nokia.caf
+2026-03-31 03:02:17 +0000  copying file ./Metadata.appintents/version.json ... 
+2026-03-31 03:02:17 +0000  52 bytes for ./Metadata.appintents/version.json
+2026-03-31 03:02:17 +0000  copying file ./Metadata.appintents/nlu/nlu.lzfse ... 
+2026-03-31 03:02:17 +0000  2733 bytes for ./Metadata.appintents/nlu/nlu.lzfse
+2026-03-31 03:02:17 +0000  copying file ./Metadata.appintents/nlu/6e5d89e1a1970f37441ffee8ba51607e.version ... 
+2026-03-31 03:02:17 +0000  1 bytes for ./Metadata.appintents/nlu/6e5d89e1a1970f37441ffee8ba51607e.version
+2026-03-31 03:02:17 +0000  copying file ./Metadata.appintents/extract.actionsdata ... 
+2026-03-31 03:02:17 +0000  11491 bytes for ./Metadata.appintents/extract.actionsdata
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/_CodeSignature/CodeResources ... 
+2026-03-31 03:02:17 +0000  4632 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/_CodeSignature/CodeResources
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/pure.caf ... 
+2026-03-31 03:02:17 +0000  925792 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/pure.caf
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/nokia.caf ... 
+2026-03-31 03:02:17 +0000  2949490 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/nokia.caf
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/CountdownLiveActivityExtension ... 
+2026-03-31 03:02:17 +0000  118288 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/CountdownLiveActivityExtension
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/version.json ... 
+2026-03-31 03:02:17 +0000  52 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/version.json
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/extract.actionsdata ... 
+2026-03-31 03:02:17 +0000  3593 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/extract.actionsdata
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/bells.caf ... 
+2026-03-31 03:02:17 +0000  766720 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/bells.caf
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/morning-birds.caf ... 
+2026-03-31 03:02:17 +0000  1547776 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/morning-birds.caf
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/childhood.caf ... 
+2026-03-31 03:02:17 +0000  1481272 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/childhood.caf
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/bird-sound.caf ... 
+2026-03-31 03:02:17 +0000  1402624 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/bird-sound.caf
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/sony.caf ... 
+2026-03-31 03:02:17 +0000  1843632 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/sony.caf
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/embedded.mobileprovision ... 
+2026-03-31 03:02:17 +0000  14328 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/embedded.mobileprovision
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/rings.caf ... 
+2026-03-31 03:02:17 +0000  1297464 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/rings.caf
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/soft.caf ... 
+2026-03-31 03:02:17 +0000  1396352 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/soft.caf
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/Info.plist ... 
+2026-03-31 03:02:17 +0000  931 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/Info.plist
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/CountdownLiveActivityExtension.appex/1985_ring2.caf ... 
+2026-03-31 03:02:17 +0000  1129090 bytes for ./PlugIns/CountdownLiveActivityExtension.appex/1985_ring2.caf
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/FutureAlarmWidgetExtension.appex/_CodeSignature/CodeResources ... 
+2026-03-31 03:02:17 +0000  2040 bytes for ./PlugIns/FutureAlarmWidgetExtension.appex/_CodeSignature/CodeResources
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/FutureAlarmWidgetExtension.appex/FutureAlarmWidgetExtension ... 
+2026-03-31 03:02:17 +0000  235808 bytes for ./PlugIns/FutureAlarmWidgetExtension.appex/FutureAlarmWidgetExtension
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/FutureAlarmWidgetExtension.appex/embedded.mobileprovision ... 
+2026-03-31 03:02:17 +0000  14814 bytes for ./PlugIns/FutureAlarmWidgetExtension.appex/embedded.mobileprovision
+2026-03-31 03:02:17 +0000  copying file ./PlugIns/FutureAlarmWidgetExtension.appex/Info.plist ... 
+2026-03-31 03:02:17 +0000  926 bytes for ./PlugIns/FutureAlarmWidgetExtension.appex/Info.plist
+2026-03-31 03:02:17 +0000  copying file ./bells.caf ... 
+2026-03-31 03:02:17 +0000  766720 bytes for ./bells.caf
+2026-03-31 03:02:17 +0000  copying file ./AppIcon60x60@2x.png ... 
+2026-03-31 03:02:17 +0000  18004 bytes for ./AppIcon60x60@2x.png
+2026-03-31 03:02:17 +0000  copying file ./morning-birds.caf ... 
+2026-03-31 03:02:17 +0000  1547776 bytes for ./morning-birds.caf
+2026-03-31 03:02:17 +0000  copying file ./childhood.caf ... 
+2026-03-31 03:02:17 +0000  1481272 bytes for ./childhood.caf
+2026-03-31 03:02:17 +0000  copying file ./bird-sound.caf ... 
+2026-03-31 03:02:17 +0000  1402624 bytes for ./bird-sound.caf
+2026-03-31 03:02:17 +0000  copying file ./Assets.car ... 
+2026-03-31 03:02:17 +0000  2199752 bytes for ./Assets.car
+2026-03-31 03:02:17 +0000  copying file ./sony.caf ... 
+2026-03-31 03:02:17 +0000  1843632 bytes for ./sony.caf
+2026-03-31 03:02:17 +0000  copying file ./AppIcon76x76@2x~ipad.png ... 
+2026-03-31 03:02:17 +0000  27070 bytes for ./AppIcon76x76@2x~ipad.png
+2026-03-31 03:02:17 +0000  copying file ./MyAlarmApp ... 
+2026-03-31 03:02:17 +0000  1031552 bytes for ./MyAlarmApp
+2026-03-31 03:02:17 +0000  copying file ./embedded.mobileprovision ... 
+2026-03-31 03:02:17 +0000  15672 bytes for ./embedded.mobileprovision
+2026-03-31 03:02:17 +0000  copying file ./rings.caf ... 
+2026-03-31 03:02:17 +0000  1297464 bytes for ./rings.caf
+2026-03-31 03:02:17 +0000  copying file ./soft.caf ... 
+2026-03-31 03:02:17 +0000  1396352 bytes for ./soft.caf
+2026-03-31 03:02:17 +0000  copying file ./Info.plist ... 
+2026-03-31 03:02:17 +0000  2031 bytes for ./Info.plist
+2026-03-31 03:02:17 +0000  copying file ./PkgInfo ... 
+2026-03-31 03:02:17 +0000  8 bytes for ./PkgInfo
+2026-03-31 03:02:17 +0000  copying file ./1985_ring2.caf ... 
+2026-03-31 03:02:17 +0000  1129090 bytes for ./1985_ring2.caf
+2026-03-31 03:02:17 +0000 [MT] /usr/bin/ditto exited with 0
+2026-03-31 03:02:17 +0000 [MT] Processing step: IDEDistributionEmbedProfileStep
+2026-03-31 03:02:17 +0000 [MT] Processing step: IDEDistributionInfoPlistStep
+2026-03-31 03:02:17 +0000 [MT] Skipping setting DTXcodeBuildDistribution because toolsBuildVersionName was nil.
+2026-03-31 03:02:17 +0000 [MT] Skipping setting DTXcodeBuildDistribution because toolsBuildVersionName was nil.
+2026-03-31 03:02:17 +0000 [MT] Skipping setting DTXcodeBuildDistribution because toolsBuildVersionName was nil.
+2026-03-31 03:02:17 +0000 [MT] Processing step: IDEDistributionItemRemovalStep
+2026-03-31 03:02:17 +0000 [MT] Processing step: IDEDistributionAppThinningPlistStep
+2026-03-31 03:02:17 +0000 [MT] Skipping step: IDEDistributionAppThinningPlistStep because it said so
+2026-03-31 03:02:17 +0000 [MT] Processing step: IDEDistributionSymbolsStep
+2026-03-31 03:02:17 +0000 [MT] Writing /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Symbols/73384C69-CC90-38B1-B842-4571C69A6B3F.symbols
+2026-03-31 03:02:17 +0000 [MT] Writing /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Symbols/2B580AE5-30B4-37F1-B051-C5F47688DDB2.symbols
+2026-03-31 03:02:17 +0000 [MT] Writing /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Symbols/1FE11A9B-09CE-3BF8-B1BF-97C7328F6EE8.symbols
+2026-03-31 03:02:17 +0000 [MT] Processing step: IDEDistributionCopyAppleProvidedContentStep
+2026-03-31 03:02:17 +0000 [MT] Processing step: IDEDistributionAppThinningStep
+2026-03-31 03:02:17 +0000 [MT] Skipping step: IDEDistributionAppThinningStep because it said so
+2026-03-31 03:02:17 +0000 [MT] Processing step: IDEDistributionArchThinningStep
+2026-03-31 03:02:17 +0000 [MT] Archs to thin for item /Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex are []
+2026-03-31 03:02:17 +0000 [MT] Archs to thin for item /Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex are []
+2026-03-31 03:02:17 +0000 [MT] Archs to thin for item /Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app are []
+2026-03-31 03:02:17 +0000 [MT] Processing step: IDEDistributionODRStep
+2026-03-31 03:02:17 +0000 [MT] Processing step: IDEDistributionStripXattrsStep
+2026-03-31 03:02:17 +0000 [MT] Skipping stripping extended attributes because the codesign step will strip them.
+2026-03-31 03:02:17 +0000 [MT] Skipping stripping extended attributes because the codesign step will strip them.
+2026-03-31 03:02:17 +0000 [MT] Skipping stripping extended attributes because the codesign step will strip them.
+2026-03-31 03:02:17 +0000 [MT] Processing step: IDEDistributionCodesignStep
+2026-03-31 03:02:17 +0000 [MT] Entitlements for <IDEDistributionItem: 0xb4a391920; bundleID='com.speshtalent.FutureAlarm26.CountdownLiveActivity', path='<DVTFilePath:0xb4a2d5a00:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0xb4a391980; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0xb4a2d0b40; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
     "1.2.840.113635.100.6.1.12",
     "1.2.840.113635.100.6.1.2"
 ), issueDate='2026-03-24 18:07:37 +0000''>', entitlements='{
     "application-identifier" = "BK8PTBP6K2.com.speshtalent.FutureAlarm26.CountdownLiveActivity";
     "com.apple.developer.team-identifier" = BK8PTBP6K2;
     "get-task-allow" = 1;
-}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26.CountdownLiveActivity', executablePath='<DVTFilePath:0x7dfbc0e00:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/CountdownLiveActivityExtension'>', hardenedRuntime='0'>'>: {
+}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26.CountdownLiveActivity', executablePath='<DVTFilePath:0xb4a294a80:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/CountdownLiveActivityExtension'>', hardenedRuntime='0'>'>: {
     "application-identifier" = "BK8PTBP6K2.com.speshtalent.FutureAlarm26.CountdownLiveActivity";
     "beta-reports-active" = 1;
     "com.apple.developer.team-identifier" = BK8PTBP6K2;
     "get-task-allow" = 0;
 }
-2026-03-27 04:50:56 +0000 [MT] Associated App Clip Identifiers Filter: Skipping because "com.apple.developer.associated-appclip-app-identifiers" is not present
-2026-03-27 04:50:56 +0000 [MT] Entitlements for <IDEDistributionItem: 0x7dfb33c00; bundleID='com.speshtalent.FutureAlarm26.CountdownLiveActivity', path='<DVTFilePath:0x7ddc2f100:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x7dfb33c60; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x7e05c8f00; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
+2026-03-31 03:02:17 +0000 [MT] Associated App Clip Identifiers Filter: Skipping because "com.apple.developer.associated-appclip-app-identifiers" is not present
+2026-03-31 03:02:17 +0000 [MT] Entitlements for <IDEDistributionItem: 0xb4a391920; bundleID='com.speshtalent.FutureAlarm26.CountdownLiveActivity', path='<DVTFilePath:0xb4a2d5a00:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0xb4a391980; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0xb4a2d09c0; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
     "1.2.840.113635.100.6.1.12",
     "1.2.840.113635.100.6.1.2"
 ), issueDate='2026-03-24 18:07:37 +0000''>', entitlements='{
     "application-identifier" = "BK8PTBP6K2.com.speshtalent.FutureAlarm26.CountdownLiveActivity";
     "com.apple.developer.team-identifier" = BK8PTBP6K2;
     "get-task-allow" = 1;
-}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26.CountdownLiveActivity', executablePath='<DVTFilePath:0x7dfbc0e00:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/CountdownLiveActivityExtension'>', hardenedRuntime='0'>'> are: {
+}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26.CountdownLiveActivity', executablePath='<DVTFilePath:0xb4a294a80:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/CountdownLiveActivityExtension'>', hardenedRuntime='0'>'> are: {
     "application-identifier" = "BK8PTBP6K2.com.speshtalent.FutureAlarm26.CountdownLiveActivity";
     "beta-reports-active" = 1;
     "com.apple.developer.team-identifier" = BK8PTBP6K2;
     "get-task-allow" = 0;
 }
-2026-03-27 04:50:56 +0000 [MT] Writing entitlements for <IDEDistributionItem: 0x7dfb33c00; bundleID='com.speshtalent.FutureAlarm26.CountdownLiveActivity', path='<DVTFilePath:0x7ddc2f100:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x7dfb33c60; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x7e05c8f00; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
+2026-03-31 03:02:17 +0000 [MT] Writing entitlements for <IDEDistributionItem: 0xb4a391920; bundleID='com.speshtalent.FutureAlarm26.CountdownLiveActivity', path='<DVTFilePath:0xb4a2d5a00:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0xb4a391980; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0xb4a2d09c0; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
     "1.2.840.113635.100.6.1.12",
     "1.2.840.113635.100.6.1.2"
 ), issueDate='2026-03-24 18:07:37 +0000''>', entitlements='{
     "application-identifier" = "BK8PTBP6K2.com.speshtalent.FutureAlarm26.CountdownLiveActivity";
     "com.apple.developer.team-identifier" = BK8PTBP6K2;
     "get-task-allow" = 1;
-}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26.CountdownLiveActivity', executablePath='<DVTFilePath:0x7dfbc0e00:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/CountdownLiveActivityExtension'>', hardenedRuntime='0'>'> to: /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/entitlements~~~V7h7Sq
-2026-03-27 04:50:56 +0000 [MT] invoking codesign: <NSConcreteTask: 0x7e05de850; launchPath='/usr/bin/codesign', arguments='(
+}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26.CountdownLiveActivity', executablePath='<DVTFilePath:0xb4a294a80:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/CountdownLiveActivityExtension'>', hardenedRuntime='0'>'> to: /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/entitlements~~~kMA4vB
+2026-03-31 03:02:17 +0000 [MT] invoking codesign: <NSConcreteTask: 0xb4cd825d0; launchPath='/usr/bin/codesign', arguments='(
     "-f",
     "-s",
     1AB343C37F9108A2932CE91B5C87AEDDD8BDAD49,
     "--entitlements",
-    "/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/entitlements~~~V7h7Sq",
+    "/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/entitlements~~~kMA4vB",
     "--preserve-metadata=identifier,flags,runtime,launch-constraints,library-constraints",
     "--generate-entitlement-der",
     "--strip-disallowed-xattrs",
     "-vvv",
-    "/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Root/Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex"
+    "/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Root/Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex"
 )'>
-2026-03-27 04:50:56 +0000 [MT] codesign output: /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Root/Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex: replacing existing signature
-/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Root/Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex: signed bundle with Mach-O thin (arm64) [com.speshtalent.FutureAlarm26.CountdownLiveActivity]
-2026-03-27 04:50:56 +0000 [MT] Entitlements for <IDEDistributionItem: 0x7dfb33ba0; bundleID='com.speshtalent.FutureAlarm26.FutureAlarmWidget', path='<DVTFilePath:0x7ddc2f300:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x7dfb33b40; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x7e05cb240; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
+2026-03-31 03:02:17 +0000 [MT] codesign output: /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Root/Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex: replacing existing signature
+/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Root/Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex: signed bundle with Mach-O thin (arm64) [com.speshtalent.FutureAlarm26.CountdownLiveActivity]
+2026-03-31 03:02:17 +0000 [MT] Entitlements for <IDEDistributionItem: 0xb4a391d40; bundleID='com.speshtalent.FutureAlarm26.FutureAlarmWidget', path='<DVTFilePath:0xb4a2d6900:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0xb4a391da0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0xb4a2d0b40; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
     "1.2.840.113635.100.6.1.12",
     "1.2.840.113635.100.6.1.2"
 ), issueDate='2026-03-24 18:07:37 +0000''>', entitlements='{
@@ -189,7 +189,7 @@
         "group.com.speshtalent.FutureAlarm26"
     );
     "get-task-allow" = 1;
-}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26.FutureAlarmWidget', executablePath='<DVTFilePath:0x7dfbc10a0:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/FutureAlarmWidgetExtension'>', hardenedRuntime='0'>'>: {
+}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26.FutureAlarmWidget', executablePath='<DVTFilePath:0xb4a294cb0:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/FutureAlarmWidgetExtension'>', hardenedRuntime='0'>'>: {
     "application-identifier" = "BK8PTBP6K2.com.speshtalent.FutureAlarm26.FutureAlarmWidget";
     "beta-reports-active" = 1;
     "com.apple.developer.team-identifier" = BK8PTBP6K2;
@@ -198,8 +198,8 @@
     );
     "get-task-allow" = 0;
 }
-2026-03-27 04:50:56 +0000 [MT] Associated App Clip Identifiers Filter: Skipping because "com.apple.developer.associated-appclip-app-identifiers" is not present
-2026-03-27 04:50:56 +0000 [MT] Entitlements for <IDEDistributionItem: 0x7dfb33ba0; bundleID='com.speshtalent.FutureAlarm26.FutureAlarmWidget', path='<DVTFilePath:0x7ddc2f300:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x7dfb33b40; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x7e05c8f00; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
+2026-03-31 03:02:17 +0000 [MT] Associated App Clip Identifiers Filter: Skipping because "com.apple.developer.associated-appclip-app-identifiers" is not present
+2026-03-31 03:02:17 +0000 [MT] Entitlements for <IDEDistributionItem: 0xb4a391d40; bundleID='com.speshtalent.FutureAlarm26.FutureAlarmWidget', path='<DVTFilePath:0xb4a2d6900:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0xb4a391da0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0xb4a2d09c0; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
     "1.2.840.113635.100.6.1.12",
     "1.2.840.113635.100.6.1.2"
 ), issueDate='2026-03-24 18:07:37 +0000''>', entitlements='{
@@ -209,7 +209,7 @@
         "group.com.speshtalent.FutureAlarm26"
     );
     "get-task-allow" = 1;
-}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26.FutureAlarmWidget', executablePath='<DVTFilePath:0x7dfbc10a0:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/FutureAlarmWidgetExtension'>', hardenedRuntime='0'>'> are: {
+}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26.FutureAlarmWidget', executablePath='<DVTFilePath:0xb4a294cb0:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/FutureAlarmWidgetExtension'>', hardenedRuntime='0'>'> are: {
     "application-identifier" = "BK8PTBP6K2.com.speshtalent.FutureAlarm26.FutureAlarmWidget";
     "beta-reports-active" = 1;
     "com.apple.developer.team-identifier" = BK8PTBP6K2;
@@ -218,7 +218,7 @@
     );
     "get-task-allow" = 0;
 }
-2026-03-27 04:50:56 +0000 [MT] Writing entitlements for <IDEDistributionItem: 0x7dfb33ba0; bundleID='com.speshtalent.FutureAlarm26.FutureAlarmWidget', path='<DVTFilePath:0x7ddc2f300:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x7dfb33b40; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x7e05c8f00; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
+2026-03-31 03:02:17 +0000 [MT] Writing entitlements for <IDEDistributionItem: 0xb4a391d40; bundleID='com.speshtalent.FutureAlarm26.FutureAlarmWidget', path='<DVTFilePath:0xb4a2d6900:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0xb4a391da0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0xb4a2d09c0; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
     "1.2.840.113635.100.6.1.12",
     "1.2.840.113635.100.6.1.2"
 ), issueDate='2026-03-24 18:07:37 +0000''>', entitlements='{
@@ -228,199 +228,214 @@
         "group.com.speshtalent.FutureAlarm26"
     );
     "get-task-allow" = 1;
-}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26.FutureAlarmWidget', executablePath='<DVTFilePath:0x7dfbc10a0:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/FutureAlarmWidgetExtension'>', hardenedRuntime='0'>'> to: /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/entitlements~~~B4UHXH
-2026-03-27 04:50:56 +0000 [MT] invoking codesign: <NSConcreteTask: 0x7e05ddc70; launchPath='/usr/bin/codesign', arguments='(
+}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26.FutureAlarmWidget', executablePath='<DVTFilePath:0xb4a294cb0:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/FutureAlarmWidgetExtension'>', hardenedRuntime='0'>'> to: /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/entitlements~~~APP5oQ
+2026-03-31 03:02:17 +0000 [MT] invoking codesign: <NSConcreteTask: 0xb4cd814a0; launchPath='/usr/bin/codesign', arguments='(
     "-f",
     "-s",
     1AB343C37F9108A2932CE91B5C87AEDDD8BDAD49,
     "--entitlements",
-    "/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/entitlements~~~B4UHXH",
+    "/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/entitlements~~~APP5oQ",
     "--preserve-metadata=identifier,flags,runtime,launch-constraints,library-constraints",
     "--generate-entitlement-der",
     "--strip-disallowed-xattrs",
     "-vvv",
-    "/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Root/Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex"
+    "/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Root/Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex"
 )'>
-2026-03-27 04:50:56 +0000 [MT] codesign output: /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Root/Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex: replacing existing signature
-/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Root/Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex: signed bundle with Mach-O thin (arm64) [com.speshtalent.FutureAlarm26.FutureAlarmWidget]
-2026-03-27 04:50:56 +0000 [MT] Entitlements for <IDEDistributionItem: 0x7dfb33ae0; bundleID='com.speshtalent.FutureAlarm26', path='<DVTFilePath:0x7dfaebc60:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x7dfb33a80; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x7e05cb240; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
+2026-03-31 03:02:17 +0000 [MT] codesign output: /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Root/Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex: replacing existing signature
+/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Root/Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex: signed bundle with Mach-O thin (arm64) [com.speshtalent.FutureAlarm26.FutureAlarmWidget]
+2026-03-31 03:02:17 +0000 [MT] Entitlements for <IDEDistributionItem: 0xb4a391f80; bundleID='com.speshtalent.FutureAlarm26', path='<DVTFilePath:0xb4a269b00:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0xb4a391c80; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0xb4a2d0b40; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
     "1.2.840.113635.100.6.1.12",
     "1.2.840.113635.100.6.1.2"
 ), issueDate='2026-03-24 18:07:37 +0000''>', entitlements='{
     "application-identifier" = "BK8PTBP6K2.com.speshtalent.FutureAlarm26";
+    "com.apple.developer.icloud-container-identifiers" =     (
+    );
     "com.apple.developer.siri" = 1;
     "com.apple.developer.team-identifier" = BK8PTBP6K2;
+    "com.apple.developer.ubiquity-kvstore-identifier" = "BK8PTBP6K2.com.speshtalent.FutureAlarm26";
     "com.apple.security.application-groups" =     (
         "group.com.speshtalent.FutureAlarm26"
     );
     "get-task-allow" = 1;
-}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26', executablePath='<DVTFilePath:0x7dfb33120:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/MyAlarmApp'>', hardenedRuntime='0'>'>: {
+}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26', executablePath='<DVTFilePath:0xb4a391140:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/MyAlarmApp'>', hardenedRuntime='0'>'>: {
     "application-identifier" = "BK8PTBP6K2.com.speshtalent.FutureAlarm26";
     "beta-reports-active" = 1;
+    "com.apple.developer.icloud-container-identifiers" =     (
+    );
     "com.apple.developer.siri" = 1;
     "com.apple.developer.team-identifier" = BK8PTBP6K2;
+    "com.apple.developer.ubiquity-kvstore-identifier" = "BK8PTBP6K2.com.speshtalent.FutureAlarm26";
     "com.apple.security.application-groups" =     (
         "group.com.speshtalent.FutureAlarm26"
     );
     "get-task-allow" = 0;
 }
-2026-03-27 04:50:56 +0000 [MT] Associated App Clip Identifiers Filter: Skipping because "com.apple.developer.associated-appclip-app-identifiers" is not present
-2026-03-27 04:50:56 +0000 [MT] Entitlements for <IDEDistributionItem: 0x7dfb33ae0; bundleID='com.speshtalent.FutureAlarm26', path='<DVTFilePath:0x7dfaebc60:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x7dfb33a80; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x7e05c8f00; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
+2026-03-31 03:02:17 +0000 [MT] Associated App Clip Identifiers Filter: Skipping because "com.apple.developer.associated-appclip-app-identifiers" is not present
+2026-03-31 03:02:17 +0000 [MT] Entitlements for <IDEDistributionItem: 0xb4a391f80; bundleID='com.speshtalent.FutureAlarm26', path='<DVTFilePath:0xb4a269b00:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0xb4a391c80; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0xb4a2d09c0; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
     "1.2.840.113635.100.6.1.12",
     "1.2.840.113635.100.6.1.2"
 ), issueDate='2026-03-24 18:07:37 +0000''>', entitlements='{
     "application-identifier" = "BK8PTBP6K2.com.speshtalent.FutureAlarm26";
+    "com.apple.developer.icloud-container-identifiers" =     (
+    );
     "com.apple.developer.siri" = 1;
     "com.apple.developer.team-identifier" = BK8PTBP6K2;
+    "com.apple.developer.ubiquity-kvstore-identifier" = "BK8PTBP6K2.com.speshtalent.FutureAlarm26";
     "com.apple.security.application-groups" =     (
         "group.com.speshtalent.FutureAlarm26"
     );
     "get-task-allow" = 1;
-}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26', executablePath='<DVTFilePath:0x7dfb33120:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/MyAlarmApp'>', hardenedRuntime='0'>'> are: {
+}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26', executablePath='<DVTFilePath:0xb4a391140:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/MyAlarmApp'>', hardenedRuntime='0'>'> are: {
     "application-identifier" = "BK8PTBP6K2.com.speshtalent.FutureAlarm26";
     "beta-reports-active" = 1;
+    "com.apple.developer.icloud-container-identifiers" =     (
+    );
     "com.apple.developer.siri" = 1;
     "com.apple.developer.team-identifier" = BK8PTBP6K2;
+    "com.apple.developer.ubiquity-kvstore-identifier" = "BK8PTBP6K2.com.speshtalent.FutureAlarm26";
     "com.apple.security.application-groups" =     (
         "group.com.speshtalent.FutureAlarm26"
     );
     "get-task-allow" = 0;
 }
-2026-03-27 04:50:56 +0000 [MT] Writing entitlements for <IDEDistributionItem: 0x7dfb33ae0; bundleID='com.speshtalent.FutureAlarm26', path='<DVTFilePath:0x7dfaebc60:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x7dfb33a80; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x7e05c8f00; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
+2026-03-31 03:02:17 +0000 [MT] Writing entitlements for <IDEDistributionItem: 0xb4a391f80; bundleID='com.speshtalent.FutureAlarm26', path='<DVTFilePath:0xb4a269b00:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0xb4a391c80; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0xb4a2d09c0; name='Apple Development: Rakesh Ravva (QMRD8WBS3A)', hash='3742D7236AEA409D6CFD28A8FF74DC00D9ACFE42', serialNumber='5FE79058BEB4D58A67FCF5E8510A3DCC', certificateKinds='(
     "1.2.840.113635.100.6.1.12",
     "1.2.840.113635.100.6.1.2"
 ), issueDate='2026-03-24 18:07:37 +0000''>', entitlements='{
     "application-identifier" = "BK8PTBP6K2.com.speshtalent.FutureAlarm26";
+    "com.apple.developer.icloud-container-identifiers" =     (
+    );
     "com.apple.developer.siri" = 1;
     "com.apple.developer.team-identifier" = BK8PTBP6K2;
+    "com.apple.developer.ubiquity-kvstore-identifier" = "BK8PTBP6K2.com.speshtalent.FutureAlarm26";
     "com.apple.security.application-groups" =     (
         "group.com.speshtalent.FutureAlarm26"
     );
     "get-task-allow" = 1;
-}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26', executablePath='<DVTFilePath:0x7dfb33120:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/MyAlarmApp'>', hardenedRuntime='0'>'> to: /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/entitlements~~~R73s6B
-2026-03-27 04:50:56 +0000 [MT] invoking codesign: <NSConcreteTask: 0x7e05ddc70; launchPath='/usr/bin/codesign', arguments='(
+}', teamID='BK8PTBP6K2', identifier='com.speshtalent.FutureAlarm26', executablePath='<DVTFilePath:0xb4a391140:'/Users/rakdev/Desktop/iOS Apps/Alarm-kit/build/MyAlarmApp.xcarchive/Products/Applications/MyAlarmApp.app/MyAlarmApp'>', hardenedRuntime='0'>'> to: /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/entitlements~~~1ggOLa
+2026-03-31 03:02:17 +0000 [MT] invoking codesign: <NSConcreteTask: 0xb4cd814a0; launchPath='/usr/bin/codesign', arguments='(
     "-f",
     "-s",
     1AB343C37F9108A2932CE91B5C87AEDDD8BDAD49,
     "--entitlements",
-    "/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/entitlements~~~R73s6B",
+    "/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/entitlements~~~1ggOLa",
     "--preserve-metadata=identifier,flags,runtime,launch-constraints,library-constraints",
     "--generate-entitlement-der",
     "--strip-disallowed-xattrs",
     "-vvv",
-    "/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Root/Payload/MyAlarmApp.app"
+    "/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Root/Payload/MyAlarmApp.app"
 )'>
-2026-03-27 04:50:56 +0000 [MT] codesign output: /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Root/Payload/MyAlarmApp.app: replacing existing signature
-/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Root/Payload/MyAlarmApp.app: signed app bundle with Mach-O thin (arm64) [com.speshtalent.FutureAlarm26]
-2026-03-27 04:50:56 +0000 [MT] Processing step: IDEDistributionZipODRItemStep
-2026-03-27 04:50:56 +0000 [MT] Skipping step: IDEDistributionZipODRItemStep because it said so
-2026-03-27 04:50:56 +0000 [MT] Skipping step: IDEDistributionZipODRItemStep because it said so
-2026-03-27 04:50:56 +0000 [MT] Skipping step: IDEDistributionZipODRItemStep because it said so
-2026-03-27 04:50:56 +0000 [MT] Processing step: IDEDistributionCreateIPAStep
-2026-03-27 04:50:56 +0000 [MT] Running /usr/bin/rsync '-8aPhhE' '/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Symbols' '--link-dest' '/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y' '/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Root'
-2026-03-27 04:50:56 +0000  Symbols/
-Symbols/056FF8A0-4231-31E1-805F-B2B4B8D4E5B6.symbols
-Symbols/2B45E7D4-6DEA-3D7F-BF6B-C9090C7238D7.symbols
-Symbols/BD9EB2EA-0177-3597-90DE-F5B0335E2346.symbols
-2026-03-27 04:50:56 +0000 [MT] /usr/bin/rsync exited with 0
-2026-03-27 04:50:56 +0000 [MT] Running /usr/bin/ditto '-V' '-c' '-k' '--norsrc' '/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Root' '/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Packages/MyAlarmApp.ipa'
-2026-03-27 04:50:56 +0000  >>> Copying /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Root 
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/_CodeSignature/CodeResources ... 
-2026-03-27 04:50:56 +0000  12141 bytes for ./Payload/MyAlarmApp.app/_CodeSignature/CodeResources
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/pure.caf ... 
-2026-03-27 04:50:56 +0000  925792 bytes for ./Payload/MyAlarmApp.app/pure.caf
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/nokia.caf ... 
-2026-03-27 04:50:56 +0000  2949490 bytes for ./Payload/MyAlarmApp.app/nokia.caf
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/Metadata.appintents/version.json ... 
-2026-03-27 04:50:56 +0000  52 bytes for ./Payload/MyAlarmApp.app/Metadata.appintents/version.json
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/Metadata.appintents/nlu/nlu.lzfse ... 
-2026-03-27 04:50:56 +0000  2331 bytes for ./Payload/MyAlarmApp.app/Metadata.appintents/nlu/nlu.lzfse
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/Metadata.appintents/nlu/c5a33d86570d075e4c744782c9a6805a.version ... 
-2026-03-27 04:50:56 +0000  1 bytes for ./Payload/MyAlarmApp.app/Metadata.appintents/nlu/c5a33d86570d075e4c744782c9a6805a.version
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/Metadata.appintents/extract.actionsdata ... 
-2026-03-27 04:50:56 +0000  6542 bytes for ./Payload/MyAlarmApp.app/Metadata.appintents/extract.actionsdata
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/_CodeSignature/CodeResources ... 
-2026-03-27 04:50:56 +0000  4632 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/_CodeSignature/CodeResources
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/pure.caf ... 
-2026-03-27 04:50:56 +0000  925792 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/pure.caf
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/nokia.caf ... 
-2026-03-27 04:50:56 +0000  2949490 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/nokia.caf
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/CountdownLiveActivityExtension ... 
-2026-03-27 04:50:56 +0000  118352 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/CountdownLiveActivityExtension
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/version.json ... 
-2026-03-27 04:50:56 +0000  52 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/version.json
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/extract.actionsdata ... 
-2026-03-27 04:50:56 +0000  3593 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/extract.actionsdata
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/bells.caf ... 
-2026-03-27 04:50:56 +0000  766720 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/bells.caf
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/morning-birds.caf ... 
-2026-03-27 04:50:56 +0000  1547776 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/morning-birds.caf
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/childhood.caf ... 
-2026-03-27 04:50:56 +0000  1481272 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/childhood.caf
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/bird-sound.caf ... 
-2026-03-27 04:50:56 +0000  1402624 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/bird-sound.caf
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/sony.caf ... 
-2026-03-27 04:50:56 +0000  1843632 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/sony.caf
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/embedded.mobileprovision ... 
-2026-03-27 04:50:56 +0000  14526 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/embedded.mobileprovision
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/rings.caf ... 
-2026-03-27 04:50:56 +0000  1297464 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/rings.caf
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/soft.caf ... 
-2026-03-27 04:50:56 +0000  1396352 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/soft.caf
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/Info.plist ... 
-2026-03-27 04:50:56 +0000  923 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/Info.plist
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/1985_ring2.caf ... 
-2026-03-27 04:50:56 +0000  1129090 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/1985_ring2.caf
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/_CodeSignature/CodeResources ... 
+2026-03-31 03:02:18 +0000 [MT] codesign output: /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Root/Payload/MyAlarmApp.app: replacing existing signature
+/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Root/Payload/MyAlarmApp.app: signed app bundle with Mach-O thin (arm64) [com.speshtalent.FutureAlarm26]
+2026-03-31 03:02:18 +0000 [MT] Processing step: IDEDistributionZipODRItemStep
+2026-03-31 03:02:18 +0000 [MT] Skipping step: IDEDistributionZipODRItemStep because it said so
+2026-03-31 03:02:18 +0000 [MT] Skipping step: IDEDistributionZipODRItemStep because it said so
+2026-03-31 03:02:18 +0000 [MT] Skipping step: IDEDistributionZipODRItemStep because it said so
+2026-03-31 03:02:18 +0000 [MT] Processing step: IDEDistributionCreateIPAStep
+2026-03-31 03:02:18 +0000 [MT] Running /usr/bin/rsync '-8aPhhE' '/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Symbols' '--link-dest' '/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE' '/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Root'
+2026-03-31 03:02:18 +0000  Symbols/
+Symbols/1FE11A9B-09CE-3BF8-B1BF-97C7328F6EE8.symbols
+Symbols/2B580AE5-30B4-37F1-B051-C5F47688DDB2.symbols
+Symbols/73384C69-CC90-38B1-B842-4571C69A6B3F.symbols
+2026-03-31 03:02:18 +0000 [MT] /usr/bin/rsync exited with 0
+2026-03-31 03:02:18 +0000 [MT] Running /usr/bin/ditto '-V' '-c' '-k' '--norsrc' '/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Root' '/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Packages/MyAlarmApp.ipa'
+2026-03-31 03:02:18 +0000  >>> Copying /var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Root 
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/_CodeSignature/CodeResources ... 
+2026-03-31 03:02:18 +0000  12141 bytes for ./Payload/MyAlarmApp.app/_CodeSignature/CodeResources
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/pure.caf ... 
+2026-03-31 03:02:18 +0000  925792 bytes for ./Payload/MyAlarmApp.app/pure.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/nokia.caf ... 
+2026-03-31 03:02:18 +0000  2949490 bytes for ./Payload/MyAlarmApp.app/nokia.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/Metadata.appintents/version.json ... 
+2026-03-31 03:02:18 +0000  52 bytes for ./Payload/MyAlarmApp.app/Metadata.appintents/version.json
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/Metadata.appintents/nlu/nlu.lzfse ... 
+2026-03-31 03:02:18 +0000  2733 bytes for ./Payload/MyAlarmApp.app/Metadata.appintents/nlu/nlu.lzfse
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/Metadata.appintents/nlu/6e5d89e1a1970f37441ffee8ba51607e.version ... 
+2026-03-31 03:02:18 +0000  1 bytes for ./Payload/MyAlarmApp.app/Metadata.appintents/nlu/6e5d89e1a1970f37441ffee8ba51607e.version
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/Metadata.appintents/extract.actionsdata ... 
+2026-03-31 03:02:18 +0000  11491 bytes for ./Payload/MyAlarmApp.app/Metadata.appintents/extract.actionsdata
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/_CodeSignature/CodeResources ... 
+2026-03-31 03:02:18 +0000  4632 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/_CodeSignature/CodeResources
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/pure.caf ... 
+2026-03-31 03:02:18 +0000  925792 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/pure.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/nokia.caf ... 
+2026-03-31 03:02:18 +0000  2949490 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/nokia.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/CountdownLiveActivityExtension ... 
+2026-03-31 03:02:18 +0000  118352 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/CountdownLiveActivityExtension
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/version.json ... 
+2026-03-31 03:02:18 +0000  52 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/version.json
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/extract.actionsdata ... 
+2026-03-31 03:02:18 +0000  3593 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/extract.actionsdata
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/bells.caf ... 
+2026-03-31 03:02:18 +0000  766720 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/bells.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/morning-birds.caf ... 
+2026-03-31 03:02:18 +0000  1547776 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/morning-birds.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/childhood.caf ... 
+2026-03-31 03:02:18 +0000  1481272 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/childhood.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/bird-sound.caf ... 
+2026-03-31 03:02:18 +0000  1402624 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/bird-sound.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/sony.caf ... 
+2026-03-31 03:02:18 +0000  1843632 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/sony.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/embedded.mobileprovision ... 
+2026-03-31 03:02:18 +0000  14526 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/embedded.mobileprovision
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/rings.caf ... 
+2026-03-31 03:02:18 +0000  1297464 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/rings.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/soft.caf ... 
+2026-03-31 03:02:18 +0000  1396352 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/soft.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/Info.plist ... 
+2026-03-31 03:02:18 +0000  931 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/Info.plist
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/1985_ring2.caf ... 
+2026-03-31 03:02:18 +0000  1129090 bytes for ./Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex/1985_ring2.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/_CodeSignature/CodeResources ... 
 2040 bytes for ./Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/_CodeSignature/CodeResources
 copying file ./Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/FutureAlarmWidgetExtension ... 
-2026-03-27 04:50:56 +0000  200384 bytes for ./Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/FutureAlarmWidgetExtension
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/embedded.mobileprovision ... 
-2026-03-27 04:50:56 +0000  14673 bytes for ./Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/embedded.mobileprovision
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/Info.plist ... 
-2026-03-27 04:50:56 +0000  918 bytes for ./Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/Info.plist
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/bells.caf ... 
-2026-03-27 04:50:56 +0000  766720 bytes for ./Payload/MyAlarmApp.app/bells.caf
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/AppIcon60x60@2x.png ... 
-2026-03-27 04:50:56 +0000  18004 bytes for ./Payload/MyAlarmApp.app/AppIcon60x60@2x.png
-2026-03-27 04:50:56 +0000  copying file ./Payload/MyAlarmApp.app/morning-birds.caf ... 
-2026-03-27 04:50:57 +0000  1547776 bytes for ./Payload/MyAlarmApp.app/morning-birds.caf
-2026-03-27 04:50:57 +0000  copying file ./Payload/MyAlarmApp.app/childhood.caf ... 
-2026-03-27 04:50:57 +0000  1481272 bytes for ./Payload/MyAlarmApp.app/childhood.caf
-2026-03-27 04:50:57 +0000  copying file ./Payload/MyAlarmApp.app/bird-sound.caf ... 
-2026-03-27 04:50:57 +0000  1402624 bytes for ./Payload/MyAlarmApp.app/bird-sound.caf
-2026-03-27 04:50:57 +0000  copying file ./Payload/MyAlarmApp.app/Assets.car ... 
-2026-03-27 04:50:57 +0000  2199752 bytes for ./Payload/MyAlarmApp.app/Assets.car
-2026-03-27 04:50:57 +0000  copying file ./Payload/MyAlarmApp.app/sony.caf ... 
-2026-03-27 04:50:57 +0000  1843632 bytes for ./Payload/MyAlarmApp.app/sony.caf
-2026-03-27 04:50:57 +0000  copying file ./Payload/MyAlarmApp.app/AppIcon76x76@2x~ipad.png ... 
-2026-03-27 04:50:57 +0000  27070 bytes for ./Payload/MyAlarmApp.app/AppIcon76x76@2x~ipad.png
-2026-03-27 04:50:57 +0000  copying file ./Payload/MyAlarmApp.app/MyAlarmApp ... 
-2026-03-27 04:50:57 +0000  924832 bytes for ./Payload/MyAlarmApp.app/MyAlarmApp
-2026-03-27 04:50:57 +0000  copying file ./Payload/MyAlarmApp.app/embedded.mobileprovision ... 
-2026-03-27 04:50:57 +0000  14671 bytes for ./Payload/MyAlarmApp.app/embedded.mobileprovision
-2026-03-27 04:50:57 +0000  copying file ./Payload/MyAlarmApp.app/rings.caf ... 
-2026-03-27 04:50:57 +0000  1297464 bytes for ./Payload/MyAlarmApp.app/rings.caf
-2026-03-27 04:50:57 +0000  copying file ./Payload/MyAlarmApp.app/soft.caf ... 
-2026-03-27 04:50:57 +0000  1396352 bytes for ./Payload/MyAlarmApp.app/soft.caf
-2026-03-27 04:50:57 +0000  copying file ./Payload/MyAlarmApp.app/Info.plist ... 
-2026-03-27 04:50:57 +0000  2023 bytes for ./Payload/MyAlarmApp.app/Info.plist
-2026-03-27 04:50:57 +0000  copying file ./Payload/MyAlarmApp.app/PkgInfo ... 
-2026-03-27 04:50:57 +0000  8 bytes for ./Payload/MyAlarmApp.app/PkgInfo
-2026-03-27 04:50:57 +0000  copying file ./Payload/MyAlarmApp.app/1985_ring2.caf ... 
-2026-03-27 04:50:57 +0000  1129090 bytes for ./Payload/MyAlarmApp.app/1985_ring2.caf
-2026-03-27 04:50:57 +0000  copying file ./Symbols/BD9EB2EA-0177-3597-90DE-F5B0335E2346.symbols ... 
-2026-03-27 04:50:57 +0000  3235844 bytes for ./Symbols/BD9EB2EA-0177-3597-90DE-F5B0335E2346.symbols
-2026-03-27 04:50:57 +0000  copying file ./Symbols/2B45E7D4-6DEA-3D7F-BF6B-C9090C7238D7.symbols ... 
-2026-03-27 04:50:57 +0000  124916 bytes for ./Symbols/2B45E7D4-6DEA-3D7F-BF6B-C9090C7238D7.symbols
-2026-03-27 04:50:57 +0000  copying file ./Symbols/056FF8A0-4231-31E1-805F-B2B4B8D4E5B6.symbols ... 
-2026-03-27 04:50:57 +0000  320932 bytes for ./Symbols/056FF8A0-4231-31E1-805F-B2B4B8D4E5B6.symbols
-2026-03-27 04:50:57 +0000 [MT] /usr/bin/ditto exited with 0
-2026-03-27 04:50:57 +0000 [MT] Processing step: IDEDistributionAppStoreInformationStep
-2026-03-27 04:50:57 +0000 [MT] Skipping step: IDEDistributionAppStoreInformationStep because it said so
-2026-03-27 04:50:57 +0000 [MT] Processing step: IDEDistributionGenerateProcessedDistributionItems
-2026-03-27 04:50:57 +0000 [MT] IDEDistributionItem init <DVTFilePath:0x7de3fbc80:'/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Root/Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex'>
-2026-03-27 04:50:57 +0000 [MT] IDEDistributionItem init <DVTFilePath:0x7de3fa900:'/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Root/Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex'>
-2026-03-27 04:50:57 +0000 [MT] IDEDistributionItem init <DVTFilePath:0x7e06d0180:'/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~h0W18Y/Root/Payload/MyAlarmApp.app'>
-2026-03-27 04:50:57 +0000 [MT] Processing step: IDEDistributionCreateManifestStep
-2026-03-27 04:50:57 +0000 [MT] Skipping step: IDEDistributionCreateManifestStep because it said so
+2026-03-31 03:02:18 +0000  235888 bytes for ./Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/FutureAlarmWidgetExtension
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/embedded.mobileprovision ... 
+2026-03-31 03:02:18 +0000  14673 bytes for ./Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/embedded.mobileprovision
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/Info.plist ... 
+2026-03-31 03:02:18 +0000  926 bytes for ./Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex/Info.plist
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/bells.caf ... 
+2026-03-31 03:02:18 +0000  766720 bytes for ./Payload/MyAlarmApp.app/bells.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/AppIcon60x60@2x.png ... 
+2026-03-31 03:02:18 +0000  18004 bytes for ./Payload/MyAlarmApp.app/AppIcon60x60@2x.png
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/morning-birds.caf ... 
+2026-03-31 03:02:18 +0000  1547776 bytes for ./Payload/MyAlarmApp.app/morning-birds.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/childhood.caf ... 
+2026-03-31 03:02:18 +0000  1481272 bytes for ./Payload/MyAlarmApp.app/childhood.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/bird-sound.caf ... 
+2026-03-31 03:02:18 +0000  1402624 bytes for ./Payload/MyAlarmApp.app/bird-sound.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/Assets.car ... 
+2026-03-31 03:02:18 +0000  2199752 bytes for ./Payload/MyAlarmApp.app/Assets.car
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/sony.caf ... 
+2026-03-31 03:02:18 +0000  1843632 bytes for ./Payload/MyAlarmApp.app/sony.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/AppIcon76x76@2x~ipad.png ... 
+2026-03-31 03:02:18 +0000  27070 bytes for ./Payload/MyAlarmApp.app/AppIcon76x76@2x~ipad.png
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/MyAlarmApp ... 
+2026-03-31 03:02:18 +0000  1031632 bytes for ./Payload/MyAlarmApp.app/MyAlarmApp
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/embedded.mobileprovision ... 
+2026-03-31 03:02:18 +0000  15531 bytes for ./Payload/MyAlarmApp.app/embedded.mobileprovision
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/rings.caf ... 
+2026-03-31 03:02:18 +0000  1297464 bytes for ./Payload/MyAlarmApp.app/rings.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/soft.caf ... 
+2026-03-31 03:02:18 +0000  1396352 bytes for ./Payload/MyAlarmApp.app/soft.caf
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/Info.plist ... 
+2026-03-31 03:02:18 +0000  2031 bytes for ./Payload/MyAlarmApp.app/Info.plist
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/PkgInfo ... 
+2026-03-31 03:02:18 +0000  8 bytes for ./Payload/MyAlarmApp.app/PkgInfo
+2026-03-31 03:02:18 +0000  copying file ./Payload/MyAlarmApp.app/1985_ring2.caf ... 
+2026-03-31 03:02:18 +0000  1129090 bytes for ./Payload/MyAlarmApp.app/1985_ring2.caf
+2026-03-31 03:02:18 +0000  copying file ./Symbols/1FE11A9B-09CE-3BF8-B1BF-97C7328F6EE8.symbols ... 
+2026-03-31 03:02:18 +0000  380532 bytes for ./Symbols/1FE11A9B-09CE-3BF8-B1BF-97C7328F6EE8.symbols
+2026-03-31 03:02:18 +0000  copying file ./Symbols/2B580AE5-30B4-37F1-B051-C5F47688DDB2.symbols ... 
+2026-03-31 03:02:18 +0000  125156 bytes for ./Symbols/2B580AE5-30B4-37F1-B051-C5F47688DDB2.symbols
+2026-03-31 03:02:18 +0000  copying file ./Symbols/73384C69-CC90-38B1-B842-4571C69A6B3F.symbols ... 
+2026-03-31 03:02:18 +0000  3529540 bytes for ./Symbols/73384C69-CC90-38B1-B842-4571C69A6B3F.symbols
+2026-03-31 03:02:18 +0000 [MT] /usr/bin/ditto exited with 0
+2026-03-31 03:02:18 +0000 [MT] Processing step: IDEDistributionAppStoreInformationStep
+2026-03-31 03:02:18 +0000 [MT] Skipping step: IDEDistributionAppStoreInformationStep because it said so
+2026-03-31 03:02:18 +0000 [MT] Processing step: IDEDistributionGenerateProcessedDistributionItems
+2026-03-31 03:02:18 +0000 [MT] IDEDistributionItem init <DVTFilePath:0xb4a51c800:'/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Root/Payload/MyAlarmApp.app/PlugIns/FutureAlarmWidgetExtension.appex'>
+2026-03-31 03:02:18 +0000 [MT] IDEDistributionItem init <DVTFilePath:0xb4a51c480:'/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Root/Payload/MyAlarmApp.app/PlugIns/CountdownLiveActivityExtension.appex'>
+2026-03-31 03:02:18 +0000 [MT] IDEDistributionItem init <DVTFilePath:0xb49d7d080:'/var/folders/pm/r07tst_s1clb6xkg4zc6f_s80000gp/T/XcodeDistPipeline.~~~b38gsE/Root/Payload/MyAlarmApp.app'>
+2026-03-31 03:02:18 +0000 [MT] Processing step: IDEDistributionCreateManifestStep
+2026-03-31 03:02:18 +0000 [MT] Skipping step: IDEDistributionCreateManifestStep because it said so
