@@ -308,10 +308,70 @@ struct ContentView: View {
 struct SettingsView: View {
     @AppStorage("appColorScheme") private var appColorScheme: String = "system"
     @AppStorage("use24HourFormat") private var use24HourFormat: Bool = false
+    @AppStorage("selectedAppIcon") private var selectedAppIcon: String = "Classic"
+    @State private var pendingIcon: String = "Classic"
     @State private var showFeatureRequest = false
+    @Environment(\.colorScheme) private var systemColorScheme
     @Environment(\.dismiss) private var dismiss
 
     var preferredColorScheme: ColorScheme?
+
+    private let appIcons: [(name: String, imageName: String, iconName: String?)] = [
+        ("Classic", "AppIcon1", "AppIcon1"),
+        ("Future", "AppIcon2", "AppIcon2"),
+        ("Pro", "AppIcon3", "AppIcon3"),
+        ("Elite", "AppIcon4", "AppIcon4"),
+        ("Neon", "AppIcon5", "AppIcon5"),
+    ]
+
+    // ✅ System Default toggle binding
+    private var useSystemDefault: Binding<Bool> {
+        Binding(
+            get: { appColorScheme == "system" },
+            set: { newValue in
+                if newValue {
+                    UIApplication.shared.connectedScenes
+                        .compactMap { $0 as? UIWindowScene }
+                        .flatMap { $0.windows }
+                        .forEach { $0.overrideUserInterfaceStyle = .unspecified }
+                    appColorScheme = "system"
+                    dismiss()
+                } else {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        appColorScheme = effectiveScheme == .dark ? "dark" : "light"
+                    }
+                }
+            }
+        )
+    }
+
+    private var effectiveScheme: ColorScheme {
+        switch appColorScheme {
+        case "light": return .light
+        case "dark": return .dark
+        default: return systemColorScheme
+        }
+    }
+
+    private var bgColor: Color {
+        effectiveScheme == .dark
+            ? Color(UIColor(red: 0.071, green: 0.071, blue: 0.078, alpha: 1))
+            : Color(UIColor.systemGroupedBackground)
+    }
+
+    private var cardColor: Color {
+        effectiveScheme == .dark
+            ? Color(UIColor(red: 0.13, green: 0.13, blue: 0.14, alpha: 1))
+            : Color(UIColor.secondarySystemGroupedBackground)
+    }
+
+    private var primaryText: Color {
+        effectiveScheme == .dark ? .white : Color(UIColor.label)
+    }
+
+    private var secondaryText: Color {
+        effectiveScheme == .dark ? Color(white: 0.55) : Color(UIColor.secondaryLabel)
+    }
 
     private var currentColorScheme: ColorScheme? {
         switch appColorScheme {
@@ -329,53 +389,145 @@ struct SettingsView: View {
 
     var body: some View {
         ZStack {
-            Color("AppBackground").ignoresSafeArea()
+            bgColor.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 16) {
 
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(Color("SecondaryText").opacity(0.4))
+                        .fill(secondaryText.opacity(0.4))
                         .frame(width: 40, height: 5)
                         .padding(.top, 12)
 
                     Text("Settings")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color("PrimaryText"))
+                        .foregroundStyle(primaryText)
                         .padding(.bottom, 4)
 
-                    // ✅ Appearance card — 3 options with dismiss
+                    // ✅ Appearance card
                     ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
+                        RoundedRectangle(cornerRadius: 16).fill(cardColor)
                         VStack(spacing: 0) {
                             HStack(spacing: 8) {
                                 Image(systemName: "circle.lefthalf.filled")
                                     .foregroundStyle(.orange)
                                 Text("Appearance")
                                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(Color("PrimaryText"))
+                                    .foregroundStyle(primaryText)
                                 Spacer()
                             }
                             .padding(16)
                             Divider()
-                            appearanceRow(title: "System Default", value: "system")
-                            Divider()
-                            appearanceRow(title: "Light Mode", value: "light")
-                            Divider()
-                            appearanceRow(title: "Dark Mode", value: "dark")
+
+                            // ✅ System Default toggle
+                            HStack {
+                                Text("System Default")
+                                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                                    .foregroundStyle(primaryText)
+                                Spacer()
+                                Toggle("", isOn: useSystemDefault)
+                                    .tint(.orange)
+                            }
+                            .padding(16)
+
+                            // ✅ Light/Dark only show when System Default is OFF
+                            if appColorScheme != "system" {
+                                Divider()
+                                appearanceRow(title: "Light Mode", value: "light")
+                                Divider()
+                                appearanceRow(title: "Dark Mode", value: "dark")
+                            }
                         }
                     }
                     .padding(.horizontal, 20)
 
+                    // App Icon card
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16).fill(cardColor)
+                        VStack(spacing: 0) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "app.fill")
+                                    .foregroundStyle(.orange)
+                                Text("App Icon")
+                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(primaryText)
+                                Spacer()
+                            }
+                            .padding(16)
+                            Divider()
+
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 16) {
+                                    ForEach(appIcons, id: \.name) { icon in
+                                        VStack(spacing: 8) {
+                                            Group {
+                                                if let uiImage = UIImage(named: icon.imageName) {
+                                                    Image(uiImage: uiImage)
+                                                        .resizable()
+                                                        .scaledToFit()
+                                                } else {
+                                                    RoundedRectangle(cornerRadius: 14)
+                                                        .fill(Color.orange.opacity(0.2))
+                                                }
+                                            }
+                                            .frame(width: 64, height: 64)
+                                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 14)
+                                                    .stroke(pendingIcon == icon.name ? Color.orange : Color.clear, lineWidth: 3)
+                                            )
+                                            .shadow(color: pendingIcon == icon.name ? .orange.opacity(0.4) : .clear, radius: 6)
+
+                                            Text(icon.name)
+                                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                                .foregroundStyle(pendingIcon == icon.name ? .orange : secondaryText)
+
+                                            if selectedAppIcon == icon.name {
+                                                Text("Active")
+                                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                                    .foregroundStyle(.orange)
+                                            }
+                                        }
+                                        .onTapGesture {
+                                            withAnimation(.spring(response: 0.3)) {
+                                                pendingIcon = icon.name
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding(16)
+                            }
+
+                            if pendingIcon != selectedAppIcon {
+                                Button {
+                                    applyIcon()
+                                } label: {
+                                    Text("Apply")
+                                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                                        .foregroundStyle(.black)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 12)
+                                        .background(Color.orange)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 16)
+                                .transition(.opacity)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .onAppear { pendingIcon = selectedAppIcon }
+
                     // Time Format card
                     ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
+                        RoundedRectangle(cornerRadius: 16).fill(cardColor)
                         VStack(spacing: 0) {
                             HStack(spacing: 8) {
                                 Image(systemName: "clock.fill")
                                     .foregroundStyle(.orange)
                                 Text("Time Format")
                                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(Color("PrimaryText"))
+                                    .foregroundStyle(primaryText)
                                 Spacer()
                             }
                             .padding(16)
@@ -383,7 +535,7 @@ struct SettingsView: View {
                             HStack {
                                 Text("24 Hour")
                                     .font(.system(size: 15, weight: .medium, design: .rounded))
-                                    .foregroundStyle(Color("PrimaryText"))
+                                    .foregroundStyle(primaryText)
                                 Spacer()
                                 Toggle("", isOn: $use24HourFormat)
                                     .tint(.orange)
@@ -398,16 +550,16 @@ struct SettingsView: View {
 
                     // Feature Request card
                     ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
+                        RoundedRectangle(cornerRadius: 16).fill(cardColor)
                         HStack(spacing: 8) {
                             Image(systemName: "lightbulb.fill")
                                 .foregroundStyle(.orange)
                             Text("Request a Feature")
                                 .font(.system(size: 15, weight: .medium, design: .rounded))
-                                .foregroundStyle(Color("PrimaryText"))
+                                .foregroundStyle(primaryText)
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .foregroundStyle(Color("SecondaryText"))
+                                .foregroundStyle(secondaryText)
                                 .font(.system(size: 13))
                         }
                         .padding(16)
@@ -417,17 +569,17 @@ struct SettingsView: View {
 
                     // Version card
                     ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
+                        RoundedRectangle(cornerRadius: 16).fill(cardColor)
                         HStack(spacing: 8) {
                             Image(systemName: "info.circle.fill")
                                 .foregroundStyle(.orange)
                             Text("Version")
                                 .font(.system(size: 15, weight: .medium, design: .rounded))
-                                .foregroundStyle(Color("PrimaryText"))
+                                .foregroundStyle(primaryText)
                             Spacer()
                             Text(appVersion)
                                 .font(.system(size: 14, design: .rounded))
-                                .foregroundStyle(Color("SecondaryText"))
+                                .foregroundStyle(secondaryText)
                         }
                         .padding(16)
                     }
@@ -443,12 +595,24 @@ struct SettingsView: View {
         }
     }
 
+    private func applyIcon() {
+        guard let icon = appIcons.first(where: { $0.name == pendingIcon }) else { return }
+        guard UIApplication.shared.supportsAlternateIcons else { return }
+        UIApplication.shared.setAlternateIconName(icon.iconName) { error in
+            if error == nil {
+                DispatchQueue.main.async {
+                    selectedAppIcon = pendingIcon
+                }
+            }
+        }
+    }
+
     @ViewBuilder
     private func appearanceRow(title: String, value: String) -> some View {
         HStack {
             Text(title)
                 .font(.system(size: 15, weight: .medium, design: .rounded))
-                .foregroundStyle(Color("PrimaryText"))
+                .foregroundStyle(primaryText)
             Spacer()
             if appColorScheme == value {
                 Image(systemName: "checkmark.circle.fill")
@@ -458,13 +622,9 @@ struct SettingsView: View {
         .padding(16)
         .contentShape(Rectangle())
         .onTapGesture {
-            appColorScheme = value
-            let style: UIUserInterfaceStyle = value == "light" ? .light : value == "dark" ? .dark : .unspecified
-            UIApplication.shared.connectedScenes
-                .compactMap { $0 as? UIWindowScene }
-                .flatMap { $0.windows }
-                .forEach { $0.overrideUserInterfaceStyle = style }
-            dismiss() // ✅ closes sheet so it reopens with correct color
+            withAnimation(.easeInOut(duration: 0.2)) {
+                appColorScheme = value
+            }
         }
     }
 }
