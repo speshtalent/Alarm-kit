@@ -8,6 +8,26 @@
 		<data>
 		otCx6YRhQr4csqMkny2BU2haOuM=
 		</data>
+		<key>AppIcon1.png</key>
+		<data>
+		i6a5sL6hLmFMEt0ZxnzwgoiUIH0=
+		</data>
+		<key>AppIcon2.png</key>
+		<data>
+		MB9lacL7m0nTVhDvqTOwoVJYosg=
+		</data>
+		<key>AppIcon3.png</key>
+		<data>
+		vllu4RNmrPjdqt0kIXL59dmrbqw=
+		</data>
+		<key>AppIcon4.png</key>
+		<data>
+		IfxbXBBgAWk2DikivPxqp1cxd0M=
+		</data>
+		<key>AppIcon5.png</key>
+		<data>
+		t2WWZfbV8Ufn57t9kW7Su43uPaA=
+		</data>
 		<key>AppIcon60x60@2x.png</key>
 		<data>
 		gMN2zIt1nXm5zgLXkAlN95pXixs=
@@ -22,11 +42,11 @@
 		</data>
 		<key>Info.plist</key>
 		<data>
-		8kgQyKwXpoyLUyC68USI6CXAuPA=
+		7j8Vaf4zXK39ZM53LLcaVW7xie4=
 		</data>
 		<key>Metadata.appintents/extract.actionsdata</key>
 		<data>
-		II2JM2qytUgjrx0OjiWpb8BKtDM=
+		UiqaSpGiB5Sh5YoKOfPxz2J2uCQ=
 		</data>
 		<key>Metadata.appintents/nlu/6e5d89e1a1970f37441ffee8ba51607e.version</key>
 		<data>
@@ -34,7 +54,7 @@
 		</data>
 		<key>Metadata.appintents/nlu/nlu.lzfse</key>
 		<data>
-		n2RYn4LImEBR6YywQizz6Gs/msE=
+		YXd0dJ+KcydpGyacySXukZryUTc=
 		</data>
 		<key>Metadata.appintents/version.json</key>
 		<data>
@@ -50,23 +70,23 @@
 		</data>
 		<key>PlugIns/CountdownLiveActivityExtension.appex/CountdownLiveActivityExtension</key>
 		<data>
-		ngxouhUxIvZzq8KOC2rBvFG1i4c=
+		+//4270+Ejh902RkiVSCCbS3Fok=
 		</data>
 		<key>PlugIns/CountdownLiveActivityExtension.appex/Info.plist</key>
 		<data>
-		TRoUML09/Xk/jPA3KC344UcGM1k=
+		Nym7b45Dix8rLL8oKAu3EVIzdS8=
 		</data>
 		<key>PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/extract.actionsdata</key>
 		<data>
-		J55nJRolG9+ngcPgFkNlrHR7O34=
+		gmXxXBSPbVF5Yr+TQn5LPosUaW4=
 		</data>
 		<key>PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/version.json</key>
 		<data>
-		5cQ8W9lS/tDiMR6Gtf4r687sBVE=
+		7w1Ll5l26LJ1LppWC0B6iejWorY=
 		</data>
 		<key>PlugIns/CountdownLiveActivityExtension.appex/_CodeSignature/CodeResources</key>
 		<data>
-		gl5a8Ws/00jGkbuhcfiSgxHiUKk=
+		VLnRDWWJFHihcbf73eQvytfbfRM=
 		</data>
 		<key>PlugIns/CountdownLiveActivityExtension.appex/bells.caf</key>
 		<data>
@@ -110,15 +130,15 @@
 		</data>
 		<key>PlugIns/FutureAlarmWidgetExtension.appex/FutureAlarmWidgetExtension</key>
 		<data>
-		XU6mW1o643VoqnAydjpONz07mGM=
+		w2co+t75peTEdHn+haJFfiknxeM=
 		</data>
 		<key>PlugIns/FutureAlarmWidgetExtension.appex/Info.plist</key>
 		<data>
-		RcxXbxU/N/DlklESwRT00KGSs/0=
+		ogoPPsRThYE9IHB1tVbZnV+dpi0=
 		</data>
 		<key>PlugIns/FutureAlarmWidgetExtension.appex/_CodeSignature/CodeResources</key>
 		<data>
-		B2DiPTBsbEof1M9wU24csr2N3cU=
+		SrxAdTeK7I95I+JnHA6EizD7E8A=
 		</data>
 		<key>PlugIns/FutureAlarmWidgetExtension.appex/embedded.mobileprovision</key>
 		<data>
@@ -174,6 +194,41 @@
 			VB0thcnElXQYwW4HGIA2j6eiHQueHPCR3Gtn1x/Js3E=
 			</data>
 		</dict>
+		<key>AppIcon1.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			TEWc/ia9fdwvVAuY3E0VAcDIA8oRhraLUWRCiObcKk0=
+			</data>
+		</dict>
+		<key>AppIcon2.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			WufTJNTyVsL/ilvSMgvU1M2BHf8hSapl34Bo0aK7f2o=
+			</data>
+		</dict>
+		<key>AppIcon3.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			pik3/Xvu/SyNy1W8qymisy0rv3Uk6GMNHzMowl9QLQA=
+			</data>
+		</dict>
+		<key>AppIcon4.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			i12hKDmRRqtstsVR5oxm/9H/SrR9Z6QhdTlvHP3hH8k=
+			</data>
+		</dict>
+		<key>AppIcon5.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			DICQWWcuW3RRc00PXDQsXqfrnkqfsZsBxLvN5fOkuYY=
+			</data>
+		</dict>
 		<key>AppIcon60x60@2x.png</key>
 		<dict>
 			<key>hash2</key>
@@ -199,7 +254,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			jDVoa84N8OElWJOdOYt4Hi3ufd6Y+MlxtiYf94BNkww=
+			kNJ2SuEugJE7jWoN3P/JCdyp/4ZAPVT7FJFaY5KYEKg=
 			</data>
 		</dict>
 		<key>Metadata.appintents/nlu/6e5d89e1a1970f37441ffee8ba51607e.version</key>
@@ -213,7 +268,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			7NPxmrxSBayuLA3NqPGDJwbas462UKE0oaLpF/9bl8g=
+			68avo586XcLjBzW/D2pT5fF3VGzCj9hJ3PPLYq5iBpc=
 			</data>
 		</dict>
 		<key>Metadata.appintents/version.json</key>
@@ -234,35 +289,35 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			Hcf5nK5wvAU9M5IwOXLOSjbB0wq0QNkJ0sYQjKRnLSE=
+			36+cjsO3Iuj7Aw/Kj66WN4UV0fVeHz7h5h86iyVHRDg=
 			</data>
 		</dict>
 		<key>PlugIns/CountdownLiveActivityExtension.appex/Info.plist</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			c/sjSNtkHuoYproGtbv6iiV+161fsnC9SS2u3qGMMwI=
+			DI+k7vgkBPYkkAkpmUA/7TWz5PUqPxPdt2SfKQtiWbo=
 			</data>
 		</dict>
 		<key>PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/extract.actionsdata</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			7BuOta69wphP+AUG0AbS45GQKNF/vJW3vL6WHnHndyQ=
+			7gX8+l3BDpgaoMLWmllvK8eqAIy57VDi7u7ouh128Ms=
 			</data>
 		</dict>
 		<key>PlugIns/CountdownLiveActivityExtension.appex/Metadata.appintents/version.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			7Y0rLJmBePCB020gMHL6k9O8mrxjYR55JfTptuv/4jQ=
+			y1TAcXNcDbD2aIxNWsc0P2Vcl711IsZl2N4OtFadFYc=
 			</data>
 		</dict>
 		<key>PlugIns/CountdownLiveActivityExtension.appex/_CodeSignature/CodeResources</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			/8oaOe0KGvAX7JVRttEisraiJ69CW9tBewqq5/4Kbco=
+			DKZmwGCS3LLyE7RDlU2CO5jAESAkDkS8FArpnc8YoVY=
 			</data>
 		</dict>
 		<key>PlugIns/CountdownLiveActivityExtension.appex/bells.caf</key>
@@ -339,21 +394,21 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			mKtFdO6k+4RhhJvhmXqWvE6F7KQW/AF9rNYGGN7cL/o=
+			WvujAgRQAkeRrzrqoPWZ/gJAU2j59CBo9e0c0QDXuuc=
 			</data>
 		</dict>
 		<key>PlugIns/FutureAlarmWidgetExtension.appex/Info.plist</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			p7kwLrZ1Z9nW2nQRjeXcYYasItr7qJJiHdqPtl96gJ4=
+			tqnQygu8/aPz73GJAQ6Jd5cKI/TX/j5re26BU7N1tzQ=
 			</data>
 		</dict>
 		<key>PlugIns/FutureAlarmWidgetExtension.appex/_CodeSignature/CodeResources</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			ehnBHFNfz9ZwxUkZIDgAkj8LhWT71mhQZnPc0FSo9IM=
+			TU2zl5tpbofPmrjK6RXf6q4it4AhiPB7+M+FZND5k64=
 			</data>
 		</dict>
 		<key>PlugIns/FutureAlarmWidgetExtension.appex/embedded.mobileprovision</key>
