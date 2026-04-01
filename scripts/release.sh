@@ -36,21 +36,21 @@ is_version_file() {
 }
 
 ensure_safe_git_state() {
-  local status_lines line path
+  local line path has_changes=0
 
-  mapfile -t status_lines < <(git status --porcelain)
-
-  if [[ "${#status_lines[@]}" -eq 0 ]]; then
-    return 0
-  fi
-
-  for line in "${status_lines[@]}"; do
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    has_changes=1
     path="${line:3}"
     if ! is_version_file "$path"; then
       printf '[release] Unexpected git change: %s\n' "$path" >&2
       die "Working tree must be clean except for known build-number files."
     fi
-  done
+  done < <(git status --porcelain)
+
+  if [[ "$has_changes" -eq 0 ]]; then
+    return 0
+  fi
 }
 
 cd "$ROOT_DIR"
