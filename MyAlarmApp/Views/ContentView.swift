@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var showSettings = false
     @State private var selectedTab: Int = 0
     @State private var groupToEdit: AlarmService.AlarmGroup? = nil
+    @State private var pendingIntentAlarmDraft: PendingSetAlarmIntentDraft? = nil
 
     @StateObject private var alarmService = AlarmService.shared
     @StateObject private var timerService = TimerService.shared
@@ -217,9 +218,15 @@ struct ContentView: View {
                 .id(appColorScheme)
         }
         .sheet(isPresented: $showAddAlarm, onDismiss: {
+            pendingIntentAlarmDraft = nil
             alarmService.loadAlarms()
         }) {
-            AddAlarmView { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays in
+            AddAlarmView(
+                preselectedDate: pendingIntentAlarmDraft?.date,
+                initialTitle: pendingIntentAlarmDraft?.label,
+                autoStartRecording: pendingIntentAlarmDraft?.shouldRecordVoice == true,
+                repeatDaysToLoad: pendingIntentAlarmDraft?.repeatDays ?? []
+            ) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays in
                 Task {
                     _ = await alarmService.scheduleFutureAlarm(
                         date: date, title: title,
@@ -267,6 +274,10 @@ struct ContentView: View {
         .onAppear {
             alarmService.loadAlarms()
             timerService.loadTimers()
+            consumePendingIntentAlarmFlowIfNeeded()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            consumePendingIntentAlarmFlowIfNeeded()
         }
     }
 
@@ -287,6 +298,16 @@ struct ContentView: View {
             showSettings = true
         default: break
         }
+    }
+
+    func consumePendingIntentAlarmFlowIfNeeded() {
+        guard let draft = PendingSetAlarmIntentStore.consume() else { return }
+        pendingIntentAlarmDraft = draft
+        groupToEdit = nil
+        selectedTab = 0
+        mode = .alarms
+        showAddTimer = false
+        showAddAlarm = true
     }
 
     @ViewBuilder
