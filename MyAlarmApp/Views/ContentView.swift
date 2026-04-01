@@ -317,13 +317,14 @@ struct SettingsView: View {
     var preferredColorScheme: ColorScheme?
 
     private let appIcons: [(name: String, imageName: String, iconName: String?)] = [
+        ("Storm", "AppIcon6", "AppIcon6"),  // ✅ siri
+        ("Blaze", "AppIcon7", "AppIcon7"),  // ✅ siri
         ("Classic", "AppIcon1", "AppIcon1"),
         ("Future", "AppIcon2", "AppIcon2"),
         ("Pro", "AppIcon3", "AppIcon3"),
         ("Elite", "AppIcon4", "AppIcon4"),
         ("Neon", "AppIcon5", "AppIcon5"),
-        ("Storm", "AppIcon6", "AppIcon6"),  // ✅ new
-        ("Blaze", "AppIcon7", "AppIcon7"),  // ✅ new
+
     ]
 
     // ✅ System Default toggle binding

@@ -26,7 +26,8 @@ struct FutureAlarmProvider: TimelineProvider {
             alarmLabel: "Morning Coffee",
             upcomingAlarms: [
                 (Date().addingTimeInterval(8.5 * 3600), "Morning Coffee"),
-                (Date().addingTimeInterval(18 * 3600), "Evening Walk")
+                (Date().addingTimeInterval(18 * 3600), "Evening Walk"),
+                (Date().addingTimeInterval(26 * 3600), "Meeting")
             ],
             use24Hour: false
         )
@@ -90,7 +91,6 @@ private func timeLeft(_ date: Date) -> String {
     return "\(h)h \(m)m"
 }
 
-// ✅ FIXED — never includes AM/PM in string, always separate
 private func timeString(_ date: Date, use24Hour: Bool) -> String {
     let f = DateFormatter()
     f.dateFormat = use24Hour ? "HH:mm" : "h:mm"
@@ -184,13 +184,14 @@ struct SmallView: View {
     }
 }
 
-// MARK: - MEDIUM Widget
+// MARK: - MEDIUM Widget ✅ Added upcoming alarms on right side
 struct MediumView: View {
     let entry: FutureAlarmEntry
 
     var body: some View {
         if let d = entry.alarmDate, !isAlarmPast(d) {
             HStack(spacing: 0) {
+                // Left — next alarm
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(spacing: 4) {
                         Image(systemName: "alarm.fill")
@@ -222,8 +223,18 @@ struct MediumView: View {
                         .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(textSec)
                         .lineLimit(1)
+
+                    Spacer()
+
+                    Text(dayLabel(d))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(orange)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(orangeDim, in: Capsule())
                 }
                 .padding(.leading, 16)
+                .padding(.vertical, 14)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 Rectangle()
@@ -231,31 +242,46 @@ struct MediumView: View {
                     .frame(width: 1)
                     .padding(.vertical, 12)
 
-                VStack(alignment: .trailing, spacing: 10) {
-                    Text(dayLabel(d))
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundStyle(orange)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(orangeDim, in: Capsule())
+                // ✅ Right — upcoming alarms
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("UPCOMING")
+                        .font(.system(size: 8, weight: .heavy, design: .rounded))
+                        .foregroundStyle(textSec)
+                        .tracking(1.2)
+                        .padding(.bottom, 8)
 
-                    Spacer()
+                    let upcoming = entry.upcomingAlarms.filter { !isAlarmPast($0.date) }.prefix(3)
 
-                    VStack(alignment: .trailing, spacing: 3) {
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 18))
-                            .foregroundStyle(orange.opacity(0.7))
-                        Text(timeLeft(d))
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .foregroundStyle(textPri)
-                        Text("remaining")
-                            .font(.system(size: 9, weight: .medium, design: .rounded))
-                            .foregroundStyle(textSec)
+                    if upcoming.isEmpty {
+                        Text("No more\nalarms")
+                            .font(.system(size: 11, design: .rounded))
+                            .foregroundStyle(textSec.opacity(0.5))
+                    } else {
+                        ForEach(Array(upcoming.enumerated()), id: \.offset) { _, alarm in
+                            VStack(alignment: .leading, spacing: 1) {
+                                HStack(alignment: .lastTextBaseline, spacing: 2) {
+                                    Text(timeString(alarm.date, use24Hour: entry.use24Hour))
+                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                        .foregroundStyle(textPri)
+                                    if !entry.use24Hour {
+                                        Text(ampm(alarm.date))
+                                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                                            .foregroundStyle(orange)
+                                    }
+                                }
+                                Text(dayLabel(alarm.date))
+                                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                                    .foregroundStyle(textSec)
+                            }
+                            .padding(.bottom, 7)
+                        }
                     }
+                    Spacer()
                 }
-                .padding(.trailing, 16)
+                .padding(.leading, 12)
+                .padding(.trailing, 12)
                 .padding(.vertical, 14)
-                .frame(width: 100, alignment: .trailing)
+                .frame(width: 120, alignment: .leading)
             }
             .containerBackground(bg, for: .widget)
         } else {
@@ -279,7 +305,7 @@ struct MediumView: View {
     }
 }
 
-// MARK: - LARGE Widget
+// MARK: - LARGE Widget ✅ Added upcoming alarms at bottom
 struct LargeView: View {
     let entry: FutureAlarmEntry
 
@@ -296,7 +322,7 @@ struct LargeView: View {
                         .tracking(1.5)
                     Spacer()
                 }
-                .padding(.bottom, 20)
+                .padding(.bottom, 16)
 
                 Text("NEXT ALARM")
                     .font(.system(size: 10, weight: .heavy, design: .rounded))
@@ -317,7 +343,7 @@ struct LargeView: View {
                             .padding(.bottom, 8)
                     }
                 }
-                .padding(.bottom, 12)
+                .padding(.bottom, 8)
 
                 HStack(spacing: 6) {
                     Image(systemName: "calendar")
@@ -327,7 +353,7 @@ struct LargeView: View {
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                         .foregroundStyle(orange)
                 }
-                .padding(.bottom, 10)
+                .padding(.bottom, 6)
 
                 HStack(spacing: 6) {
                     Image(systemName: "tag.fill")
@@ -338,32 +364,57 @@ struct LargeView: View {
                         .foregroundStyle(textPri)
                         .lineLimit(1)
                 }
-                .padding(.bottom, 20)
+                .padding(.bottom, 16)
 
                 Rectangle()
                     .fill(orangeLine)
                     .frame(height: 1)
-                    .padding(.bottom, 16)
+                    .padding(.bottom, 14)
 
-                HStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(orangeDim)
-                            .frame(width: 44, height: 44)
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 20))
-                            .foregroundStyle(orange)
+                // ✅ Upcoming alarms section
+                Text("UPCOMING")
+                    .font(.system(size: 10, weight: .heavy, design: .rounded))
+                    .foregroundStyle(textSec)
+                    .tracking(2)
+                    .padding(.bottom, 10)
+
+                let upcoming = entry.upcomingAlarms.filter { !isAlarmPast($0.date) }.prefix(4)
+
+                if upcoming.isEmpty {
+                    Text("No more upcoming alarms")
+                        .font(.system(size: 13, design: .rounded))
+                        .foregroundStyle(textSec.opacity(0.5))
+                } else {
+                    ForEach(Array(upcoming.enumerated()), id: \.offset) { _, alarm in
+                        HStack {
+                            HStack(alignment: .lastTextBaseline, spacing: 3) {
+                                Text(timeString(alarm.date, use24Hour: entry.use24Hour))
+                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .foregroundStyle(textPri)
+                                if !entry.use24Hour {
+                                    Text(ampm(alarm.date))
+                                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                                        .foregroundStyle(orange)
+                                }
+                            }
+                            Spacer()
+                            Text(dayLabel(alarm.date))
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundStyle(textSec)
+                            Spacer()
+                            Text(alarm.label)
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundStyle(textSec)
+                                .lineLimit(1)
+                        }
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .background(orangeDim, in: RoundedRectangle(cornerRadius: 8))
+                        .padding(.bottom, 5)
                     }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Time remaining")
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
-                            .foregroundStyle(textSec)
-                        Text(timeLeft(d))
-                            .font(.system(size: 22, weight: .black, design: .rounded))
-                            .foregroundStyle(textPri)
-                    }
-                    Spacer()
                 }
+
+                Spacer()
             }
             .padding(20)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
@@ -431,51 +482,6 @@ struct CountdownView: View {
                 Text("Tap to set")
                     .font(.system(size: 9, design: .rounded))
                     .foregroundStyle(textSec.opacity(0.5))
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .containerBackground(bg, for: .widget)
-        }
-    }
-}
-
-// MARK: - TIME ONLY Widget
-struct TimeOnlyView: View {
-    let entry: FutureAlarmEntry
-
-    var body: some View {
-        if let d = entry.alarmDate, !isAlarmPast(d) {
-            VStack(spacing: 2) {
-                Image(systemName: "alarm.fill")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(orange)
-                    .padding(.bottom, 4)
-                Text(timeString(d, use24Hour: entry.use24Hour))
-                    .font(.system(size: 34, weight: .black, design: .rounded))
-                    .foregroundStyle(textPri)
-                    .minimumScaleFactor(0.6)
-                    .lineLimit(1)
-                if !entry.use24Hour {
-                    Text(ampm(d))
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundStyle(orange)
-                        .padding(.top, 1)
-                }
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .containerBackground(bg, for: .widget)
-        } else {
-            VStack(spacing: 4) {
-                Image(systemName: "alarm.fill")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(orange.opacity(0.4))
-                Text("--:--")
-                    .font(.system(size: 34, weight: .black, design: .rounded))
-                    .foregroundStyle(textSec.opacity(0.4))
-                Text("Set alarm")
-                    .font(.system(size: 10, design: .rounded))
-                    .foregroundStyle(textSec.opacity(0.4))
             }
             .padding(12)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -572,18 +578,6 @@ struct CountdownWidget: Widget {
     }
 }
 
-struct TimeOnlyWidget: Widget {
-    let kind = "TimeOnlyWidget"
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: FutureAlarmProvider()) { entry in
-            TimeOnlyView(entry: entry)
-        }
-        .configurationDisplayName("Alarm Time")
-        .description("Shows only your next alarm time.")
-        .supportedFamilies([.systemSmall])
-    }
-}
-
 struct LockScreenWidget: Widget {
     let kind = "LockScreenWidget"
     var body: some WidgetConfiguration {
@@ -601,29 +595,36 @@ struct LockScreenWidget: Widget {
 #Preview("Small", as: .systemSmall) {
     FutureAlarmWidget()
 } timeline: {
-    FutureAlarmEntry(date: .now, alarmDate: Date().addingTimeInterval(8.5 * 3600), alarmLabel: "Morning Coffee", upcomingAlarms: [], use24Hour: false)
+    FutureAlarmEntry(date: .now, alarmDate: Date().addingTimeInterval(8.5 * 3600), alarmLabel: "Morning Coffee", upcomingAlarms: [
+        (Date().addingTimeInterval(8.5 * 3600), "Morning Coffee"),
+        (Date().addingTimeInterval(18 * 3600), "Evening Walk"),
+        (Date().addingTimeInterval(26 * 3600), "Meeting")
+    ], use24Hour: false)
 }
 
 #Preview("Medium", as: .systemMedium) {
     FutureAlarmWidget()
 } timeline: {
-    FutureAlarmEntry(date: .now, alarmDate: Date().addingTimeInterval(8.5 * 3600), alarmLabel: "Morning Coffee", upcomingAlarms: [], use24Hour: false)
+    FutureAlarmEntry(date: .now, alarmDate: Date().addingTimeInterval(8.5 * 3600), alarmLabel: "Morning Coffee", upcomingAlarms: [
+        (Date().addingTimeInterval(8.5 * 3600), "Morning Coffee"),
+        (Date().addingTimeInterval(18 * 3600), "Evening Walk"),
+        (Date().addingTimeInterval(26 * 3600), "Meeting")
+    ], use24Hour: false)
 }
 
 #Preview("Large", as: .systemLarge) {
     FutureAlarmWidget()
 } timeline: {
-    FutureAlarmEntry(date: .now, alarmDate: Date().addingTimeInterval(8.5 * 3600), alarmLabel: "Morning Coffee", upcomingAlarms: [], use24Hour: false)
+    FutureAlarmEntry(date: .now, alarmDate: Date().addingTimeInterval(8.5 * 3600), alarmLabel: "Morning Coffee", upcomingAlarms: [
+        (Date().addingTimeInterval(8.5 * 3600), "Morning Coffee"),
+        (Date().addingTimeInterval(18 * 3600), "Evening Walk"),
+        (Date().addingTimeInterval(26 * 3600), "Meeting"),
+        (Date().addingTimeInterval(34 * 3600), "Doctor Appointment")
+    ], use24Hour: false)
 }
 
 #Preview("Countdown", as: .systemSmall) {
     CountdownWidget()
-} timeline: {
-    FutureAlarmEntry(date: .now, alarmDate: Date().addingTimeInterval(8.5 * 3600), alarmLabel: "Morning Coffee", upcomingAlarms: [], use24Hour: false)
-}
-
-#Preview("Time Only", as: .systemSmall) {
-    TimeOnlyWidget()
 } timeline: {
     FutureAlarmEntry(date: .now, alarmDate: Date().addingTimeInterval(8.5 * 3600), alarmLabel: "Morning Coffee", upcomingAlarms: [], use24Hour: false)
 }

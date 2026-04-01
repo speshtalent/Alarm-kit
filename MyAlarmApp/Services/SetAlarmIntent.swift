@@ -1,29 +1,26 @@
 import Foundation
 import AppIntents
 
-// MARK: - Set Alarm Intent (existing — unchanged)
+// MARK: - Set Alarm Intent
 struct SetAlarmIntent: AppIntent {
     static var title: LocalizedStringResource = "Set Alarm"
     static var description = IntentDescription("Creates an alarm for a specific date and time.")
 
-    @Parameter(title: "Date")
-    var date: Date
+    // ✅ Combined date+time into one parameter — works in one sentence
+    @Parameter(title: "When", description: "The date and time for the alarm")
+    var when: Date
 
-    @Parameter(title: "Time")
-    var time: Date
-
-    @Parameter(title: "Label")
+    @Parameter(title: "Label", description: "What the alarm is for", default: "Alarm")
     var label: String
 
     static var parameterSummary: some ParameterSummary {
-        Summary("Set an alarm for \(\.$date) at \(\.$time) about \(\.$label)")
+        Summary("Set an alarm for \(\.$when) about \(\.$label)")
     }
 
     init() {}
 
-    init(date: Date, time: Date, label: String) {
-        self.date = date
-        self.time = time
+    init(when: Date, label: String) {
+        self.when = when
         self.label = label
     }
 
@@ -31,35 +28,29 @@ struct SetAlarmIntent: AppIntent {
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let cleanedLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
         let finalLabel = cleanedLabel.isEmpty ? "Alarm" : cleanedLabel
-        let fireDate = Self.combineDateAndTime(date: date, time: time)
+
+        // ✅ Validate not in past
+        guard when > Date() else {
+            return .result(dialog: IntentDialog("That time has already passed. Please set a future date and time."))
+        }
+
         await AlarmService.shared.requestAuthorizationIfNeeded()
-        _ = await AlarmService.shared.scheduleFutureAlarm(date: fireDate, title: finalLabel)
+        _ = await AlarmService.shared.scheduleFutureAlarm(date: when, title: finalLabel)
         AlarmService.shared.loadAlarms()
-        let formatted = fireDate.formatted(
+
+        let formatted = when.formatted(
             Date.FormatStyle()
                 .weekday(.wide)
+                .month(.wide)
+                .day(.defaultDigits)
                 .hour(.defaultDigits(amPM: .abbreviated))
                 .minute(.twoDigits)
         )
         return .result(dialog: IntentDialog("Got it! '\(finalLabel)' alarm set for \(formatted)."))
     }
-
-    private static func combineDateAndTime(date: Date, time: Date) -> Date {
-        let calendar = Calendar.current
-        let dateComponents = calendar.dateComponents([.year, .month, .day], from: date)
-        let timeComponents = calendar.dateComponents([.hour, .minute], from: time)
-        var merged = DateComponents()
-        merged.year = dateComponents.year
-        merged.month = dateComponents.month
-        merged.day = dateComponents.day
-        merged.hour = timeComponents.hour
-        merged.minute = timeComponents.minute
-        merged.second = 0
-        return calendar.date(from: merged) ?? date
-    }
 }
 
-// MARK: - ✅ NEW — 5 Min Timer Intent
+// MARK: - 5 Min Timer Intent
 struct FiveMinTimerIntent: AppIntent {
     static var title: LocalizedStringResource = "5 Minute Timer"
     static var description = IntentDescription("Instantly starts a 5 minute timer.")
@@ -73,7 +64,7 @@ struct FiveMinTimerIntent: AppIntent {
     }
 }
 
-// MARK: - ✅ NEW — Start Timer Intent
+// MARK: - Start Timer Intent
 struct StartTimerIntent: AppIntent {
     static var title: LocalizedStringResource = "Start Timer"
     static var description = IntentDescription("Starts a countdown timer for a custom duration.")
@@ -95,7 +86,7 @@ struct StartTimerIntent: AppIntent {
     }
 }
 
-// MARK: - ✅ NEW — Open App Intent
+// MARK: - Open App Intent
 struct OpenFutureAlarmIntent: AppIntent {
     static var title: LocalizedStringResource = "Open Future Alarm"
     static var description = IntentDescription("Opens the Future Alarm app.")
@@ -112,15 +103,24 @@ struct OpenFutureAlarmIntent: AppIntent {
 struct AlarmAppShortcutsProvider: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
 
-        // ✅ Set Alarm
+        // ✅ Set Alarm — natural language phrases
         AppShortcut(
             intent: SetAlarmIntent(),
             phrases: [
                 "Set an alarm with \(.applicationName)",
+                "Set alarm in \(.applicationName)",
                 "Create alarm with \(.applicationName)",
-                "Use \(.applicationName) to set an alarm",
+                "Create alarm in \(.applicationName)",
+                "Set an alarm in \(.applicationName)",
                 "Remind me with \(.applicationName)",
-                "Wake me up with \(.applicationName)"
+                "Wake me up with \(.applicationName)",
+                "Wake me up using \(.applicationName)",
+                "Set a future alarm with \(.applicationName)",
+                "Set a future alarm in \(.applicationName)",
+                "Add alarm in \(.applicationName)",
+                "New alarm in \(.applicationName)",
+                "Schedule alarm in \(.applicationName)",
+                "Set reminder in \(.applicationName)"
             ],
             shortTitle: "Set Alarm",
             systemImageName: "alarm"

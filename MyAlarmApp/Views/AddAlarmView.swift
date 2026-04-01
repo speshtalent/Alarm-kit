@@ -5,7 +5,6 @@ struct AddAlarmView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
-    // ✅ Read 24hr setting
     @AppStorage("use24HourFormat") private var use24HourFormat: Bool = false
 
     @State private var selectedHour: Int
@@ -30,7 +29,7 @@ struct AddAlarmView: View {
     @State private var soundPlayer: AVAudioPlayer? = nil
 
     @State private var repeatDays: Set<Int> = []
-    @State private var showPastTimeAlert = false
+    @State private var showPastDateAlert = false
 
     private var editingAlarmID: String?
     var hideDateToggle: Bool = false
@@ -118,8 +117,6 @@ struct AddAlarmView: View {
             components.second = 0
             return Calendar.current.date(from: components) ?? selectedDate
         } else {
-            // ✅ 24hr: selectedHour is already 0-23
-            // 12hr: convert from 12hr + AMPM to 24hr
             let hour24: Int
             if use24HourFormat {
                 hour24 = selectedHour
@@ -140,26 +137,32 @@ struct AddAlarmView: View {
         }
     }
 
+    // ✅ "Rings at" label — always 12hr format with date
+    private var ringsAtText: String {
+        let date = fireDate
+        let formatter = DateFormatter()
+        formatter.amSymbol = "AM"
+        formatter.pmSymbol = "PM"
+        formatter.dateFormat = "h:mm a"
+        let timeStr = formatter.string(from: date)
+        let calendar = Calendar.current
+        let dateFormatter = DateFormatter()
+        if calendar.isDateInToday(date) {
+            return "Rings at \(timeStr) · Today"
+        } else if calendar.isDateInTomorrow(date) {
+            return "Rings at \(timeStr) · Tomorrow"
+        } else {
+            dateFormatter.dateFormat = "MMM d, yyyy"
+            let dateStr = dateFormatter.string(from: date)
+            return "Rings at \(timeStr) · \(dateStr)"
+        }
+    }
+
     private var isEditing: Bool { editingAlarmID != nil }
 
-    private var isTimeInPast: Bool {
-        guard !useSpecificDate else {
-            return fireDate <= Date() && repeatDays.isEmpty
-        }
-        let hour24: Int
-        if use24HourFormat {
-            hour24 = selectedHour
-        } else {
-            var h = selectedHour % 12
-            if selectedAMPM == 1 { h += 12 }
-            hour24 = h
-        }
-        var components = Calendar.current.dateComponents(in: TimeZone.current, from: Date())
-        components.hour = hour24
-        components.minute = selectedMinute
-        components.second = 0
-        let rawDate = Calendar.current.date(from: components) ?? Date()
-        return rawDate <= Date() && repeatDays.isEmpty
+    private var isSpecificDateInPast: Bool {
+        guard useSpecificDate else { return false }
+        return fireDate <= Date() && repeatDays.isEmpty
     }
 
     private var repeatLabel: String {
@@ -186,7 +189,7 @@ struct AddAlarmView: View {
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundStyle(Color("PrimaryText"))
 
-                    Text("Rings at \(fireDate.formatted(date: useSpecificDate ? .abbreviated : .omitted, time: .shortened))")
+                    Text(ringsAtText)
                         .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(.orange)
 
@@ -207,19 +210,17 @@ struct AddAlarmView: View {
                         .padding(.horizontal, 20)
                     }
 
-                    // ✅ Picker card — changes based on 24hr setting
+                    // Picker card
                     ZStack {
                         RoundedRectangle(cornerRadius: 20).fill(Color("CardBackground"))
                         if useSpecificDate {
                             DatePicker("", selection: $selectedDate,
-                                in: Date().addingTimeInterval(60)...,
                                 displayedComponents: [.date, .hourAndMinute])
                             .datePickerStyle(.wheel)
                             .labelsHidden()
                             .colorScheme(colorScheme)
                             .padding(8)
                         } else if use24HourFormat {
-                            // ✅ 24 hour picker — 0 to 23, no AM/PM
                             HStack(spacing: 0) {
                                 Picker("Hour", selection: $selectedHour) {
                                     ForEach(0...23, id: \.self) { h in
@@ -237,7 +238,6 @@ struct AddAlarmView: View {
                             }
                             .colorScheme(colorScheme).padding(8)
                         } else {
-                            // ✅ 12 hour picker — 1 to 12 + AM/PM
                             HStack(spacing: 0) {
                                 Picker("Hour", selection: $selectedHour) {
                                     ForEach(1...12, id: \.self) { h in
@@ -303,7 +303,7 @@ struct AddAlarmView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // Title card with header
+                    // Title card
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Alarm name/label")
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -314,6 +314,7 @@ struct AddAlarmView: View {
                             RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                             HStack {
                                 Image(systemName: "tag").foregroundStyle(.orange)
+                                // ✅ Toolbar removed from here — moved to ZStack level
                                 TextField("Alarm name/label", text: $title)
                                     .foregroundStyle(Color("PrimaryText")).tint(.orange)
                             }
@@ -524,8 +525,8 @@ struct AddAlarmView: View {
                     .padding(.horizontal, 20)
 
                     Button {
-                        if isTimeInPast {
-                            showPastTimeAlert = true
+                        if isSpecificDateInPast {
+                            showPastDateAlert = true
                             return
                         }
                         saveAlarm()
@@ -543,10 +544,21 @@ struct AddAlarmView: View {
                 }
             }
         }
-        .alert("Time Already Passed", isPresented: $showPastTimeAlert) {
-            Button("Change Time", role: .cancel) {}
+        // ✅ Done button on keyboard — works for ALL text fields
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+                .foregroundStyle(.orange)
+                .font(.system(size: 16, weight: .semibold))
+            }
+        }
+        .alert("Date Already Passed", isPresented: $showPastDateAlert) {
+            Button("Change Date", role: .cancel) {}
         } message: {
-            Text("This time has already passed today. Please pick a future time or select repeat days to create a recurring alarm.")
+            Text("The date you selected has already passed. Please pick a future date.")
         }
         .onAppear {
             if let id = editingAlarmID {
@@ -583,7 +595,6 @@ struct AddAlarmView: View {
                     let tempName = UserDefaults.standard.string(forKey: "voiceRecordingName_temp") ?? savedRecordingName
                     UserDefaults.standard.set(tempName, forKey: self.voiceNameKey(for: newAlarm.id.uuidString))
                     UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
-                    print("✅ Voice name saved for alarm: \(newAlarm.id.uuidString)")
                 }
             }
         }
