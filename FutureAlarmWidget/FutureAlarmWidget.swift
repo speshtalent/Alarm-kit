@@ -81,16 +81,6 @@ private func dayLabel(_ date: Date) -> String {
     return f.string(from: date)
 }
 
-private func timeLeft(_ date: Date) -> String {
-    let diff = date.timeIntervalSince(Date())
-    guard diff > 0 else { return "Now!" }
-    let h = Int(diff / 3600)
-    let m = Int((diff.truncatingRemainder(dividingBy: 3600)) / 60)
-    if h == 0 { return "\(m)m" }
-    if m == 0 { return "\(h)h" }
-    return "\(h)h \(m)m"
-}
-
 private func timeString(_ date: Date, use24Hour: Bool) -> String {
     let f = DateFormatter()
     f.dateFormat = use24Hour ? "HH:mm" : "h:mm"
@@ -184,14 +174,13 @@ struct SmallView: View {
     }
 }
 
-// MARK: - MEDIUM Widget ✅ Added upcoming alarms on right side
+// MARK: - MEDIUM Widget
 struct MediumView: View {
     let entry: FutureAlarmEntry
 
     var body: some View {
         if let d = entry.alarmDate, !isAlarmPast(d) {
             HStack(spacing: 0) {
-                // Left — next alarm
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(spacing: 4) {
                         Image(systemName: "alarm.fill")
@@ -242,7 +231,6 @@ struct MediumView: View {
                     .frame(width: 1)
                     .padding(.vertical, 12)
 
-                // ✅ Right — upcoming alarms
                 VStack(alignment: .leading, spacing: 0) {
                     Text("UPCOMING")
                         .font(.system(size: 8, weight: .heavy, design: .rounded))
@@ -305,7 +293,7 @@ struct MediumView: View {
     }
 }
 
-// MARK: - LARGE Widget ✅ Added upcoming alarms at bottom
+// MARK: - LARGE Widget
 struct LargeView: View {
     let entry: FutureAlarmEntry
 
@@ -371,7 +359,6 @@ struct LargeView: View {
                     .frame(height: 1)
                     .padding(.bottom, 14)
 
-                // ✅ Upcoming alarms section
                 Text("UPCOMING")
                     .font(.system(size: 10, weight: .heavy, design: .rounded))
                     .foregroundStyle(textSec)
@@ -439,57 +426,7 @@ struct LargeView: View {
     }
 }
 
-// MARK: - COUNTDOWN Widget
-struct CountdownView: View {
-    let entry: FutureAlarmEntry
-
-    var body: some View {
-        if let d = entry.alarmDate, !isAlarmPast(d) {
-            VStack(spacing: 6) {
-                ZStack {
-                    Circle()
-                        .fill(orangeDim)
-                        .frame(width: 38, height: 38)
-                    Image(systemName: "timer")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(orange)
-                }
-                Text(timeLeft(d))
-                    .font(.system(size: 26, weight: .black, design: .rounded))
-                    .foregroundStyle(textPri)
-                    .minimumScaleFactor(0.6)
-                    .lineLimit(1)
-                Text("until alarm")
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
-                    .foregroundStyle(textSec)
-                Text(entry.alarmLabel)
-                    .font(.system(size: 9, weight: .medium, design: .rounded))
-                    .foregroundStyle(orange.opacity(0.8))
-                    .lineLimit(1)
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .containerBackground(bg, for: .widget)
-        } else {
-            VStack(spacing: 6) {
-                Image(systemName: "timer")
-                    .font(.system(size: 24))
-                    .foregroundStyle(orange.opacity(0.4))
-                Text("Set New\nAlarm")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundStyle(textSec)
-                    .multilineTextAlignment(.center)
-                Text("Tap to set")
-                    .font(.system(size: 9, design: .rounded))
-                    .foregroundStyle(textSec.opacity(0.5))
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .containerBackground(bg, for: .widget)
-        }
-    }
-}
-
+// MARK: - Lock Screen Widget
 // MARK: - Lock Screen Widget
 struct LockScreenView: View {
     let entry: FutureAlarmEntry
@@ -505,29 +442,44 @@ struct LockScreenView: View {
             }
             .containerBackground(.clear, for: .widget)
         } else {
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 5) {
                 ForEach(0..<min(entry.upcomingAlarms.count, 3), id: \.self) { i in
                     let alarm = entry.upcomingAlarms[i]
-                    HStack(spacing: 0) {
-                        Text(entry.use24Hour
-                             ? timeString(alarm.date, use24Hour: true)
-                             : "\(timeString(alarm.date, use24Hour: false)) \(ampm(alarm.date))")
-                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                            .lineLimit(1)
-                            .fixedSize()
+                    let endDate = alarm.date.addingTimeInterval(600) // ✅ 10 min duration
+                    let opacity = i == 0 ? 1.0 : (i == 1 ? 0.65 : 0.4)
+
+                    HStack(spacing: 6) {
+                        // ✅ Orange line on left
+                        Rectangle()
+                            .fill(Color.orange.opacity(opacity))
+                            .frame(width: 2)
                             .widgetAccentable()
 
-                        Spacer()
+                        VStack(alignment: .leading, spacing: 1) {
+                            // ✅ Alarm name
+                            Text(alarm.label)
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .lineLimit(1)
+                                .opacity(opacity)
+                                .widgetAccentable()
 
-                        Text(shortDay(alarm.date))
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .lineLimit(1)
-                            .fixedSize()
+                            // ✅ Time range + day
+                            Text("\(fullTimeString(alarm.date, use24Hour: entry.use24Hour)) – \(fullTimeString(endDate, use24Hour: entry.use24Hour)) · \(shortDay(alarm.date))")
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .lineLimit(1)
+                                .opacity(opacity * 0.8)
+                        }
                     }
                 }
             }
             .containerBackground(.clear, for: .widget)
         }
+    }
+
+    private func fullTimeString(_ date: Date, use24Hour: Bool) -> String {
+        let f = DateFormatter()
+        f.dateFormat = use24Hour ? "HH:mm" : "h:mm a"
+        return f.string(from: date)
     }
 
     private func shortDay(_ date: Date) -> String {
@@ -538,7 +490,6 @@ struct LockScreenView: View {
         return f.string(from: date)
     }
 }
-
 // MARK: - Entry Views
 struct FutureAlarmEntryView: View {
     @Environment(\.widgetFamily) var family
@@ -563,18 +514,6 @@ struct FutureAlarmWidget: Widget {
         .configurationDisplayName("Future Alarm")
         .description("See your next alarm details.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-    }
-}
-
-struct CountdownWidget: Widget {
-    let kind = "CountdownWidget"
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: FutureAlarmProvider()) { entry in
-            CountdownView(entry: entry)
-        }
-        .configurationDisplayName("Alarm Countdown")
-        .description("Time remaining until your next alarm.")
-        .supportedFamilies([.systemSmall])
     }
 }
 
@@ -621,12 +560,6 @@ struct LockScreenWidget: Widget {
         (Date().addingTimeInterval(26 * 3600), "Meeting"),
         (Date().addingTimeInterval(34 * 3600), "Doctor Appointment")
     ], use24Hour: false)
-}
-
-#Preview("Countdown", as: .systemSmall) {
-    CountdownWidget()
-} timeline: {
-    FutureAlarmEntry(date: .now, alarmDate: Date().addingTimeInterval(8.5 * 3600), alarmLabel: "Morning Coffee", upcomingAlarms: [], use24Hour: false)
 }
 
 #Preview("Lock Screen", as: .accessoryRectangular) {

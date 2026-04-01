@@ -31,6 +31,9 @@ struct AddAlarmView: View {
     @State private var repeatDays: Set<Int> = []
     @State private var showPastDateAlert = false
 
+    // ✅ "" = no repeat, "weekly", "monthly", "yearly"
+    @State private var repeatType: String = ""
+
     private var editingAlarmID: String?
     var hideDateToggle: Bool = false
 
@@ -58,6 +61,17 @@ struct AddAlarmView: View {
         self.hideDateToggle = hideDateToggle
         self.onSave = onSave
         _repeatDays = State(initialValue: repeatDaysToLoad)
+
+        // ✅ Detect repeatType from repeatDaysToLoad
+        if repeatDaysToLoad == Set([100]) {
+            _repeatType = State(initialValue: "monthly")
+        } else if repeatDaysToLoad == Set([200]) {
+            _repeatType = State(initialValue: "yearly")
+        } else if !repeatDaysToLoad.isEmpty {
+            _repeatType = State(initialValue: "weekly")
+        } else {
+            _repeatType = State(initialValue: "")
+        }
 
         if let item = editingItem, let fireDate = item.fireDate {
             _title = State(initialValue: item.label)
@@ -137,7 +151,6 @@ struct AddAlarmView: View {
         }
     }
 
-    // ✅ "Rings at" label — always 12hr format with date
     private var ringsAtText: String {
         let date = fireDate
         let formatter = DateFormatter()
@@ -162,16 +175,37 @@ struct AddAlarmView: View {
 
     private var isSpecificDateInPast: Bool {
         guard useSpecificDate else { return false }
-        return fireDate <= Date() && repeatDays.isEmpty
+        return fireDate <= Date() && repeatDays.isEmpty && repeatType == ""
     }
 
     private var repeatLabel: String {
-        if repeatDays.isEmpty { return "Never" }
-        if repeatDays.count == 7 { return "Every day" }
-        if repeatDays == Set([2, 3, 4, 5, 6]) { return "Weekdays" }
-        if repeatDays == Set([7, 1]) { return "Weekends" }
-        let ordered = weekDays.filter { repeatDays.contains($0.value) }.map { $0.label }
-        return ordered.joined(separator: ", ")
+        switch repeatType {
+        case "monthly":
+            let day = Calendar.current.component(.day, from: fireDate)
+            return "Every month on \(day)"
+        case "yearly":
+            let f = DateFormatter()
+            f.dateFormat = "MMM d"
+            return "Every year on \(f.string(from: fireDate))"
+        case "weekly":
+            if repeatDays.isEmpty { return "Weekly" }
+            if repeatDays.count == 7 { return "Every day" }
+            if repeatDays == Set([2, 3, 4, 5, 6]) { return "Weekdays" }
+            if repeatDays == Set([7, 1]) { return "Weekends" }
+            let ordered = weekDays.filter { repeatDays.contains($0.value) }.map { $0.label }
+            return ordered.joined(separator: ", ")
+        default:
+            return ""
+        }
+    }
+
+    private var finalRepeatDays: Set<Int> {
+        switch repeatType {
+        case "monthly": return Set([100])
+        case "yearly": return Set([200])
+        case "weekly": return repeatDays
+        default: return []
+        }
     }
 
     var body: some View {
@@ -273,22 +307,34 @@ struct AddAlarmView: View {
                                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                                     .foregroundStyle(Color("PrimaryText"))
                                 Spacer()
-                                Text(repeatLabel)
-                                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                                    .foregroundStyle(.orange)
+                                if !repeatLabel.isEmpty {
+                                    Text(repeatLabel)
+                                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                                        .foregroundStyle(.orange)
+                                }
                             }
                             Divider()
+
+                            // Weekly / Monthly / Yearly
                             HStack(spacing: 6) {
-                                ForEach(weekDays, id: \.value) { day in
-                                    let isSelected = repeatDays.contains(day.value)
+                                ForEach(["Weekly", "Monthly", "Yearly"], id: \.self) { type in
+                                    let key = type.lowercased()
+                                    let isSelected = repeatType == key
                                     Button {
-                                        if isSelected {
-                                            repeatDays.remove(day.value)
-                                        } else {
-                                            repeatDays.insert(day.value)
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            if repeatType == key {
+                                                repeatType = ""
+                                                repeatDays = []
+                                            } else {
+                                                repeatType = key
+                                                if key != "weekly" { repeatDays = [] }
+                                                if key == "monthly" || key == "yearly" {
+                                                    useSpecificDate = true
+                                                }
+                                            }
                                         }
                                     } label: {
-                                        Text(day.label)
+                                        Text(type)
                                             .font(.system(size: 11, weight: .bold, design: .rounded))
                                             .foregroundStyle(isSelected ? .black : Color("SecondaryText"))
                                             .frame(maxWidth: .infinity)
@@ -297,6 +343,41 @@ struct AddAlarmView: View {
                                             .clipShape(RoundedRectangle(cornerRadius: 8))
                                     }
                                 }
+                            }
+
+                            // Weekly days
+                            if repeatType == "weekly" {
+                                HStack(spacing: 6) {
+                                    ForEach(weekDays, id: \.value) { day in
+                                        let isSelected = repeatDays.contains(day.value)
+                                        Button {
+                                            if isSelected {
+                                                repeatDays.remove(day.value)
+                                            } else {
+                                                repeatDays.insert(day.value)
+                                            }
+                                        } label: {
+                                            Text(day.label)
+                                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                                .foregroundStyle(isSelected ? .black : Color("SecondaryText"))
+                                                .frame(maxWidth: .infinity)
+                                                .padding(.vertical, 8)
+                                                .background(isSelected ? Color.orange : Color("AppBackground"))
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Monthly info
+                            if repeatType == "monthly" {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "calendar").foregroundStyle(.orange).font(.system(size: 13))
+                                    Text("Fires on day \(Calendar.current.component(.day, from: fireDate)) of every month")
+                                        .font(.system(size: 13, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                }
+                                .padding(.top, 4)
                             }
                         }
                         .padding(16)
@@ -314,7 +395,6 @@ struct AddAlarmView: View {
                             RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                             HStack {
                                 Image(systemName: "tag").foregroundStyle(.orange)
-                                // ✅ Toolbar removed from here — moved to ZStack level
                                 TextField("Alarm name/label", text: $title)
                                     .foregroundStyle(Color("PrimaryText")).tint(.orange)
                             }
@@ -544,7 +624,6 @@ struct AddAlarmView: View {
                 }
             }
         }
-        // ✅ Done button on keyboard — works for ALL text fields
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
@@ -583,7 +662,7 @@ struct AddAlarmView: View {
         let savedDate = fireDate
         let savedTitle = title
         let savedRecordingName = recordingName
-        onSave(savedDate, savedTitle, snoozeEnabled, TimeInterval(snoozeDuration * 60), selectedSound, repeatDays)
+        onSave(savedDate, savedTitle, snoozeEnabled, TimeInterval(snoozeDuration * 60), selectedSound, finalRepeatDays)
 
         if hasRecording {
             Task {
