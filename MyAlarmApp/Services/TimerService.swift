@@ -14,6 +14,30 @@ final class TimerService: ObservableObject {
 
     private init() {}
 
+    private func makeAlert(for title: String) -> AlarmPresentation.Alert {
+        let titleResource = LocalizedStringResource(stringLiteral: title)
+        if #available(iOS 26.1, *) {
+            return AlarmPresentation.Alert(
+                title: titleResource,
+                secondaryButton: AlarmButton(
+                    text: "Repeat",
+                    textColor: .white,
+                    systemImageName: "repeat"
+                ),
+                secondaryButtonBehavior: .countdown
+            )
+        } else {
+            return AlarmPresentation.Alert(
+                title: titleResource,
+                stopButton: AlarmButton(
+                    text: "Stop",
+                    textColor: .white,
+                    systemImageName: "stop.fill"
+                )
+            )
+        }
+    }
+
     // MARK: - Load timers
     func loadTimers() {
         do {
@@ -29,16 +53,7 @@ final class TimerService: ObservableObject {
     func startTimer(duration: TimeInterval, title: String, sound: String = "nokia.caf") async {
         do {
             let id = Alarm.ID()
-
-            let alert = AlarmPresentation.Alert(
-                title: LocalizedStringResource(stringLiteral: title),
-                secondaryButton: AlarmButton(
-                    text: "Repeat",
-                    textColor: .white,
-                    systemImageName: "repeat"
-                ),
-                secondaryButtonBehavior: .countdown
-            )
+            let alert = makeAlert(for: title)
 
             let countdown = AlarmPresentation.Countdown(
                 title: LocalizedStringResource(stringLiteral: title),
