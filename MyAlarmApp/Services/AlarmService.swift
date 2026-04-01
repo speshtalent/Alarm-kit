@@ -85,7 +85,7 @@ final class AlarmService: ObservableObject {
             schedule: .fixed(scheduleDate),
             attributes: attributes,
             stopIntent: StopAlarmIntent(alarmID: id.uuidString),
-            secondaryIntent: nil,
+            secondaryIntent: RepeatAlarmIntent(alarmID: id.uuidString),
             sound: .named(sound)
         )
         let alarm = try await AlarmManager.shared.schedule(id: id, configuration: configuration)
