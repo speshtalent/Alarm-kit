@@ -317,17 +317,15 @@ struct SettingsView: View {
     var preferredColorScheme: ColorScheme?
 
     private let appIcons: [(name: String, imageName: String, iconName: String?)] = [
-        ("Storm", "AppIcon6", "AppIcon6"),  // ✅ siri
-        ("Blaze", "AppIcon7", "AppIcon7"),  // ✅ siri
+        ("Storm", "AppIcon6", "AppIcon6"),
+        ("Blaze", "AppIcon7", "AppIcon7"),
         ("Classic", "AppIcon1", "AppIcon1"),
         ("Future", "AppIcon2", "AppIcon2"),
         ("Pro", "AppIcon3", "AppIcon3"),
         ("Elite", "AppIcon4", "AppIcon4"),
         ("Neon", "AppIcon5", "AppIcon5"),
-
     ]
 
-    // ✅ System Default toggle binding
     private var useSystemDefault: Binding<Bool> {
         Binding(
             get: { appColorScheme == "system" },
@@ -406,7 +404,6 @@ struct SettingsView: View {
                         .foregroundStyle(primaryText)
                         .padding(.bottom, 4)
 
-                    // ✅ Appearance card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(cardColor)
                         VStack(spacing: 0) {
@@ -421,7 +418,6 @@ struct SettingsView: View {
                             .padding(16)
                             Divider()
 
-                            // ✅ System Default toggle
                             HStack {
                                 Text("System Default")
                                     .font(.system(size: 15, weight: .medium, design: .rounded))
@@ -432,7 +428,6 @@ struct SettingsView: View {
                             }
                             .padding(16)
 
-                            // ✅ Light/Dark only show when System Default is OFF
                             if appColorScheme != "system" {
                                 Divider()
                                 appearanceRow(title: "Light Mode", value: "light")
@@ -443,7 +438,6 @@ struct SettingsView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // App Icon card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(cardColor)
                         VStack(spacing: 0) {
@@ -521,7 +515,6 @@ struct SettingsView: View {
                     .padding(.horizontal, 20)
                     .onAppear { pendingIcon = selectedAppIcon }
 
-                    // Time Format card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(cardColor)
                         VStack(spacing: 0) {
@@ -551,7 +544,6 @@ struct SettingsView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // Feature Request card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(cardColor)
                         HStack(spacing: 8) {
@@ -570,7 +562,6 @@ struct SettingsView: View {
                     .padding(.horizontal, 20)
                     .onTapGesture { showFeatureRequest = true }
 
-                    // Version card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(cardColor)
                         HStack(spacing: 8) {
@@ -722,15 +713,19 @@ struct AlarmGroupRow: View {
     let use24Hour: Bool
     let onToggle: () -> Void
 
+    // ✅ Only this changed — added Monthly/Yearly support
     private var subtitleText: String {
         let f = DateFormatter()
         f.dateFormat = use24Hour ? "EEE, MMM d • HH:mm" : "EEE, MMM d • h:mm a"
+        let tf = DateFormatter()
+        tf.dateFormat = use24Hour ? "HH:mm" : "h:mm a"
+        let timeOnly = group.fireDate.flatMap { tf.string(from: $0) } ?? ""
+
+        if group.repeatDays == Set([100]) { return "Monthly • \(timeOnly)" }
+        if group.repeatDays == Set([200]) { return "Yearly • \(timeOnly)" }
         if group.repeatLabel.isEmpty {
             return group.fireDate.flatMap { f.string(from: $0) } ?? ""
         } else {
-            let tf = DateFormatter()
-            tf.dateFormat = use24Hour ? "HH:mm" : "h:mm a"
-            let timeOnly = group.fireDate.flatMap { tf.string(from: $0) } ?? ""
             return "\(group.repeatLabel) • \(timeOnly)"
         }
     }

@@ -8,7 +8,6 @@ struct MyAlarmAppApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var quickActionMode: String? = nil
     @State private var showFeedbackAlert = false
-    // ✅ NEW — iCloud restore popup
     @State private var showVoiceRestoredAlert = false
 
     init() {
@@ -24,6 +23,8 @@ struct MyAlarmAppApp: App {
         }
         AlarmAppShortcutsProvider.updateAppShortcutParameters()
         setupAlarmStopListener()
+        // ✅ NEW — listen for iCloud changes from other devices
+        setupiCloudListener()
     }
 
     private func setupAlarmStopListener() {
@@ -34,6 +35,23 @@ struct MyAlarmAppApp: App {
         ) { _ in
             Task { @MainActor in
                 AlarmHandler.shared.playVoiceIfNeeded()
+            }
+        }
+    }
+
+    // ✅ NEW — iCloud real-time listener
+    private func setupiCloudListener() {
+        NSUbiquitousKeyValueStore.default.synchronize()
+        NotificationCenter.default.addObserver(
+            forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+            object: NSUbiquitousKeyValueStore.default,
+            queue: .main
+        ) { _ in
+            Task { @MainActor in
+                let restored = await AlarmService.shared.restoreFromiCloud()
+                if restored {
+                    AlarmService.shared.loadAlarms()
+                }
             }
         }
     }
@@ -74,13 +92,11 @@ struct MyAlarmAppApp: App {
         }
     }
 
-    // ✅ NEW — restore alarms from iCloud on first launch after reinstall
     private func restoreFromiCloudIfNeeded() {
         Task { @MainActor in
             let restored = await AlarmService.shared.restoreFromiCloud()
             if restored {
                 AlarmService.shared.loadAlarms()
-                // ✅ Show popup about voice recordings being lost
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     showVoiceRestoredAlert = true
                 }
@@ -93,12 +109,10 @@ struct MyAlarmAppApp: App {
             ContentView(quickActionMode: $quickActionMode)
                 .onAppear {
                     setupQuickActions()
-                    // ✅ NEW — try restore from iCloud on launch
                     restoreFromiCloudIfNeeded()
                     print("✅ App launched")
                 }
 
-                // ✅ NEW — voice recording lost popup after iCloud restore
                 .alert("Alarms Restored 🔔", isPresented: $showVoiceRestoredAlert) {
                     Button("OK", role: .cancel) { }
                 } message: {

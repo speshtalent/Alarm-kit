@@ -5,7 +5,6 @@ import SwiftUI
 struct FutureAlarmWidgetBundle: WidgetBundle {
     var body: some Widget {
         FutureAlarmWidget()
-        CountdownWidget()
         LockScreenWidget()
     }
 }

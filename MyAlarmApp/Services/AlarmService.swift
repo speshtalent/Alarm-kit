@@ -32,6 +32,9 @@ final class AlarmService: ObservableObject {
 
         var repeatLabel: String {
             if repeatDays.isEmpty { return "" }
+            // ✅ Monthly and Yearly
+            if repeatDays == Set([100]) { return "Monthly" }
+            if repeatDays == Set([200]) { return "Yearly" }
             let weekDays: [(label: String, value: Int)] = [
                 ("Mon", 2), ("Tue", 3), ("Wed", 4),
                 ("Thu", 5), ("Fri", 6), ("Sat", 7), ("Sun", 1)
@@ -248,7 +251,7 @@ final class AlarmService: ObservableObject {
             let alarmID = UUID()
             var finalSound = sound
 
-            if tempExists && repeatDays.isEmpty {
+            if tempExists && (repeatDays.isEmpty || repeatDays == Set([100]) || repeatDays == Set([200])) {
                 let voiceFileName = "alarm_voice_\(alarmID.uuidString).caf"
                 let destURL = libraryURL.appendingPathComponent("Sounds/\(voiceFileName)")
                 try? FileManager.default.removeItem(at: destURL)
@@ -257,6 +260,26 @@ final class AlarmService: ObservableObject {
                 print("✅ Voice file saved as: \(voiceFileName)")
             }
             UserDefaults.standard.set(true, forKey: "hasEverSetAlarm")
+
+            // ✅ Monthly — schedule single alarm, save with repeatDays Set([100])
+            if repeatDays == Set([100]) {
+                let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
+                saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: Set([100]))
+                rebuildGroups()
+                saveNextAlarmForWidget()
+                syncToiCloud()
+                return id
+            }
+
+            // ✅ Yearly — schedule single alarm, save with repeatDays Set([200])
+            if repeatDays == Set([200]) {
+                let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
+                saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: Set([200]))
+                rebuildGroups()
+                saveNextAlarmForWidget()
+                syncToiCloud()
+                return id
+            }
 
             if repeatDays.isEmpty {
                 let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
