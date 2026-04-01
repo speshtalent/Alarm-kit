@@ -1,1 +1,6 @@
 *.xcuserstate
+build/
+*.xcarchive
+*.ipa
+DerivedData/
+*.xcdistributionlogs
