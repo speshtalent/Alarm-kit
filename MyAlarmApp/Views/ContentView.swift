@@ -38,6 +38,9 @@ struct ContentView: View {
                 CalendarView()
                     .tabItem { Label("Calendar", systemImage: "calendar") }
                     .tag(1)
+                HistoryView()
+                    .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
+                    .tag(2)
             }
             .tint(.orange)
             .onAppear {
@@ -803,5 +806,108 @@ struct TimerRow: View {
         .padding(16)
         .background(Color("CardBackground"))
         .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+}
+
+// MARK: - History View
+struct HistoryView: View {
+    @AppStorage("use24HourFormat") private var use24HourFormat: Bool = false
+    @State private var history: [[String: Any]] = []
+    @State private var showClearAlert = false
+
+    var body: some View {
+        ZStack {
+            Color("AppBackground").ignoresSafeArea()
+            VStack(spacing: 0) {
+                HStack {
+                    Text("History")
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color("PrimaryText"))
+                    Spacer()
+                    if !history.isEmpty {
+                        Button {
+                            showClearAlert = true
+                        } label: {
+                            Image(systemName: "trash.fill")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(Color("SecondaryText"))
+                                .frame(width: 36, height: 36)
+                                .background(Color("CardBackground"))
+                                .clipShape(Circle())
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 16)
+
+                if history.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.orange.opacity(0.4))
+                        Text("No alarm history yet")
+                            .font(.system(size: 16, weight: .medium, design: .rounded))
+                            .foregroundStyle(Color("SecondaryText"))
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.top, 80)
+                } else {
+                    List {
+                        ForEach(Array(history.enumerated()), id: \.offset) { _, entry in
+                            let label = entry["label"] as? String ?? "Alarm"
+                            let firedAt = entry["firedAt"] as? TimeInterval ?? 0
+                            let date = Date(timeIntervalSince1970: firedAt)
+                            HStack(spacing: 16) {
+                                ZStack {
+                                    Circle()
+                                        .fill(.orange.opacity(0.15))
+                                        .frame(width: 48, height: 48)
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(.orange)
+                                        .font(.system(size: 20))
+                                }
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(label)
+                                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(Color("PrimaryText"))
+                                    Text(formatDate(date))
+                                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                }
+                                Spacer()
+                            }
+                            .padding(16)
+                            .background(Color("CardBackground"))
+                            .clipShape(RoundedRectangle(cornerRadius: 18))
+                            .listRowBackground(Color("AppBackground"))
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                        }
+                    }
+                    .listStyle(.plain)
+                    .background(Color("AppBackground"))
+                    .scrollContentBackground(.hidden)
+                }
+            }
+        }
+        .onAppear {
+            history = AlarmService.shared.loadHistory()
+        }
+        .alert("Clear History", isPresented: $showClearAlert) {
+            Button("Clear", role: .destructive) {
+                AlarmService.shared.clearHistory()
+                history = []
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Are you sure you want to clear all alarm history?")
+        }
+    }
+
+    private func formatDate(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = use24HourFormat ? "EEE, MMM d • HH:mm" : "EEE, MMM d • h:mm a"
+        return f.string(from: date)
     }
 }

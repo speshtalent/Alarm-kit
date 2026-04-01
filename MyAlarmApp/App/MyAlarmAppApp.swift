@@ -11,19 +11,11 @@ struct MyAlarmAppApp: App {
     @State private var showVoiceRestoredAlert = false
 
     init() {
-        #if DEBUG
-        let hasEverSetAlarm = UserDefaults.standard.bool(forKey: "hasEverSetAlarm")
-        if hasEverSetAlarm {
-            UserDefaults.standard.set(true, forKey: "alarmFiredSinceLastReview")
-        }
-        #endif
-
         Task {
             await AlarmService.shared.requestAuthorizationIfNeeded()
         }
         AlarmAppShortcutsProvider.updateAppShortcutParameters()
         setupAlarmStopListener()
-        // ✅ NEW — listen for iCloud changes from other devices
         setupiCloudListener()
     }
 
@@ -35,11 +27,14 @@ struct MyAlarmAppApp: App {
         ) { _ in
             Task { @MainActor in
                 AlarmHandler.shared.playVoiceIfNeeded()
+                // ✅ Increment alarm fired count
+                let count = UserDefaults.standard.integer(forKey: "alarmFiredCount") + 1
+                UserDefaults.standard.set(count, forKey: "alarmFiredCount")
+                UserDefaults.standard.set(true, forKey: "alarmFiredSinceLastReview")
             }
         }
     }
 
-    // ✅ NEW — iCloud real-time listener
     private func setupiCloudListener() {
         NSUbiquitousKeyValueStore.default.synchronize()
         NotificationCenter.default.addObserver(
@@ -74,9 +69,22 @@ struct MyAlarmAppApp: App {
     }
 
     private func requestReviewIfNeeded() {
+        // ✅ Only show after at least 2 alarms have fired
+        let alarmFiredCount = UserDefaults.standard.integer(forKey: "alarmFiredCount")
+        guard alarmFiredCount >= 2 else { return }
+
+        // ✅ Only show if alarm fired since last review check
         let alarmFired = UserDefaults.standard.bool(forKey: "alarmFiredSinceLastReview")
         guard alarmFired else { return }
+
+        // ✅ Only show if not shown in last 30 days
+        let lastReviewDate = UserDefaults.standard.double(forKey: "lastReviewRequestDate")
+        let daysSinceLastReview = (Date().timeIntervalSince1970 - lastReviewDate) / 86400
+        guard daysSinceLastReview >= 30 || lastReviewDate == 0 else { return }
+
         UserDefaults.standard.set(false, forKey: "alarmFiredSinceLastReview")
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "lastReviewRequestDate")
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             showFeedbackAlert = true
         }

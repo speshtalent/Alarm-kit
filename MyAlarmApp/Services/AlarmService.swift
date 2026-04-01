@@ -340,7 +340,7 @@ final class AlarmService: ObservableObject {
             schedule: .fixed(scheduleDate),
             attributes: attributes,
             stopIntent: StopAlarmIntent(alarmID: id.uuidString),
-            secondaryIntent: nil,
+            secondaryIntent: RepeatAlarmIntent(alarmID: id.uuidString),
             sound: .named(sound)
         )
         let alarm = try await AlarmManager.shared.schedule(id: id, configuration: configuration)
@@ -609,5 +609,35 @@ final class AlarmService: ObservableObject {
         alarms.sort { lhs, rhs in
             (lhs.fireDate ?? .distantFuture) < (rhs.fireDate ?? .distantFuture)
         }
+    }
+
+    // ✅ HISTORY
+    private let historyKey = "AlarmHistory"
+
+    func saveToHistory(alarmID: String, label: String, firedAt: Date) {
+        var history = loadHistory()
+        let entry: [String: Any] = [
+            "alarmID": alarmID,
+            "label": label,
+            "firedAt": firedAt.timeIntervalSince1970
+        ]
+        history.insert(entry, at: 0)
+        if history.count > 50 { history = Array(history.prefix(50)) }
+        if let data = try? JSONSerialization.data(withJSONObject: history),
+           let json = String(data: data, encoding: .utf8) {
+            UserDefaults.standard.set(json, forKey: historyKey)
+        }
+    }
+
+    func loadHistory() -> [[String: Any]] {
+        guard let json = UserDefaults.standard.string(forKey: historyKey),
+              let data = json.data(using: .utf8),
+              let list = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]
+        else { return [] }
+        return list
+    }
+
+    func clearHistory() {
+        UserDefaults.standard.removeObject(forKey: historyKey)
     }
 }
