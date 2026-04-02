@@ -149,7 +149,7 @@ private struct Screen1: View {
  
             // Title
             HStack(spacing: 0) {
-                Text("Future ")
+                Text("Date ")
                     .font(.system(size: 42, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                 Text("Alarm")
@@ -161,6 +161,17 @@ private struct Screen1: View {
             Text("Your smart alarm companion")
                 .font(.system(size: 17, weight: .medium, design: .rounded))
                 .foregroundStyle(Color.white.opacity(0.4))
+
+            Text("Say: Hey Siri, set a Date Alarm")
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(.orange)
+                .padding(.top, 14)
+
+            Text("Teach Siri those three words once, then build the habit.")
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(Color.white.opacity(0.34))
+                .multilineTextAlignment(.center)
+                .padding(.top, 8)
  
             Spacer()
         }
@@ -168,7 +179,7 @@ private struct Screen1: View {
     }
 }
  
-// MARK: - Screen 2: Future Alarm / Set in Advance
+// MARK: - Screen 2: Date Alarm / Set in Advance
 private struct Screen2: View {
     var body: some View {
         VStack(spacing: 0) {
@@ -237,18 +248,24 @@ private struct Screen2: View {
             }
             .padding(.bottom, 40)
  
-            Text("Future Alarm")
+            Text("Date Alarm")
                 .font(.system(size: 34, weight: .heavy, design: .rounded))
                 .foregroundStyle(.white)
                 .padding(.bottom, 6)
  
-            Text("(Set in Advance)")
+            Text("The phrase Siri should learn")
                 .font(.system(size: 18, weight: .medium, design: .rounded))
                 .foregroundStyle(.orange)
                 .italic()
+                .padding(.bottom, 10)
+
+            Text("\"Hey Siri, set a Date Alarm\"")
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
                 .padding(.bottom, 16)
  
-            Text("Set alarms days or weeks ahead.\nNever miss important events.\nSchedule your future self!")
+            Text("Adding the word \"date\" helps Siri route to this app instead of Clock.\nUse this exact phrase the first few times so Siri learns your intent.")
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .foregroundStyle(Color.white.opacity(0.42))
                 .multilineTextAlignment(.center)
@@ -467,7 +484,7 @@ private struct Screen4: View {
     }
 }
  
-// MARK: - Screen 5: Quick Actions
+// MARK: - Screen 5: Siri Voice Setup
 private struct Screen5: View {
     var body: some View {
         VStack(spacing: 0) {
@@ -483,10 +500,14 @@ private struct Screen5: View {
                     .overlay(RoundedRectangle(cornerRadius: 36).stroke(Color.white.opacity(0.07), lineWidth: 1))
  
                 HStack(spacing: 14) {
-                    ForEach(0..<4) { _ in
+                    ForEach(0..<4) { index in
                         RoundedRectangle(cornerRadius: 14)
                             .fill(Color.white.opacity(0.1))
                             .frame(width: 54, height: 54)
+                            .overlay(
+                                Image(systemName: index == 0 ? "waveform" : index == 1 ? "calendar" : index == 2 ? "mic" : "alarm")
+                                    .foregroundStyle(index == 0 ? .orange : .white.opacity(0.35))
+                            )
                     }
                 }
                 .padding(.top, 20)
@@ -495,7 +516,7 @@ private struct Screen5: View {
  
                 VStack(alignment: .trailing, spacing: 0) {
                     VStack(spacing: 0) {
-                        ForEach(["New Alarm", "New Timer", "5 Min Timer", "Settings"], id: \.self) { item in
+                        ForEach(["Set a Date Alarm", "Set a Date Alarm for tomorrow", "Create a Date Alarm", "Create a voice Date Alarm"], id: \.self) { item in
                             HStack {
                                 Text(item)
                                     .font(.system(size: 15, design: .rounded))
@@ -528,12 +549,12 @@ private struct Screen5: View {
             .frame(width: 300, height: 285)
             .padding(.bottom, 34)
  
-            Text("Quick Actions")
+            Text("Teach Siri One Phrase")
                 .font(.system(size: 32, weight: .heavy, design: .rounded))
                 .foregroundStyle(.white)
                 .padding(.bottom, 12)
  
-            Text("Long press the app icon for instant shortcuts like **New Alarm**, **New Timer**, or **Settings** via Haptic Touch.")
+            Text("Say **\"Hey Siri, set a Date Alarm\"**.\nStart there, then answer Siri's follow-up questions for the date, time, and label.")
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .foregroundStyle(Color.white.opacity(0.42))
                 .multilineTextAlignment(.center)
@@ -629,12 +650,12 @@ private struct Screen6: View {
             .overlay(RoundedRectangle(cornerRadius: 28).stroke(Color.white.opacity(0.05), lineWidth: 1))
             .padding(.bottom, 32)
  
-            Text("Calendar Integration")
+            Text("Works With Real Dates")
                 .font(.system(size: 30, weight: .heavy, design: .rounded))
                 .foregroundStyle(.white)
                 .padding(.bottom, 12)
  
-            Text("Alarms sync to your iPhone Calendar.\nSee everything at a glance with orange dots!")
+            Text("After Siri opens Date Alarm, you can set alarms for tomorrow,\nnext Friday, or any future day you need. Siri fills in the real date and time for you.")
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .foregroundStyle(Color.white.opacity(0.42))
                 .multilineTextAlignment(.center)

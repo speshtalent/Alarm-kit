@@ -281,7 +281,7 @@ struct MediumView: View {
                     Text("Set New Alarm")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundStyle(textSec)
-                    Text("Open Future Alarm to set one")
+                    Text("Open Date Alarm to set one")
                         .font(.system(size: 12, design: .rounded))
                         .foregroundStyle(textSec.opacity(0.5))
                 }
@@ -304,7 +304,7 @@ struct LargeView: View {
                     Image(systemName: "alarm.fill")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(orange)
-                    Text("FUTURE ALARM")
+                    Text("DATE ALARM")
                         .font(.system(size: 12, weight: .heavy, design: .rounded))
                         .foregroundStyle(orange)
                         .tracking(1.5)
@@ -414,7 +414,7 @@ struct LargeView: View {
                 Text("Set New Alarm")
                     .font(.system(size: 30, weight: .black, design: .rounded))
                     .foregroundStyle(textSec)
-                Text("Open Future Alarm\nto set your next alarm")
+                Text("Open Date Alarm\nto set your next alarm")
                     .font(.system(size: 14, design: .rounded))
                     .foregroundStyle(textSec.opacity(0.5))
                     .lineSpacing(4)
@@ -511,7 +511,7 @@ struct FutureAlarmWidget: Widget {
         StaticConfiguration(kind: kind, provider: FutureAlarmProvider()) { entry in
             FutureAlarmEntryView(entry: entry)
         }
-        .configurationDisplayName("Future Alarm")
+        .configurationDisplayName("Date Alarm")
         .description("See your next alarm details.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }

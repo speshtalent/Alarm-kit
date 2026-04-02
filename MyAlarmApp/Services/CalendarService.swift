@@ -35,7 +35,7 @@ final class CalendarService: ObservableObject {
         event.startDate = date
         event.endDate = date.addingTimeInterval(3600)
         event.calendar = eventStore.defaultCalendarForNewEvents
-        event.notes = "Alarm set from Future Alarm app"
+        event.notes = "Alarm set from Date Alarm app"
 
         do {
             try eventStore.save(event, span: .thisEvent)

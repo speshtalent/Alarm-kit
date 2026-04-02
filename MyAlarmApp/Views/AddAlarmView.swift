@@ -30,12 +30,14 @@ struct AddAlarmView: View {
 
     @State private var repeatDays: Set<Int> = []
     @State private var showPastDateAlert = false
+    @State private var didAutoStartRecording = false
 
     // ✅ "" = no repeat, "weekly", "monthly", "yearly"
     @State private var repeatType: String = ""
 
     private var editingAlarmID: String?
     var hideDateToggle: Bool = false
+    private let autoStartRecording: Bool
 
     let sounds: [(name: String, file: String)] = [
         (name: "Nokia", file: "nokia.caf"),
@@ -57,8 +59,17 @@ struct AddAlarmView: View {
 
     var onSave: (Date, String, Bool, TimeInterval, String, Set<Int>) -> Void
 
-    init(preselectedDate: Date? = nil, editingItem: AlarmService.AlarmListItem? = nil, hideDateToggle: Bool = false, repeatDaysToLoad: Set<Int> = [], onSave: @escaping (Date, String, Bool, TimeInterval, String, Set<Int>) -> Void) {
+    init(
+        preselectedDate: Date? = nil,
+        initialTitle: String? = nil,
+        editingItem: AlarmService.AlarmListItem? = nil,
+        hideDateToggle: Bool = false,
+        autoStartRecording: Bool = false,
+        repeatDaysToLoad: Set<Int> = [],
+        onSave: @escaping (Date, String, Bool, TimeInterval, String, Set<Int>) -> Void
+    ) {
         self.hideDateToggle = hideDateToggle
+        self.autoStartRecording = autoStartRecording
         self.onSave = onSave
         _repeatDays = State(initialValue: repeatDaysToLoad)
 
@@ -86,6 +97,7 @@ struct AddAlarmView: View {
             self.editingAlarmID = item.id.uuidString
         } else if let date = preselectedDate, !Calendar.current.isDateInToday(date) {
             _title = State(initialValue: "")
+
             _selectedDate = State(initialValue: date)
             let hour24 = Calendar.current.component(.hour, from: date)
             _selectedHour = State(initialValue: hour24)
@@ -94,7 +106,6 @@ struct AddAlarmView: View {
             _useSpecificDate = State(initialValue: true)
             self.editingAlarmID = nil
         } else {
-            _title = State(initialValue: "")
             _selectedDate = State(initialValue: Date())
             let hour24 = Calendar.current.component(.hour, from: Date())
             let is24Hr = UserDefaults.standard.bool(forKey: "use24HourFormat")
@@ -672,6 +683,13 @@ struct AddAlarmView: View {
                 UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
                 hasRecording = false
                 recordingName = ""
+            }
+
+            if autoStartRecording, !didAutoStartRecording, !hasRecording {
+                didAutoStartRecording = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    startRecording()
+                }
             }
         }
         .onDisappear {

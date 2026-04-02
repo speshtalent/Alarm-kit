@@ -368,11 +368,12 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
 				INFOPLIST_FILE = CountdownLiveActivity/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = CountdownLiveActivity;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -397,11 +398,12 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
 				INFOPLIST_FILE = CountdownLiveActivity/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = CountdownLiveActivity;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -454,7 +456,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -519,7 +521,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -547,24 +549,26 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon2 AppIcon3 AppIcon4 AppIcon5 AppIcon6 AppIcon7";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = MyAlarmApp/MyAlarmApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MyAlarmApp/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Future Alarm";
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Future Alarm needs calendar access to add your alarms to your calendar.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Future Alarm needs microphone access to record voice messages for alarms.";
-				INFOPLIST_KEY_NSSiriUsageDescription = "Future Alarm uses Siri to set alarms with your voice.";
+				INFOPLIST_KEY_CFBundleDisplayName = "Date Alarm";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Date Alarm needs calendar access to add your alarms to your calendar.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Date Alarm needs microphone access to record voice messages for alarms.";
+				INFOPLIST_KEY_NSSiriUsageDescription = "Date Alarm uses Siri to set date alarms with your voice.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -587,24 +591,26 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon2 AppIcon3 AppIcon4 AppIcon5 AppIcon6 AppIcon7";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = MyAlarmApp/MyAlarmApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MyAlarmApp/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Future Alarm";
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Future Alarm needs calendar access to add your alarms to your calendar.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Future Alarm needs microphone access to record voice messages for alarms.";
-				INFOPLIST_KEY_NSSiriUsageDescription = "Future Alarm uses Siri to set alarms with your voice.";
+				INFOPLIST_KEY_CFBundleDisplayName = "Date Alarm";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Date Alarm needs calendar access to add your alarms to your calendar.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Date Alarm needs microphone access to record voice messages for alarms.";
+				INFOPLIST_KEY_NSSiriUsageDescription = "Date Alarm uses Siri to set date alarms with your voice.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -631,11 +637,12 @@
 				CODE_SIGN_ENTITLEMENTS = FutureAlarmWidgetExtension.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
 				INFOPLIST_FILE = FutureAlarmWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = FutureAlarmWidget;
+				INFOPLIST_KEY_CFBundleDisplayName = DateAlarmWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -663,11 +670,12 @@
 				CODE_SIGN_ENTITLEMENTS = FutureAlarmWidgetExtension.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
 				INFOPLIST_FILE = FutureAlarmWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = FutureAlarmWidget;
+				INFOPLIST_KEY_CFBundleDisplayName = DateAlarmWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

@@ -60,6 +60,22 @@ final class AlarmService: ObservableObject {
 
     private init() {}
 
+    private func makeAlarmAlert(title: String) -> AlarmPresentation.Alert {
+        let titleResource = LocalizedStringResource(stringLiteral: title)
+        if #available(iOS 26.1, *) {
+            return AlarmPresentation.Alert(title: titleResource)
+        } else {
+            return AlarmPresentation.Alert(
+                title: titleResource,
+                stopButton: AlarmButton(
+                    text: "Stop",
+                    textColor: .white,
+                    systemImageName: "stop.fill"
+                )
+            )
+        }
+    }
+
     func requestAuthorizationIfNeeded() async {
         do {
             if AlarmManager.shared.authorizationState == .authorized { return }
@@ -73,9 +89,9 @@ final class AlarmService: ObservableObject {
     func scheduleAlarm(date: Date, label: String, sound: String = "nokia.caf") async throws -> UUID {
         let scheduleDate = max(date, Date().addingTimeInterval(1))
         let id = Alarm.ID()
-        let alert = AlarmPresentation.Alert(title: LocalizedStringResource(stringLiteral: label))
+        let alert = makeAlarmAlert(title: label)
         let presentation = AlarmPresentation(alert: alert)
-        let attributes = AlarmAttributes(
+        let attributes: AlarmAttributes<AppAlarmMetadata> = AlarmAttributes(
             presentation: presentation,
             metadata: AppAlarmMetadata(title: label, icon: "alarm"),
             tintColor: .orange
@@ -328,9 +344,9 @@ final class AlarmService: ObservableObject {
     @discardableResult
     func scheduleAlarmWithID(id: UUID, date: Date, label: String, sound: String = "nokia.caf") async throws -> UUID {
         let scheduleDate = max(date, Date().addingTimeInterval(1))
-        let alert = AlarmPresentation.Alert(title: LocalizedStringResource(stringLiteral: label))
+        let alert = makeAlarmAlert(title: label)
         let presentation = AlarmPresentation(alert: alert)
-        let attributes = AlarmAttributes(
+        let attributes: AlarmAttributes<AppAlarmMetadata> = AlarmAttributes(
             presentation: presentation,
             metadata: AppAlarmMetadata(title: label, icon: "alarm"),
             tintColor: .orange

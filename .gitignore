@@ -1,1 +1,8 @@
 *.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+build/
+*.xcarchive
+*.ipa
+DerivedData/
+*.xcdistributionlogs

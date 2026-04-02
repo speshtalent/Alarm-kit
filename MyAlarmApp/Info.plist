@@ -9,7 +9,7 @@
 <key>CFBundleIdentifier</key>
 <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 <key>CFBundleDisplayName</key>
-<string>Future Alarm</string>
+	<string>Date Alarm</string>
 <key>CFBundleInfoDictionaryVersion</key>
 <string>6.0</string>
 <key>CFBundleName</key>
@@ -19,15 +19,17 @@
 <key>CFBundleShortVersionString</key>
 <string>1.0</string>
 <key>CFBundleVersion</key>
-<string>9</string>
+<string>17</string>
+<key>ITSAppUsesNonExemptEncryption</key>
+<false/>
 <key>NSAlarmKitUsageDescription</key>
 <string>This app needs permission to schedule alarms.</string>
 <key>NSCalendarsFullAccessUsageDescription</key>
-<string>Future Alarm needs calendar access to add your alarms to your calendar.</string>
+	<string>Date Alarm needs calendar access to add your alarms to your calendar.</string>
 <key>NSMicrophoneUsageDescription</key>
-<string>Future Alarm needs microphone access to record voice messages for alarms.</string>
+	<string>Date Alarm needs microphone access to record voice messages for alarms.</string>
 <key>NSSiriUsageDescription</key>
-<string>Future Alarm uses Siri to set alarms with your voice.</string>
+	<string>Date Alarm uses Siri to set date alarms with your voice.</string>
 <key>NSSupportsLiveActivities</key>
 <true/>
 <key>UIApplicationSupportsIndirectInputEvents</key>
