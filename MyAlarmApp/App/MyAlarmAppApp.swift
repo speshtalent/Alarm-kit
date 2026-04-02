@@ -2,6 +2,7 @@ import SwiftUI
 import AppIntents
 import UIKit
 import StoreKit
+import Intents
 
 @main
 struct MyAlarmAppApp: App {
@@ -13,6 +14,7 @@ struct MyAlarmAppApp: App {
     init() {
         Task {
             await AlarmService.shared.requestAuthorizationIfNeeded()
+            Self.requestSiriAuthorizationIfNeeded()
         }
         AlarmAppShortcutsProvider.updateAppShortcutParameters()
         setupAlarmStopListener()
@@ -90,6 +92,29 @@ struct MyAlarmAppApp: App {
         }
     }
 
+    private static func requestSiriAuthorizationIfNeeded() {
+        guard INPreferences.siriAuthorizationStatus() == .notDetermined else { return }
+
+        INPreferences.requestSiriAuthorization { status in
+            #if DEBUG
+            let statusDescription: String
+            switch status {
+            case .authorized:
+                statusDescription = "authorized"
+            case .denied:
+                statusDescription = "denied"
+            case .restricted:
+                statusDescription = "restricted"
+            case .notDetermined:
+                statusDescription = "notDetermined"
+            @unknown default:
+                statusDescription = "unknown"
+            }
+            print("Siri authorization status: \(statusDescription)")
+            #endif
+        }
+    }
+
     private func showNativeReview() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             if let scene = UIApplication.shared.connectedScenes
@@ -127,7 +152,7 @@ struct MyAlarmAppApp: App {
                     Text("Your alarms have been restored from iCloud. Note: Voice recordings could not be restored as they are stored locally on your device.")
                 }
 
-                .alert("Enjoying Future Alarm? 🔔", isPresented: $showFeedbackAlert) {
+                .alert("Enjoying Date Alarm? 🔔", isPresented: $showFeedbackAlert) {
                     Button("Yes, Rate Us ⭐") {
                         showNativeReview()
                     }

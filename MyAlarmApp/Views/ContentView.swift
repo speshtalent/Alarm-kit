@@ -668,7 +668,7 @@ struct FeatureRequestView: View {
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundStyle(Color("PrimaryText"))
 
-                Text("Tell us what you'd like to see in Future Alarm!")
+                Text("Tell us what you'd like to see in Date Alarm!")
                     .font(.system(size: 14, design: .rounded))
                     .foregroundStyle(Color("SecondaryText"))
                     .multilineTextAlignment(.center)
@@ -718,7 +718,7 @@ struct FeatureRequestView: View {
     }
 
     private func sendFeatureRequest() {
-        let subject = "Feature Request — Future Alarm"
+        let subject = "Feature Request — Date Alarm"
         let body = requestText
         let urlString = "mailto:\(supportEmail)?subject=\(subject)&body=\(body)"
             .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""

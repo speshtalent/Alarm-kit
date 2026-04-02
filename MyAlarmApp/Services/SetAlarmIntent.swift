@@ -77,11 +77,11 @@ enum SetAlarmIntentError: LocalizedError {
         case .missingDate:
             return "Choose a date and time for the alarm."
         case .emptyLabel:
-            return "Add a label so Future Alarm can tell this apart from Apple Clock."
+            return "Add a label so Date Alarm can tell this apart from Apple Clock."
         case .pastDate:
             return "Choose a time in the future."
         case .schedulingFailed:
-            return "Future Alarm couldn't save that alarm right now. Please try again."
+            return "Date Alarm couldn't save that alarm right now. Please try again."
         }
     }
 
@@ -90,9 +90,9 @@ enum SetAlarmIntentError: LocalizedError {
     }
 }
 
-struct OpenFutureAlarmIntent: AppIntent {
-    static var title: LocalizedStringResource = "Open Future Alarm"
-    static var description = IntentDescription("Opens Future Alarm to finish alarm setup.")
+struct OpenDateAlarmIntent: AppIntent {
+    static var title: LocalizedStringResource = "Open Date Alarm"
+    static var description = IntentDescription("Opens Date Alarm to finish alarm setup.")
     static var openAppWhenRun: Bool = true
 
     func perform() async throws -> some IntentResult {
@@ -101,8 +101,8 @@ struct OpenFutureAlarmIntent: AppIntent {
 }
 
 struct SetAlarmIntent: AppIntent {
-    static var title: LocalizedStringResource = "Set Future Alarm"
-    static var description = IntentDescription("Creates a labeled alarm in Future Alarm for a specific future date, with optional repeat and voice recording setup.")
+    static var title: LocalizedStringResource = "Set Date Alarm"
+    static var description = IntentDescription("Creates a labeled date alarm in Date Alarm for a specific future date and time, with optional repeat and voice recording setup.")
 
     // Keep this background-capable so Siri can complete normal alarms silently.
     static var openAppWhenRun: Bool = false
@@ -143,7 +143,7 @@ struct SetAlarmIntent: AppIntent {
     var recurrence: AlarmRecurrence?
 
     static var parameterSummary: some ParameterSummary {
-        Summary("Create an alarm for \(\.$date) at \(\.$time)")
+        Summary("Create a date alarm for \(\.$date) at \(\.$time)")
     }
 
     init() {}
@@ -174,7 +174,7 @@ struct SetAlarmIntent: AppIntent {
                 )
 
                 return .result(
-                    opensIntent: OpenFutureAlarmIntent(),
+                    opensIntent: OpenDateAlarmIntent(),
                     dialog: handoffDialog(for: validatedDate, label: cleanedLabel, recurrence: normalizedRecurrence)
                 )
             }
@@ -277,16 +277,16 @@ struct SetAlarmIntent: AppIntent {
             recurrenceSuffix = ""
         }
 
-        return IntentDialog("Alarm set for \(date.intentAlarmDisplayString)\(recurrenceSuffix): \(label)")
+        return IntentDialog("Date alarm set for \(date.intentAlarmDisplayString)\(recurrenceSuffix): \(label)")
     }
 
     private func handoffDialog(for date: Date, label: String, recurrence: AlarmRecurrence?) -> IntentDialog {
         if shouldRecordVoice {
-            return IntentDialog("I prepared \(label) for \(date.intentAlarmDisplayString). Open Future Alarm to record your custom voice alarm.")
+            return IntentDialog("I prepared \(label) for \(date.intentAlarmDisplayString). Open Date Alarm to record your custom voice alarm.")
         }
 
         if recurrence == .custom {
-            return IntentDialog("I prepared \(label) for \(date.intentAlarmDisplayString). Open Future Alarm to finish the custom repeat schedule.")
+            return IntentDialog("I prepared \(label) for \(date.intentAlarmDisplayString). Open Date Alarm to finish the custom repeat schedule.")
         }
 
         return confirmationDialog(for: date, label: label, recurrence: recurrence)
@@ -294,8 +294,8 @@ struct SetAlarmIntent: AppIntent {
 }
 
 struct SetVoiceAlarmIntent: AppIntent {
-    static var title: LocalizedStringResource = "Set Voice Alarm"
-    static var description = IntentDescription("Creates an alarm and opens Future Alarm so you can record a custom voice reminder.")
+    static var title: LocalizedStringResource = "Set Voice Date Alarm"
+    static var description = IntentDescription("Creates a date alarm and opens Date Alarm so you can record a custom voice reminder.")
 
     @Parameter(
         title: "Date",
@@ -380,33 +380,33 @@ struct AlarmAppShortcutsProvider: AppShortcutsProvider {
         AppShortcut(
             intent: SetAlarmIntent(),
             phrases: [
-                "Schedule a future alarm with \(.applicationName)",
-                "Create a scheduled alarm with \(.applicationName)",
-                "Plan an alarm with \(.applicationName)",
-                "Set up a future reminder alarm with \(.applicationName)"
+                "Set a \(.applicationName)",
+                "Create a \(.applicationName)",
+                "Schedule a \(.applicationName)",
+                "Plan a \(.applicationName)"
             ],
-            shortTitle: "Future Alarm",
+            shortTitle: "Date Alarm",
             systemImageName: "alarm"
         )
         AppShortcut(
             intent: SetAlarmIntent(),
             phrases: [
-                "Create a labeled alarm with \(.applicationName)",
-                "Make a reminder alarm with \(.applicationName)",
-                "Add a named alarm with \(.applicationName)",
-                "Create an alarm for a task with \(.applicationName)"
+                "Set a labeled \(.applicationName)",
+                "Create a labeled \(.applicationName)",
+                "Set a task \(.applicationName)",
+                "Create a named \(.applicationName)"
             ],
-            shortTitle: "Labeled Alarm",
+            shortTitle: "Labeled Date Alarm",
             systemImageName: "calendar.badge.clock"
         )
         AppShortcut(
             intent: SetVoiceAlarmIntent(),
             phrases: [
-                "Create a voice alarm with \(.applicationName)",
-                "Record a custom alarm with \(.applicationName)",
-                "Schedule a voice reminder alarm with \(.applicationName)"
+                "Create a voice \(.applicationName)",
+                "Record a custom \(.applicationName)",
+                "Schedule a voice \(.applicationName)"
             ],
-            shortTitle: "Voice Alarm",
+            shortTitle: "Voice Date Alarm",
             systemImageName: "mic.badge.plus"
         )
     }

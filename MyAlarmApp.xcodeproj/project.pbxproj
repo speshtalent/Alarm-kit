@@ -557,10 +557,10 @@
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MyAlarmApp/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Future Alarm";
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Future Alarm needs calendar access to add your alarms to your calendar.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Future Alarm needs microphone access to record voice messages for alarms.";
-				INFOPLIST_KEY_NSSiriUsageDescription = "Future Alarm uses Siri to set alarms with your voice.";
+				INFOPLIST_KEY_CFBundleDisplayName = "Date Alarm";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Date Alarm needs calendar access to add your alarms to your calendar.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Date Alarm needs microphone access to record voice messages for alarms.";
+				INFOPLIST_KEY_NSSiriUsageDescription = "Date Alarm uses Siri to set date alarms with your voice.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -598,10 +598,10 @@
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MyAlarmApp/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Future Alarm";
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Future Alarm needs calendar access to add your alarms to your calendar.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Future Alarm needs microphone access to record voice messages for alarms.";
-				INFOPLIST_KEY_NSSiriUsageDescription = "Future Alarm uses Siri to set alarms with your voice.";
+				INFOPLIST_KEY_CFBundleDisplayName = "Date Alarm";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Date Alarm needs calendar access to add your alarms to your calendar.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Date Alarm needs microphone access to record voice messages for alarms.";
+				INFOPLIST_KEY_NSSiriUsageDescription = "Date Alarm uses Siri to set date alarms with your voice.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -638,7 +638,7 @@
 				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
 				INFOPLIST_FILE = FutureAlarmWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = FutureAlarmWidget;
+				INFOPLIST_KEY_CFBundleDisplayName = DateAlarmWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -671,7 +671,7 @@
 				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
 				INFOPLIST_FILE = FutureAlarmWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = FutureAlarmWidget;
+				INFOPLIST_KEY_CFBundleDisplayName = DateAlarmWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
