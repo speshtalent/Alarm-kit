@@ -88,7 +88,9 @@ struct AddAlarmView: View {
             _title = State(initialValue: item.label)
             _selectedDate = State(initialValue: fireDate)
             let hour24 = Calendar.current.component(.hour, from: fireDate)
-            _selectedHour = State(initialValue: hour24)
+            let is24Hr = UserDefaults.standard.bool(forKey: "use24HourFormat")
+            let hour12 = hour24 == 0 ? 12 : (hour24 > 12 ? hour24 - 12 : hour24)
+            _selectedHour = State(initialValue: is24Hr ? hour24 : hour12)
             _selectedAMPM = State(initialValue: hour24 < 12 ? 0 : 1)
             _selectedMinute = State(initialValue: Calendar.current.component(.minute, from: fireDate))
             _useSpecificDate = State(initialValue: true)
@@ -106,7 +108,9 @@ struct AddAlarmView: View {
             _title = State(initialValue: initialTitle ?? "Alarm")
             _selectedDate = State(initialValue: Date())
             let hour24 = Calendar.current.component(.hour, from: Date())
-            _selectedHour = State(initialValue: hour24)
+            let is24Hr = UserDefaults.standard.bool(forKey: "use24HourFormat")
+            let hour12 = hour24 == 0 ? 12 : (hour24 > 12 ? hour24 - 12 : hour24)
+            _selectedHour = State(initialValue: is24Hr ? hour24 : hour12)
             _selectedAMPM = State(initialValue: hour24 < 12 ? 0 : 1)
             _selectedMinute = State(initialValue: Calendar.current.component(.minute, from: Date()))
             _useSpecificDate = State(initialValue: false)
@@ -155,7 +159,7 @@ struct AddAlarmView: View {
             components.minute = selectedMinute
             components.second = 0
             var date = Calendar.current.date(from: components) ?? Date()
-            if date <= Date() && repeatDays.isEmpty {
+            if date < Date().addingTimeInterval(-60) && repeatDays.isEmpty {
                 date = Calendar.current.date(byAdding: .day, value: 1, to: date) ?? date
             }
             return date
@@ -248,7 +252,22 @@ struct AddAlarmView: View {
                                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                                     .foregroundStyle(Color("PrimaryText"))
                                 Spacer()
-                                Toggle("", isOn: $useSpecificDate).tint(.orange)
+                                Toggle("", isOn: $useSpecificDate)
+                                    .tint(.orange)
+                                    .onChange(of: useSpecificDate) { _, newValue in
+                                        if !newValue && isEditing {
+                                            // ✅ When turning off specific date in edit mode
+                                            // keep the original alarm time as selected
+                                            if let fireDate = AlarmService.shared.alarms.first(where: { $0.id.uuidString == editingAlarmID })?.fireDate {
+                                                let hour24 = Calendar.current.component(.hour, from: fireDate)
+                                                let is24Hr = UserDefaults.standard.bool(forKey: "use24HourFormat")
+                                                let hour12 = hour24 == 0 ? 12 : (hour24 > 12 ? hour24 - 12 : hour24)
+                                                selectedHour = is24Hr ? hour24 : hour12
+                                                selectedMinute = Calendar.current.component(.minute, from: fireDate)
+                                                selectedAMPM = hour24 < 12 ? 0 : 1
+                                            }
+                                        }
+                                    }
                             }
                             .padding(16)
                         }

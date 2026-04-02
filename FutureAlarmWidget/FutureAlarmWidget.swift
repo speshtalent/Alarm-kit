@@ -442,7 +442,7 @@ struct LockScreenView: View {
             }
             .containerBackground(.clear, for: .widget)
         } else {
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 2) {
                 ForEach(0..<min(entry.upcomingAlarms.count, 3), id: \.self) { i in
                     let alarm = entry.upcomingAlarms[i]
                     let endDate = alarm.date.addingTimeInterval(600) // ✅ 10 min duration
@@ -458,14 +458,14 @@ struct LockScreenView: View {
                         VStack(alignment: .leading, spacing: 1) {
                             // ✅ Alarm name
                             Text(alarm.label)
-                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .font(.system(size: 10, weight: .semibold, design: .rounded))
                                 .lineLimit(1)
                                 .opacity(opacity)
                                 .widgetAccentable()
 
                             // ✅ Time range + day
                             Text("\(fullTimeString(alarm.date, use24Hour: entry.use24Hour)) – \(fullTimeString(endDate, use24Hour: entry.use24Hour)) · \(shortDay(alarm.date))")
-                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .font(.system(size: 9, weight: .medium, design: .rounded))
                                 .lineLimit(1)
                                 .opacity(opacity * 0.8)
                         }
