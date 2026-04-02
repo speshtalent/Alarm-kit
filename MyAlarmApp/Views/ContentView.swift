@@ -322,7 +322,7 @@ struct SettingsView: View {
     private let appIcons: [(name: String, imageName: String, iconName: String?)] = [
         ("Storm", "AppIcon6", "AppIcon6"),
         ("Blaze", "AppIcon7", "AppIcon7"),
-        ("Classic", "AppIcon1", "AppIcon1"),
+        ("Classic", "AppIcon", nil),
         ("Future", "AppIcon2", "AppIcon2"),
         ("Pro", "AppIcon3", "AppIcon3"),
         ("Elite", "AppIcon4", "AppIcon4"),
@@ -594,7 +594,6 @@ struct SettingsView: View {
 
     private func applyIcon() {
         guard let icon = appIcons.first(where: { $0.name == pendingIcon }) else { return }
-        guard UIApplication.shared.supportsAlternateIcons else { return }
         UIApplication.shared.setAlternateIconName(icon.iconName) { error in
             if error == nil {
                 DispatchQueue.main.async {

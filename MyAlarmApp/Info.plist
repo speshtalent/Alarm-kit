@@ -68,7 +68,7 @@
 <dict>
     <key>CFBundleAlternateIcons</key>
     <dict>
-        <key>AppIcon1</key>
+        <key>AppIcon</key>
         <dict>
             <key>CFBundleIconFiles</key>
             <array><string>AppIcon1</string></array>
