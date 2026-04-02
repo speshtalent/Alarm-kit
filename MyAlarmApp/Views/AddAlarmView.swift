@@ -85,7 +85,7 @@ struct AddAlarmView: View {
             _useSpecificDate = State(initialValue: true)
             self.editingAlarmID = item.id.uuidString
         } else if let date = preselectedDate, !Calendar.current.isDateInToday(date) {
-            _title = State(initialValue: "Alarm")
+            _title = State(initialValue: "")
             _selectedDate = State(initialValue: date)
             let hour24 = Calendar.current.component(.hour, from: date)
             _selectedHour = State(initialValue: hour24)
@@ -94,7 +94,7 @@ struct AddAlarmView: View {
             _useSpecificDate = State(initialValue: true)
             self.editingAlarmID = nil
         } else {
-            _title = State(initialValue: "Alarm")
+            _title = State(initialValue: "")
             _selectedDate = State(initialValue: Date())
             let hour24 = Calendar.current.component(.hour, from: Date())
             let is24Hr = UserDefaults.standard.bool(forKey: "use24HourFormat")
@@ -414,7 +414,7 @@ struct AddAlarmView: View {
                             RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                             HStack {
                                 Image(systemName: "tag").foregroundStyle(.orange)
-                                TextField("Alarm name/label", text: $title)
+                                TextField("Give this alarm a name (optional)", text: $title)
                                     .foregroundStyle(Color("PrimaryText")).tint(.orange)
                             }
                             .padding(16)
@@ -511,9 +511,13 @@ struct AddAlarmView: View {
                                         }
                                         UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
                                     } label: {
-                                        Text("Re-record")
-                                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                                            .foregroundStyle(.orange)
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "mic.circle.fill")
+                                                .font(.system(size: 14))
+                                            Text("Re-record")
+                                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                        }
+                                        .foregroundStyle(.red)
                                     }
                                 }
                                 .padding(10)
@@ -679,7 +683,7 @@ struct AddAlarmView: View {
         stopSoundPreview()
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         let savedDate = fireDate
-        let savedTitle = title
+        let savedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Alarm" : title
         let savedRecordingName = recordingName
         onSave(savedDate, savedTitle, snoozeEnabled, TimeInterval(snoozeDuration * 60), selectedSound, finalRepeatDays)
 
