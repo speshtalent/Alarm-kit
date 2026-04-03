@@ -39,8 +39,8 @@ struct ContentView: View {
                 CalendarView()
                     .tabItem { Label("Calendar", systemImage: "calendar") }
                     .tag(1)
-                HistoryView()
-                    .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
+                ScheduledView()
+                    .tabItem { Label("Scheduled", systemImage: "list.bullet.clipboard")}
                     .tag(2)
             }
             .tint(.orange)
@@ -138,6 +138,12 @@ struct ContentView: View {
                                         alarmService.toggleAlarm(id: alarmID)
                                     }
                                     alarmService.rebuildGroups()
+                                    Task {
+                                        try? await Task.sleep(nanoseconds: 800_000_000)
+                                        await MainActor.run {
+                                            alarmService.rebuildGroups()
+                                        }
+                                    }
                                 }
                                 .listRowBackground(Color("AppBackground"))
                                 .listRowSeparator(.hidden)
@@ -610,8 +616,13 @@ struct SettingsView: View {
 
     private func applyIcon() {
         guard let icon = appIcons.first(where: { $0.name == pendingIcon }) else { return }
+        print("🎨 Setting icon to: \(String(describing: icon.iconName))")
+        print("🎨 Icon files in bundle: \(Bundle.main.paths(forResourcesOfType: "png", inDirectory: nil).filter { $0.contains("AppIcon") })")
         UIApplication.shared.setAlternateIconName(icon.iconName) { error in
-            if error == nil {
+            if let error = error {
+                print("❌ Error: \(error.localizedDescription)")
+            } else {
+                print("✅ Icon changed successfully!")
                 DispatchQueue.main.async {
                     selectedAppIcon = pendingIcon
                 }
@@ -741,6 +752,13 @@ struct AlarmGroupRow: View {
 
         if group.repeatDays == Set([100]) { return "Monthly • \(timeOnly)" }
         if group.repeatDays == Set([200]) { return "Yearly • \(timeOnly)" }
+        // ✅ Monthly with selected months
+        let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+        let selectedMonths = group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+        if !selectedMonths.isEmpty { return "\(selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", ")) • \(timeOnly)" }
+        // ✅ Yearly with selected years
+        let selectedYears = group.repeatDays.filter { $0 >= 2025 }.sorted()
+        if !selectedYears.isEmpty { return "\(selectedYears.map { "\($0)" }.joined(separator: ", ")) • \(timeOnly)" }
         if group.repeatLabel.isEmpty {
             return group.fireDate.flatMap { f.string(from: $0) } ?? ""
         } else {
@@ -825,43 +843,31 @@ struct TimerRow: View {
 }
 
 // MARK: - History View
-struct HistoryView: View {
+struct ScheduledView: View {
     @AppStorage("use24HourFormat") private var use24HourFormat: Bool = false
-    @State private var history: [[String: Any]] = []
-    @State private var showClearAlert = false
+    @StateObject private var alarmService = AlarmService.shared
+    @State private var expandedGroupID: UUID? = nil
 
     var body: some View {
         ZStack {
             Color("AppBackground").ignoresSafeArea()
             VStack(spacing: 0) {
                 HStack {
-                    Text("History")
+                    Text("Scheduled")
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .foregroundStyle(Color("PrimaryText"))
                     Spacer()
-                    if !history.isEmpty {
-                        Button {
-                            showClearAlert = true
-                        } label: {
-                            Image(systemName: "trash.fill")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundStyle(Color("SecondaryText"))
-                                .frame(width: 36, height: 36)
-                                .background(Color("CardBackground"))
-                                .clipShape(Circle())
-                        }
-                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 16)
 
-                if history.isEmpty {
+                if alarmService.alarmGroups.isEmpty {
                     VStack(spacing: 12) {
-                        Image(systemName: "clock.arrow.circlepath")
+                        Image(systemName: "list.bullet.clipboard")
                             .font(.system(size: 48))
                             .foregroundStyle(.orange.opacity(0.4))
-                        Text("No alarm history yet")
+                        Text("No scheduled alarms")
                             .font(.system(size: 16, weight: .medium, design: .rounded))
                             .foregroundStyle(Color("SecondaryText"))
                     }
@@ -869,32 +875,20 @@ struct HistoryView: View {
                     .padding(.top, 80)
                 } else {
                     List {
-                        ForEach(Array(history.enumerated()), id: \.offset) { _, entry in
-                            let label = entry["label"] as? String ?? "Alarm"
-                            let firedAt = entry["firedAt"] as? TimeInterval ?? 0
-                            let date = Date(timeIntervalSince1970: firedAt)
-                            HStack(spacing: 16) {
-                                ZStack {
-                                    Circle()
-                                        .fill(.orange.opacity(0.15))
-                                        .frame(width: 48, height: 48)
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(.orange)
-                                        .font(.system(size: 20))
+                        ForEach(alarmService.alarmGroups) { group in
+                            VStack(spacing: 0) {
+                                ScheduledRowView(group: group, use24Hour: use24HourFormat)
+                                    .onTapGesture {
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            expandedGroupID = expandedGroupID == group.id ? nil : group.id
+                                        }
+                                    }
+
+                                if expandedGroupID == group.id {
+                                    AlarmDetailInlineView(group: group, use24Hour: use24HourFormat)
+                                        .transition(.opacity)
                                 }
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(label)
-                                        .font(.system(size: 17, weight: .semibold, design: .rounded))
-                                        .foregroundStyle(Color("PrimaryText"))
-                                    Text(formatDate(date))
-                                        .font(.system(size: 12, weight: .medium, design: .monospaced))
-                                        .foregroundStyle(Color("SecondaryText"))
-                                }
-                                Spacer()
                             }
-                            .padding(16)
-                            .background(Color("CardBackground"))
-                            .clipShape(RoundedRectangle(cornerRadius: 18))
                             .listRowBackground(Color("AppBackground"))
                             .listRowSeparator(.hidden)
                             .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
@@ -907,22 +901,275 @@ struct HistoryView: View {
             }
         }
         .onAppear {
-            history = AlarmService.shared.loadHistory()
+            alarmService.loadAlarms()
         }
-        .alert("Clear History", isPresented: $showClearAlert) {
-            Button("Clear", role: .destructive) {
-                AlarmService.shared.clearHistory()
-                history = []
+    }
+}
+
+// MARK: - Scheduled Row
+struct ScheduledRowView: View {
+    let group: AlarmService.AlarmGroup
+    let use24Hour: Bool
+
+    private var timeText: String {
+        let f = DateFormatter()
+        f.dateFormat = use24Hour ? "HH:mm" : "h:mm a"
+        return group.fireDate.flatMap { f.string(from: $0) } ?? ""
+    }
+
+    private var dateText: String {
+        let f = DateFormatter()
+        f.dateFormat = "EEE, MMM d"
+        return group.fireDate.flatMap { f.string(from: $0) } ?? ""
+    }
+
+    private var repeatText: String {
+        let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+        if group.repeatDays == Set([100]) { return "Every month" }
+        if group.repeatDays == Set([200]) { return "Every year" }
+        let selectedMonths = group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+        if !selectedMonths.isEmpty { return "Monthly • \(selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", "))" }
+        let selectedYears = group.repeatDays.filter { $0 >= 2025 }.sorted()
+        if !selectedYears.isEmpty { return "Yearly • \(selectedYears.map { "\($0)" }.joined(separator: ", "))" }
+        if !group.repeatDays.isEmpty { return "Weekly • \(group.repeatLabel)" }
+        return ""
+    }
+
+    var body: some View {
+        HStack(spacing: 14) {
+            // Left orange line
+            RoundedRectangle(cornerRadius: 3)
+                .fill(.orange)
+                .frame(width: 4)
+                .frame(maxHeight: .infinity)
+
+            VStack(alignment: .leading, spacing: 6) {
+                // Alarm name
+                Text(group.label)
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color("PrimaryText"))
+
+                // Date and time
+                HStack(spacing: 6) {
+                    Image(systemName: "clock.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.orange)
+                    Text("\(dateText) • \(timeText)")
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color("SecondaryText"))
+                }
+
+                // Repeat info
+                if !repeatText.isEmpty {
+                    HStack(spacing: 6) {
+                        Image(systemName: "repeat")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.orange)
+                        Text(repeatText)
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundStyle(.orange)
+                    }
+                }
             }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Are you sure you want to clear all alarm history?")
+
+            Spacer()
+
+            // Status indicator
+            Circle()
+                .fill(group.isEnabled ? .orange : .gray.opacity(0.3))
+                .frame(width: 10, height: 10)
         }
+        .padding(16)
+        .background(Color("CardBackground"))
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+}
+// MARK: - Alarm Detail View
+struct AlarmDetailView: View {
+    let group: AlarmService.AlarmGroup
+    let use24Hour: Bool
+    @Environment(\.dismiss) private var dismiss
+
+    private let weekDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    private let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+
+    private var firedAlarmIDs: Set<String> {
+        let history = AlarmService.shared.loadHistory()
+        return Set(history.compactMap { $0["alarmID"] as? String })
+    }
+
+    private var timeText: String {
+        let f = DateFormatter()
+        f.dateFormat = use24Hour ? "HH:mm" : "h:mm a"
+        return group.fireDate.flatMap { f.string(from: $0) } ?? ""
+    }
+
+    var body: some View {
+        ZStack {
+            Color("AppBackground").ignoresSafeArea()
+            VStack(spacing: 0) {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color("SecondaryText").opacity(0.4))
+                    .frame(width: 40, height: 5)
+                    .padding(.top, 12)
+                    .padding(.bottom, 16)
+
+                Text(group.label)
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color("PrimaryText"))
+                    .padding(.bottom, 4)
+
+                Text(timeText)
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundStyle(.orange)
+                    .padding(.bottom, 20)
+
+                List {
+                    ForEach(Array(group.alarmIDs.enumerated()), id: \.offset) { index, alarmID in
+                        let fired = firedAlarmIDs.contains(alarmID.uuidString)
+                        let alarm = AlarmService.shared.alarms.first(where: { $0.id == alarmID })
+
+                        HStack(spacing: 16) {
+                            ZStack {
+                                Circle()
+                                    .fill(fired ? Color.green.opacity(0.15) : Color.orange.opacity(0.15))
+                                    .frame(width: 40, height: 40)
+                                Image(systemName: fired ? "checkmark.circle.fill" : "clock.fill")
+                                    .foregroundStyle(fired ? .green : .orange)
+                                    .font(.system(size: 18))
+                            }
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(itemLabel(index: index))
+                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(Color("PrimaryText"))
+
+                                if let fireDate = alarm?.fireDate {
+                                    Text(formatDate(fireDate))
+                                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                }
+                            }
+
+                            Spacer()
+
+                            Text(fired ? "Fired" : "Pending")
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .foregroundStyle(fired ? .green : .orange)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(fired ? Color.green.opacity(0.15) : Color.orange.opacity(0.15))
+                                .clipShape(Capsule())
+                        }
+                        .padding(14)
+                        .background(Color("CardBackground"))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .listRowBackground(Color("AppBackground"))
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                    }
+                }
+                .listStyle(.plain)
+                .background(Color("AppBackground"))
+                .scrollContentBackground(.hidden)
+            }
+        }
+    }
+
+    private func itemLabel(index: Int) -> String {
+        // Weekly
+        let weekdays = group.repeatDays.filter { $0 >= 1 && $0 <= 7 }.sorted()
+        if !weekdays.isEmpty && index < weekdays.count {
+            return weekDayNames[weekdays[index] - 1]
+        }
+        // Monthly with months
+        let months = group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+        if !months.isEmpty && index < months.count {
+            return monthNames[months[index] - 101]
+        }
+        // Yearly with years
+        let years = group.repeatDays.filter { $0 >= 2025 }.sorted()
+        if !years.isEmpty && index < years.count {
+            return "\(years[index])"
+        }
+        return "Alarm \(index + 1)"
     }
 
     private func formatDate(_ date: Date) -> String {
         let f = DateFormatter()
-        f.dateFormat = use24HourFormat ? "EEE, MMM d • HH:mm" : "EEE, MMM d • h:mm a"
+        f.dateFormat = use24Hour ? "EEE, MMM d • HH:mm" : "EEE, MMM d • h:mm a"
+        return f.string(from: date)
+    }
+}
+// MARK: - Alarm Detail Inline View
+struct AlarmDetailInlineView: View {
+    let group: AlarmService.AlarmGroup
+    let use24Hour: Bool
+
+    private let weekDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    private let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+
+    private var firedAlarmIDs: Set<String> {
+        let history = AlarmService.shared.loadHistory()
+        return Set(history.compactMap { $0["alarmID"] as? String })
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ForEach(Array(group.alarmIDs.enumerated()), id: \.offset) { index, alarmID in
+                let fired = firedAlarmIDs.contains(alarmID.uuidString)
+                let alarm = AlarmService.shared.alarms.first(where: { $0.id == alarmID })
+
+                HStack(spacing: 12) {
+                    Image(systemName: fired ? "checkmark.circle.fill" : "clock.fill")
+                        .foregroundStyle(fired ? .green : .orange)
+                        .font(.system(size: 16))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(itemLabel(index: index))
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color("PrimaryText"))
+                        if let fireDate = alarm?.fireDate {
+                            Text(formatDate(fireDate))
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .foregroundStyle(Color("SecondaryText"))
+                        }
+                    }
+
+                    Spacer()
+
+                    Text(fired ? "Fired ✅" : "Pending ⏳")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(fired ? .green : .orange)
+                }
+                .padding(12)
+                .background(Color("AppBackground"))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding(.horizontal, 4)
+        .padding(.bottom, 8)
+    }
+
+    private func itemLabel(index: Int) -> String {
+        let weekdays = group.repeatDays.filter { $0 >= 1 && $0 <= 7 }.sorted()
+        if !weekdays.isEmpty && index < weekdays.count {
+            return weekDayNames[weekdays[index] - 1]
+        }
+        let months = group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+        if !months.isEmpty && index < months.count {
+            return monthNames[months[index] - 101]
+        }
+        let years = group.repeatDays.filter { $0 >= 2025 }.sorted()
+        if !years.isEmpty && index < years.count {
+            return "\(years[index])"
+        }
+        return "Alarm \(index + 1)"
+    }
+
+    private func formatDate(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = use24Hour ? "EEE, MMM d • HH:mm" : "EEE, MMM d • h:mm a"
         return f.string(from: date)
     }
 }

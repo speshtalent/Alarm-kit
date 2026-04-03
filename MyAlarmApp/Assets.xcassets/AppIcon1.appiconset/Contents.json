@@ -1,112 +1,112 @@
 {
   "images" : [
     {
-      "filename" : "AppIcon-40x40.png",
+      "filename" : "Icon-20@2x.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
       "size" : "20x20"
     },
     {
-      "filename" : "AppIcon-60x60.png",
+      "filename" : "Icon-20@3x.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
       "size" : "20x20"
     },
     {
-      "filename" : "AppIcon-58x58.png",
+      "filename" : "Icon-29@2x.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
       "size" : "29x29"
     },
     {
-      "filename" : "AppIcon-87x87.png",
+      "filename" : "Icon-29@3x.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
       "size" : "29x29"
     },
     {
-      "filename" : "AppIcon-76x76.png",
+      "filename" : "Icon-38@2x.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
       "size" : "38x38"
     },
     {
-      "filename" : "AppIcon-114x114.png",
+      "filename" : "Icon-38@3x.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
       "size" : "38x38"
     },
     {
-      "filename" : "AppIcon-80x80.png",
+      "filename" : "Icon-40@2x.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
       "size" : "40x40"
     },
     {
-      "filename" : "AppIcon-120x120.png",
+      "filename" : "Icon-40@3x.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
       "size" : "40x40"
     },
     {
-      "filename" : "AppIcon-120x120 1.png",
+      "filename" : "Icon-40@3x 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
       "size" : "60x60"
     },
     {
-      "filename" : "AppIcon-180x180.png",
+      "filename" : "Icon-60@3x.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
       "size" : "60x60"
     },
     {
-      "filename" : "AppIcon-128x128.png",
+      "filename" : "Icon-64@2x.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
       "size" : "64x64"
     },
     {
-      "filename" : "AppIcon-192x192.png",
+      "filename" : "Icon-64@3x.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
       "size" : "64x64"
     },
     {
-      "filename" : "AppIcon-136x136.png",
+      "filename" : "Icon-68@2x.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
       "size" : "68x68"
     },
     {
-      "filename" : "AppIcon-152x152.png",
+      "filename" : "Icon-76@2x.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
       "size" : "76x76"
     },
     {
-      "filename" : "AppIcon-167x167.png",
+      "filename" : "Icon-83.5@2x.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
       "size" : "83.5x83.5"
     },
     {
-      "filename" : "AppIcon-1024x1024.png",
+      "filename" : "Icon-1024.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -118,6 +118,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Icon-20@2x 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -130,6 +131,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Icon-20@3x 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
@@ -142,6 +144,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Icon-29@2x 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -154,6 +157,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Icon-29@3x 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
@@ -166,6 +170,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Icon-38@2x 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -178,6 +183,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Icon-38@3x 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
@@ -190,6 +196,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Icon-40@2x 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -202,6 +209,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Icon-40@3x 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
@@ -214,6 +222,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Icon-40@3x 4.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -226,6 +235,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Icon-60@3x 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
@@ -238,6 +248,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Icon-64@2x 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -250,6 +261,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Icon-64@3x 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
@@ -262,6 +274,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Icon-68@2x 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -274,6 +287,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Icon-76@2x 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -286,6 +300,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Icon-83.5@2x 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -298,7 +313,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "AppIcon-1024x1024 1.png",
+      "filename" : "Icon-1024 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -310,6 +325,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "Icon-20@2x 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -322,6 +338,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "Icon-20@3x 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
@@ -334,6 +351,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "Icon-29@2x 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -346,6 +364,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "Icon-29@3x 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
@@ -358,6 +377,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "Icon-38@2x 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -370,6 +390,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "Icon-38@3x 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
@@ -382,6 +403,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "Icon-40@2x 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -394,6 +416,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "Icon-40@3x 3.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
@@ -406,6 +429,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "Icon-40@3x 5.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -418,6 +442,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "Icon-60@3x 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
@@ -430,6 +455,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "Icon-64@2x 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -442,6 +468,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "Icon-64@3x 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "3x",
@@ -454,6 +481,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "Icon-68@2x 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -466,6 +494,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "Icon-76@2x 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -478,6 +507,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "Icon-83.5@2x 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "scale" : "2x",
@@ -490,7 +520,7 @@
           "value" : "tinted"
         }
       ],
-      "filename" : "AppIcon-1024x1024 2.png",
+      "filename" : "Icon-1024 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

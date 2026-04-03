@@ -78,6 +78,10 @@ struct AddAlarmView: View {
             _repeatType = State(initialValue: "monthly")
         } else if repeatDaysToLoad == Set([200]) {
             _repeatType = State(initialValue: "yearly")
+        } else if repeatDaysToLoad.allSatisfy({ $0 >= 101 && $0 <= 112 }) && !repeatDaysToLoad.isEmpty {
+            _repeatType = State(initialValue: "monthly")
+        } else if repeatDaysToLoad.allSatisfy({ $0 >= 2025 }) && !repeatDaysToLoad.isEmpty {
+            _repeatType = State(initialValue: "yearly")
         } else if !repeatDaysToLoad.isEmpty {
             _repeatType = State(initialValue: "weekly")
         } else {
@@ -97,6 +101,7 @@ struct AddAlarmView: View {
             self.editingAlarmID = item.id.uuidString
         } else if let date = preselectedDate, !Calendar.current.isDateInToday(date) {
             _title = State(initialValue: "")
+            _selectedDate = State(initialValue: date)
 
             _selectedDate = State(initialValue: date)
             let hour24 = Calendar.current.component(.hour, from: date)
@@ -106,6 +111,7 @@ struct AddAlarmView: View {
             _useSpecificDate = State(initialValue: true)
             self.editingAlarmID = nil
         } else {
+            _title = State(initialValue: "")  // ✅ must be first
             _selectedDate = State(initialValue: Date())
             let hour24 = Calendar.current.component(.hour, from: Date())
             let is24Hr = UserDefaults.standard.bool(forKey: "use24HourFormat")
@@ -216,8 +222,8 @@ struct AddAlarmView: View {
 
     private var finalRepeatDays: Set<Int> {
         switch repeatType {
-        case "monthly": return Set([100])
-        case "yearly": return Set([200])
+        case "monthly": return repeatDays.isEmpty ? Set([100]) : repeatDays
+        case "yearly": return repeatDays.isEmpty ? Set([200]) : repeatDays
         case "weekly": return repeatDays
         default: return []
         }
@@ -400,12 +406,49 @@ struct AddAlarmView: View {
                             }
 
                             // Monthly info
+                            // Monthly — show month buttons
                             if repeatType == "monthly" {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "calendar").foregroundStyle(.orange).font(.system(size: 13))
-                                    Text("Fires on day \(Calendar.current.component(.day, from: fireDate)) of every month")
-                                        .font(.system(size: 13, design: .rounded))
-                                        .foregroundStyle(Color("SecondaryText"))
+                                let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+                                let currentMonth = Calendar.current.component(.month, from: Date()) - 1 // 0-based
+                                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 8) {
+                                    ForEach(currentMonth..<12, id: \.self) { i in
+                                        let monthValue = 101 + i
+                                        let isSelected = repeatDays.contains(monthValue)
+                                        Button {
+                                            if isSelected { repeatDays.remove(monthValue) } else { repeatDays.insert(monthValue) }
+                                        } label: {
+                                            Text(months[i])
+                                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                                .foregroundStyle(isSelected ? .black : Color("SecondaryText"))
+                                                .frame(maxWidth: .infinity)
+                                                .padding(.vertical, 8)
+                                                .background(isSelected ? Color.orange : Color("AppBackground"))
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                        }
+                                    }
+                                }
+                                .padding(.top, 4)
+                            }
+
+                            // Yearly — show year buttons
+                            if repeatType == "yearly" {
+                                let currentYear = Calendar.current.component(.year, from: Date())
+                                let years = Array(currentYear...(currentYear + 9))
+                                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
+                                    ForEach(years, id: \.self) { year in
+                                        let isSelected = repeatDays.contains(year)
+                                        Button {
+                                            if isSelected { repeatDays.remove(year) } else { repeatDays.insert(year) }
+                                        } label: {
+                                            Text("\(year)")
+                                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                                .foregroundStyle(isSelected ? .black : Color("SecondaryText"))
+                                                .frame(maxWidth: .infinity)
+                                                .padding(.vertical, 8)
+                                                .background(isSelected ? Color.orange : Color("AppBackground"))
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                        }
+                                    }
                                 }
                                 .padding(.top, 4)
                             }
@@ -516,10 +559,6 @@ struct AddAlarmView: View {
                                     }
                                     Button {
                                         hasRecording = false; isJustRecorded = false; recordingName = ""
-                                        if let id = editingAlarmID {
-                                            try? FileManager.default.removeItem(at: voiceURL(for: id))
-                                            UserDefaults.standard.removeObject(forKey: voiceNameKey(for: id))
-                                        }
                                         UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
                                     } label: {
                                         HStack(spacing: 4) {

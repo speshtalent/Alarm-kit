@@ -247,13 +247,17 @@ struct CalendarView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.top, 20)
                 } else {
-                    VStack(spacing: 10) {
+                    List {
                         ForEach(alarmsForSelectedDate) { item in
                             calendarAlarmRow(item: item)
-                                .padding(.horizontal, 16)
+                                .listRowBackground(Color("AppBackground"))
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                         }
                     }
-                    .padding(.bottom, 20)
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .frame(height: CGFloat(alarmsForSelectedDate.count) * 90)
                 }
             }
         }
@@ -358,13 +362,17 @@ struct CalendarView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.top, 30)
                 } else {
-                    VStack(spacing: 10) {
+                    List {
                         ForEach(alarmsForSelectedDate) { item in
                             calendarAlarmRow(item: item)
-                                .padding(.horizontal, 16)
+                                .listRowBackground(Color("AppBackground"))
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                         }
                     }
-                    .padding(.bottom, 20)
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .frame(height: CGFloat(alarmsForSelectedDate.count) * 90)
                 }
             }
         }
@@ -522,9 +530,6 @@ struct CalendarView: View {
                 .foregroundStyle(Color("SecondaryText"))
             }
             Spacer()
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Color("SecondaryText").opacity(0.5))
         }
         .padding(14)
         .background(Color("CardBackground"))
