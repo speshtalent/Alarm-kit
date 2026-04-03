@@ -70,15 +70,10 @@
 <dict>
     <key>CFBundleAlternateIcons</key>
     <dict>
-        <key>AppIcon</key>
-        <dict>
-            <key>CFBundleIconFiles</key>
-            <array><string>AppIcon6</string></array>
-        </dict>
         <key>AppIcon1</key>
         <dict>
             <key>CFBundleIconFiles</key>
-            <array><string>AppIcon7</string></array>
+            <array><string>AppIcon1</string></array>
         </dict>
     </dict>
 </dict>

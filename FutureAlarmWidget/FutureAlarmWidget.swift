@@ -125,9 +125,9 @@ struct SmallView: View {
 
                 HStack(alignment: .lastTextBaseline, spacing: 3) {
                     Text(timeString(d, use24Hour: entry.use24Hour))
-                        .font(.system(size: 34, weight: .black, design: .rounded))
+                        .font(.system(size: 30, weight: .black, design: .rounded))
                         .foregroundStyle(textPri)
-                        .minimumScaleFactor(0.7)
+                        .minimumScaleFactor(0.6)
                         .lineLimit(1)
                     if !entry.use24Hour {
                         Text(ampm(d))
@@ -144,7 +144,7 @@ struct SmallView: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(orangeDim, in: Capsule())
-                    .padding(.bottom, 6)
+                    .padding(.bottom, 2)
 
                 Text(entry.alarmLabel)
                     .font(.system(size: 11, weight: .medium, design: .rounded))
@@ -191,30 +191,27 @@ struct MediumView: View {
                             .foregroundStyle(orange)
                             .tracking(1.2)
                     }
-                    .padding(.bottom, 10)
+                    .padding(.bottom, 6)
+
+                    Text(entry.alarmLabel)
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(textPri)
+                        .lineLimit(1)
+                        .padding(.bottom, 4)
 
                     HStack(alignment: .lastTextBaseline, spacing: 3) {
                         Text(timeString(d, use24Hour: entry.use24Hour))
-                            .font(.system(size: 40, weight: .black, design: .rounded))
+                            .font(.system(size: 36, weight: .black, design: .rounded))
                             .foregroundStyle(textPri)
                             .minimumScaleFactor(0.7)
                             .lineLimit(1)
                         if !entry.use24Hour {
                             Text(ampm(d))
-                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
                                 .foregroundStyle(orange)
                                 .padding(.bottom, 5)
                         }
                     }
-                    .padding(.bottom, 6)
-
-                    Text(entry.alarmLabel)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(textSec)
-                        .lineLimit(1)
-
-                    Spacer()
-
                     Text(dayLabel(d))
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundStyle(orange)
@@ -247,10 +244,14 @@ struct MediumView: View {
                     } else {
                         ForEach(Array(upcoming.enumerated()), id: \.offset) { _, alarm in
                             VStack(alignment: .leading, spacing: 1) {
+                                Text(alarm.label)
+                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(textPri)
+                                    .lineLimit(1)
                                 HStack(alignment: .lastTextBaseline, spacing: 2) {
                                     Text(timeString(alarm.date, use24Hour: entry.use24Hour))
-                                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                                        .foregroundStyle(textPri)
+                                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                                        .foregroundStyle(orange)
                                     if !entry.use24Hour {
                                         Text(ampm(alarm.date))
                                             .font(.system(size: 9, weight: .bold, design: .rounded))
@@ -300,7 +301,7 @@ struct LargeView: View {
     var body: some View {
         if let d = entry.alarmDate, !isAlarmPast(d) {
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 6) {
+                HStack(spacing: 4) {
                     Image(systemName: "alarm.fill")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(orange)
@@ -310,7 +311,7 @@ struct LargeView: View {
                         .tracking(1.5)
                     Spacer()
                 }
-                .padding(.bottom, 16)
+                .padding(.bottom, 8)
 
                 Text("NEXT ALARM")
                     .font(.system(size: 10, weight: .heavy, design: .rounded))
@@ -320,7 +321,7 @@ struct LargeView: View {
 
                 HStack(alignment: .lastTextBaseline, spacing: 6) {
                     Text(timeString(d, use24Hour: entry.use24Hour))
-                        .font(.system(size: 64, weight: .black, design: .rounded))
+                        .font(.system(size: 52, weight: .black, design: .rounded))
                         .foregroundStyle(textPri)
                         .minimumScaleFactor(0.6)
                         .lineLimit(1)
@@ -331,17 +332,17 @@ struct LargeView: View {
                             .padding(.bottom, 8)
                     }
                 }
-                .padding(.bottom, 8)
+                .padding(.bottom, 4)
 
                 HStack(spacing: 6) {
                     Image(systemName: "calendar")
                         .font(.system(size: 13))
                         .foregroundStyle(orange)
                     Text(dayLabel(d))
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
                         .foregroundStyle(orange)
                 }
-                .padding(.bottom, 6)
+                .padding(.bottom, 4)
 
                 HStack(spacing: 6) {
                     Image(systemName: "tag.fill")
@@ -352,18 +353,18 @@ struct LargeView: View {
                         .foregroundStyle(textPri)
                         .lineLimit(1)
                 }
-                .padding(.bottom, 16)
+                .padding(.bottom, 8)
 
                 Rectangle()
                     .fill(orangeLine)
                     .frame(height: 1)
-                    .padding(.bottom, 14)
+                    .padding(.bottom, 8)
 
                 Text("UPCOMING")
                     .font(.system(size: 10, weight: .heavy, design: .rounded))
                     .foregroundStyle(textSec)
                     .tracking(2)
-                    .padding(.bottom, 10)
+                    .padding(.bottom, 6)
 
                 let upcoming = entry.upcomingAlarms.filter { !isAlarmPast($0.date) }.prefix(4)
 
@@ -394,16 +395,16 @@ struct LargeView: View {
                                 .foregroundStyle(textSec)
                                 .lineLimit(1)
                         }
-                        .padding(.vertical, 6)
+                        .padding(.vertical, 4)
                         .padding(.horizontal, 10)
                         .background(orangeDim, in: RoundedRectangle(cornerRadius: 8))
-                        .padding(.bottom, 5)
+                        .padding(.bottom, 4)
                     }
                 }
 
                 Spacer()
             }
-            .padding(20)
+            .padding(16)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .containerBackground(bg, for: .widget)
         } else {
@@ -419,7 +420,7 @@ struct LargeView: View {
                     .foregroundStyle(textSec.opacity(0.5))
                     .lineSpacing(4)
             }
-            .padding(20)
+            .padding(16)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .containerBackground(bg, for: .widget)
         }
@@ -442,7 +443,7 @@ struct LockScreenView: View {
             }
             .containerBackground(.clear, for: .widget)
         } else {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
                 ForEach(0..<min(entry.upcomingAlarms.count, 3), id: \.self) { i in
                     let alarm = entry.upcomingAlarms[i]
                     let endDate = alarm.date.addingTimeInterval(600) // ✅ 10 min duration
@@ -458,14 +459,15 @@ struct LockScreenView: View {
                         VStack(alignment: .leading, spacing: 1) {
                             // ✅ Alarm name
                             Text(alarm.label)
-                                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color.white)
                                 .lineLimit(1)
                                 .opacity(opacity)
                                 .widgetAccentable()
 
                             // ✅ Time range + day
                             Text("\(fullTimeString(alarm.date, use24Hour: entry.use24Hour)) – \(fullTimeString(endDate, use24Hour: entry.use24Hour)) · \(shortDay(alarm.date))")
-                                .font(.system(size: 9, weight: .medium, design: .rounded))
+                                .font(.system(size: 8, weight: .medium, design: .rounded))
                                 .lineLimit(1)
                                 .opacity(opacity * 0.8)
                         }
