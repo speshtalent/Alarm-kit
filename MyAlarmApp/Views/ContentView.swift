@@ -590,6 +590,28 @@ struct SettingsView: View {
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(cardColor)
                         HStack(spacing: 8) {
+                            Image(systemName: "lock.shield.fill")
+                                .foregroundStyle(.orange)
+                            Text("Privacy & Security")
+                                .font(.system(size: 15, weight: .medium, design: .rounded))
+                                .foregroundStyle(primaryText)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(secondaryText)
+                                .font(.system(size: 13))
+                        }
+                        .padding(16)
+                    }
+                    .padding(.horizontal, 20)
+                    .onTapGesture {
+                        if let url = URL(string: "https://yourwebsite.com/privacy") {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16).fill(cardColor)
+                        HStack(spacing: 8) {
                             Image(systemName: "info.circle.fill")
                                 .foregroundStyle(.orange)
                             Text("Version")

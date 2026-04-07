@@ -70,14 +70,21 @@ final class AlarmService: ObservableObject {
     private func makeAlarmAlert(title: String) -> AlarmPresentation.Alert {
         let titleResource = LocalizedStringResource(stringLiteral: title)
         if #available(iOS 26.1, *) {
-            return AlarmPresentation.Alert(title: titleResource)
+            return AlarmPresentation.Alert(
+                title: titleResource,
+                stopButton: AlarmButton(
+                    text: "Stop Alarm",
+                    textColor: .white,
+                    systemImageName: "alarm.fill"
+                )
+            )
         } else {
             return AlarmPresentation.Alert(
                 title: titleResource,
                 stopButton: AlarmButton(
-                    text: "Stop",
+                    text: "Stop Alarm",
                     textColor: .white,
-                    systemImageName: "stop.fill"
+                    systemImageName: "alarm.fill"
                 )
             )
         }
@@ -223,7 +230,7 @@ final class AlarmService: ObservableObject {
             for disabledID in disabled {
                 if !activeIDs.contains(disabledID),
                    let savedInterval = UserDefaults.standard.object(forKey: "disabledAlarmDate_\(disabledID)") as? TimeInterval,
-                   let _uuid = UUID(uuidString: disabledID) {
+                   let _ = UUID(uuidString: disabledID) {
                     let fireDate = Date(timeIntervalSince1970: savedInterval)
                     guard fireDate > Date() else { continue } // skip past alarms
                     let label = labels[disabledID] ?? "Alarm"
@@ -490,32 +497,53 @@ final class AlarmService: ObservableObject {
 
     func saveNextAlarmForWidget() {
         let userDefaults = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
-        
+
         // ✅ Sync 24hr setting to App Group so widget can read it
         let use24Hour = UserDefaults.standard.bool(forKey: "use24HourFormat")
         userDefaults?.set(use24Hour, forKey: "use24HourFormat")
 
-        // ✅ Save next single alarm (existing)
+        // ✅ Get all future enabled alarms with repeating flag
         let futureAlarms = alarms
             .filter { $0.isEnabled }
-            .compactMap { item -> (Date, String)? in
+            .compactMap { item -> (Date, String, Bool)? in
                 guard let fireDate = item.fireDate, fireDate > Date() else { return nil }
-                return (fireDate, item.label)
+                let groupID = getGroupID(for: item.id) ?? item.id
+                let repeatDays = getRepeatDays(forGroup: groupID)
+                let isRepeating = !repeatDays.isEmpty
+                return (fireDate, item.label, isRepeating)
             }
             .sorted { $0.0 < $1.0 }
 
-        if let (fireDate, label) = futureAlarms.first {
-            userDefaults?.set(fireDate.timeIntervalSince1970, forKey: "widgetNextAlarmDate")
-            userDefaults?.set(label, forKey: "widgetNextAlarmLabel")
-            print("✅ Widget saved: \(label) at \(fireDate)")
+        // ✅ Split one-time and repeating
+        let oneTimeAlarms = futureAlarms.filter { !$0.2 }
+        let repeatingAlarms = futureAlarms.filter { $0.2 }
+
+        // ✅ Priority: one-time first, repeating only if no one-time in next 3 days
+        let threeDaysFromNow = Date().addingTimeInterval(3 * 24 * 3600)
+        let upcomingOneTime = oneTimeAlarms.filter { $0.0 <= threeDaysFromNow }
+
+        let combinedAlarms: [(Date, String)]
+        if upcomingOneTime.isEmpty {
+            combinedAlarms = futureAlarms.map { ($0.0, $0.1) }
+        } else {
+            let oneTimeMapped = oneTimeAlarms.map { ($0.0, $0.1) }
+            let repeatingMapped = repeatingAlarms.map { ($0.0, $0.1) }
+            combinedAlarms = (oneTimeMapped + repeatingMapped).sorted { $0.0 < $1.0 }
+        }
+
+        // ✅ Save next alarm
+        if let first = combinedAlarms.first {
+            userDefaults?.set(first.0.timeIntervalSince1970, forKey: "widgetNextAlarmDate")
+            userDefaults?.set(first.1, forKey: "widgetNextAlarmLabel")
+            print("✅ Widget saved: \(first.1) at \(first.0)")
         } else {
             userDefaults?.removeObject(forKey: "widgetNextAlarmDate")
             userDefaults?.removeObject(forKey: "widgetNextAlarmLabel")
             print("✅ Widget cleared — no active alarms")
         }
 
-        // ✅ NEW — Save list of upcoming alarms for lock screen widget (max 5)
-        let upcomingList = futureAlarms.prefix(5).map { (date, label) -> [String: Any] in
+        // ✅ Save upcoming list (max 5)
+        let upcomingList = combinedAlarms.prefix(5).map { (date, label) -> [String: Any] in
             return [
                 "date": date.timeIntervalSince1970,
                 "label": label
