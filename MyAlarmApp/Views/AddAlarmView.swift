@@ -180,15 +180,52 @@ struct AddAlarmView: View {
         formatter.dateFormat = "h:mm a"
         let timeStr = formatter.string(from: date)
         let calendar = Calendar.current
-        let dateFormatter = DateFormatter()
+
+        // ✅ Weekly
+        if repeatType == "weekly" && !repeatDays.isEmpty {
+            let ordered = weekDays.filter { repeatDays.contains($0.value) }.map { $0.label }
+            let daysStr = ordered.joined(separator: ", ")
+            return "Rings every \(daysStr) at \(timeStr)"
+        }
+
+        // ✅ Monthly with selected months
+        let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+        let selectedMonths = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+        if repeatType == "monthly" && !selectedMonths.isEmpty {
+            let monthsStr = selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", ")
+            let day = calendar.component(.day, from: date)
+            return "Rings on day \(day) of \(monthsStr) at \(timeStr)"
+        }
+
+        // ✅ Monthly generic
+        if repeatType == "monthly" {
+            let day = calendar.component(.day, from: date)
+            return "Rings every month on day \(day) at \(timeStr)"
+        }
+
+        // ✅ Yearly with selected years
+        let selectedYears = repeatDays.filter { $0 >= 2025 }.sorted()
+        if repeatType == "yearly" && !selectedYears.isEmpty {
+            let yearsStr = selectedYears.map { "\($0)" }.joined(separator: ", ")
+            let f = DateFormatter(); f.dateFormat = "MMM d"
+            return "Rings on \(f.string(from: date)) in \(yearsStr)"
+        }
+
+        // ✅ Yearly generic
+        if repeatType == "yearly" {
+            let f = DateFormatter(); f.dateFormat = "MMM d"
+            return "Rings every year on \(f.string(from: date)) at \(timeStr)"
+        }
+
+        // ✅ One time
         if calendar.isDateInToday(date) {
             return "Rings at \(timeStr) · Today"
         } else if calendar.isDateInTomorrow(date) {
             return "Rings at \(timeStr) · Tomorrow"
         } else {
+            let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "MMM d, yyyy"
-            let dateStr = dateFormatter.string(from: date)
-            return "Rings at \(timeStr) · \(dateStr)"
+            return "Rings at \(timeStr) · \(dateFormatter.string(from: date))"
         }
     }
 
