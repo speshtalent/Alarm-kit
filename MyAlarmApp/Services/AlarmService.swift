@@ -76,7 +76,13 @@ final class AlarmService: ObservableObject {
                     text: "Stop Alarm",
                     textColor: .white,
                     systemImageName: "alarm.fill"
-                )
+                ),
+                secondaryButton: AlarmButton(
+                    text: "Snooze",
+                    textColor: .white,
+                    systemImageName: "moon.zzz.fill"
+                ),
+                secondaryButtonBehavior: .countdown
             )
         } else {
             return AlarmPresentation.Alert(
@@ -322,7 +328,7 @@ final class AlarmService: ObservableObject {
                 finalSound = voiceFileName
                 print("✅ Voice file saved as: \(voiceFileName)")
             }
-            UserDefaults.standard.set(true, forKey: "hasEverSetAlarm")
+            UserDefaults.standard.set(snoozeDuration, forKey: "snoozeDuration_\(alarmID.uuidString)")
 
             // ✅ Monthly — schedule single alarm, save with repeatDays Set([100])
             if repeatDays == Set([100]) {
