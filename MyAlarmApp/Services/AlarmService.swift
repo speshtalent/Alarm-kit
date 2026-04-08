@@ -255,11 +255,8 @@ final class AlarmService: ObservableObject {
             print("Load alarms error:", error)
             alarms = []
         }
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 200_000_000)
-            rebuildGroups()
-            saveNextAlarmForWidget()
-        }
+        rebuildGroups()
+        saveNextAlarmForWidget()
     }
 
     func rebuildGroups() {
@@ -300,32 +297,6 @@ final class AlarmService: ObservableObject {
                 fireDate: alarm.fireDate,
                 repeatDays: []
             ))
-        }
-
-        // ✅ Add fired one-time alarms as separate groups
-        let firedAlarms = loadFiredAlarms()
-        let existingIDs = Set(groups.map { $0.id.uuidString })
-        for (alarmIDStr, info) in firedAlarms {
-            guard !existingIDs.contains(alarmIDStr),
-                  let groupID = UUID(uuidString: alarmIDStr),
-                  let label = info["label"] as? String,
-                  let firedAt = info["firedAt"] as? TimeInterval else { continue }
-            groups.append(AlarmGroup(
-                id: groupID,
-                label: label,
-                isEnabled: false,
-                alarmIDs: [],
-                fireDate: Date(timeIntervalSince1970: firedAt),
-                repeatDays: [],
-                isFired: true  // ✅
-            ))
-        }
-
-        // ✅ Mark fired one-time alarms that are in groups
-        for i in groups.indices {
-            if firedAlarms[groups[i].id.uuidString] != nil {
-                groups[i].isFired = true
-            }
         }
 
         alarmGroups = groups.sorted { lhs, rhs in
@@ -859,7 +830,11 @@ final class AlarmService: ObservableObject {
         let labels = loadLabels()
 
         for (groupIDStr, alarmIDStrs) in groupIDs {
-            guard repeatDaysDict[groupIDStr]?.isEmpty ?? true else { continue }
+            // ✅ Skip if has repeat days OR if repeat days key doesn't exist (safety check)
+            let repeatDays = repeatDaysDict[groupIDStr] ?? []
+            guard repeatDays.isEmpty else { continue }
+            // ✅ Also skip if group has more than 1 alarm ID (weekly groups have multiple)
+            guard alarmIDStrs.count == 1 else { continue }
             guard fired[groupIDStr] == nil else { continue }
             guard !alarmIDStrs.isEmpty else { continue }
             // ✅ Skip if any alarm ID is in disabled list (not fired, just disabled)
