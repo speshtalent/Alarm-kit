@@ -149,7 +149,14 @@ struct ContentView: View {
                                 .listRowSeparator(.hidden)
                                 .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
                                 .onTapGesture {
-                                    groupToEdit = group
+                                    if group.isFired {
+                                        // ✅ Fired alarm — open AddAlarmView with label pre-filled, remove from fired list
+                                        AlarmService.shared.removeFiredAlarm(alarmID: group.id.uuidString)
+                                        AlarmService.shared.loadAlarms()
+                                        groupToEdit = group
+                                    } else {
+                                        groupToEdit = group
+                                    }
                                 }
                                 .swipeActions(edge: .leading) {}
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -252,7 +259,8 @@ struct ContentView: View {
             alarmService.loadAlarms()
         }) { group in
             AddAlarmView(
-                editingItem: alarmService.alarms.first(where: { group.alarmIDs.contains($0.id) }),
+                initialTitle: group.isFired ? group.label : nil,
+                editingItem: group.isFired ? nil : alarmService.alarms.first(where: { group.alarmIDs.contains($0.id) }),
                 repeatDaysToLoad: group.repeatDays
             ) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays in
                 Task {
@@ -287,6 +295,7 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             consumePendingIntentAlarmFlowIfNeeded()
+            alarmService.loadAlarms() // ✅ refresh alarms when app becomes active
         }
     }
 
@@ -763,7 +772,7 @@ struct AlarmGroupRow: View {
     let group: AlarmService.AlarmGroup
     let use24Hour: Bool
     let onToggle: () -> Void
-
+    
     // ✅ Only this changed — added Monthly/Yearly support
     private var subtitleText: String {
         let f = DateFormatter()
@@ -771,7 +780,7 @@ struct AlarmGroupRow: View {
         let tf = DateFormatter()
         tf.dateFormat = use24Hour ? "HH:mm" : "h:mm a"
         let timeOnly = group.fireDate.flatMap { tf.string(from: $0) } ?? ""
-
+        
         if group.repeatDays == Set([100]) { return "Monthly • \(timeOnly)" }
         if group.repeatDays == Set([200]) { return "Yearly • \(timeOnly)" }
         // ✅ Monthly with selected months
@@ -787,40 +796,47 @@ struct AlarmGroupRow: View {
             return "\(group.repeatLabel) • \(timeOnly)"
         }
     }
-
+    
     var body: some View {
         HStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(group.isEnabled ? .orange.opacity(0.15) : .gray.opacity(0.1))
+                    .fill(group.isFired ? Color.green.opacity(0.15) : (group.isEnabled ? .orange.opacity(0.15) : .gray.opacity(0.1)))
                     .frame(width: 48, height: 48)
-                Image(systemName: group.repeatDays.isEmpty ? "alarm" : "repeat")
-                    .foregroundStyle(group.isEnabled ? .orange : .gray)
+                Image(systemName: group.isFired ? "checkmark.circle.fill" : (group.repeatDays.isEmpty ? "alarm" : "repeat"))
+                    .foregroundStyle(group.isFired ? .green : (group.isEnabled ? .orange : .gray))
                     .font(.system(size: 20))
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(group.label)
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundStyle(group.isEnabled ? Color("PrimaryText") : Color("SecondaryText"))
-                Text(subtitleText)
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Color("SecondaryText"))
+                    .foregroundStyle(group.isFired ? Color("SecondaryText") : (group.isEnabled ? Color("PrimaryText") : Color("SecondaryText")))
+                if group.isFired {
+                    Text("Fired • Tap to reschedule")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(.green.opacity(0.8))
+                } else {
+                    Text(subtitleText)
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Color("SecondaryText"))
+                }
             }
             Spacer()
-            Toggle("", isOn: Binding(
-                get: { group.isEnabled },
-                set: { _ in onToggle() }
-            ))
-            .tint(.orange)
-            .labelsHidden()
+            if !group.isFired {
+                Toggle("", isOn: Binding(
+                    get: { group.isEnabled },
+                    set: { _ in onToggle() }
+                ))
+                .tint(.orange)
+                .labelsHidden()
+            }
         }
         .padding(16)
         .background(Color("CardBackground"))
         .clipShape(RoundedRectangle(cornerRadius: 18))
-        .opacity(group.isEnabled ? 1.0 : 0.6)
+        .opacity(group.isFired ? 0.7 : (group.isEnabled ? 1.0 : 0.6))
     }
 }
-
 // MARK: - Timer Row
 struct TimerRow: View {
     let timer: Alarm
@@ -1017,9 +1033,17 @@ struct AlarmDetailView: View {
 
     private var firedAlarmIDs: Set<String> {
         let history = AlarmService.shared.loadHistory()
-        return Set(history.compactMap { $0["alarmID"] as? String })
+        var fired = Set(history.compactMap { $0["alarmID"] as? String })
+        
+        // ✅ If alarm ID is not in active alarms → it fired
+        let activeAlarmIDs = Set(AlarmService.shared.alarms.map { $0.id.uuidString })
+        for alarmID in group.alarmIDs {
+            if !activeAlarmIDs.contains(alarmID.uuidString) {
+                fired.insert(alarmID.uuidString)
+            }
+        }
+        return fired
     }
-
     private var timeText: String {
         let f = DateFormatter()
         f.dateFormat = use24Hour ? "HH:mm" : "h:mm a"
@@ -1133,7 +1157,16 @@ struct AlarmDetailInlineView: View {
 
     private var firedAlarmIDs: Set<String> {
         let history = AlarmService.shared.loadHistory()
-        return Set(history.compactMap { $0["alarmID"] as? String })
+        var fired = Set(history.compactMap { $0["alarmID"] as? String })
+        
+        // ✅ If alarm ID is not in active alarms → it fired
+        let activeAlarmIDs = Set(AlarmService.shared.alarms.map { $0.id.uuidString })
+        for alarmID in group.alarmIDs {
+            if !activeAlarmIDs.contains(alarmID.uuidString) {
+                fired.insert(alarmID.uuidString)
+            }
+        }
+        return fired
     }
 
     var body: some View {
