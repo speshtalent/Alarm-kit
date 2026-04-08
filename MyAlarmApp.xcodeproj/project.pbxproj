@@ -54,6 +54,7 @@
 		AB9FCCBF2F4F797000410048 /* MyAlarmApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MyAlarmApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB9FFD482F71E12500307894 /* FutureAlarmWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FutureAlarmWidgetExtension.entitlements; sourceTree = "<group>"; };
 		ABA409642F746F70006867F4 /* FutureAlarmWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FutureAlarmWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		ABD399B52F85BC3600B09405 /* CountdownLiveActivityExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CountdownLiveActivityExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -167,6 +168,7 @@
 		AB9FCCB62F4F797000410048 = {
 			isa = PBXGroup;
 			children = (
+				ABD399B52F85BC3600B09405 /* CountdownLiveActivityExtension.entitlements */,
 				AB9FFD482F71E12500307894 /* FutureAlarmWidgetExtension.entitlements */,
 				AB9FCCC12F4F797000410048 /* MyAlarmApp */,
 				AB05AE862F50302C009916D8 /* CountdownLiveActivity */,
@@ -367,6 +369,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = CountdownLiveActivityExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 24;
 				INFOPLIST_FILE = CountdownLiveActivity/Info.plist;
@@ -396,6 +399,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = CountdownLiveActivityExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 24;
 				INFOPLIST_FILE = CountdownLiveActivity/Info.plist;

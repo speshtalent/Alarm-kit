@@ -39,15 +39,36 @@ struct FutureAlarmProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<FutureAlarmEntry>) -> Void) {
         let entry = readEntry()
-        let refresh = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date()
-        completion(Timeline(entries: [entry], policy: .after(refresh)))
+        
+        var entries: [FutureAlarmEntry] = [entry]
+        
+        // ✅ If there's an upcoming alarm, schedule a refresh entry exactly when it fires
+        if let alarmDate = entry.alarmDate, alarmDate > Date() {
+            // Create a new entry at exact alarm fire time with that alarm removed
+            let upcomingWithoutFirst = entry.upcomingAlarms.filter { $0.date > alarmDate }
+            let nextAlarmDate = upcomingWithoutFirst.first?.date
+            let nextAlarmLabel = upcomingWithoutFirst.first?.label ?? "No Alarm"
+            
+            let fireEntry = FutureAlarmEntry(
+                date: alarmDate, // ✅ widget switches at exact alarm time
+                alarmDate: nextAlarmDate,
+                alarmLabel: nextAlarmLabel,
+                upcomingAlarms: upcomingWithoutFirst,
+                use24Hour: entry.use24Hour
+            )
+            entries.append(fireEntry)
+        }
+        
+        // ✅ No need for frequent refresh — only updates at alarm time
+        completion(Timeline(entries: entries, policy: .never))
     }
 
     private func readEntry() -> FutureAlarmEntry {
         let ud = UserDefaults(suiteName: appGroupID)
 
         let interval = ud?.double(forKey: dateKey) ?? 0
-        let alarmDate: Date? = interval > 1 ? Date(timeIntervalSince1970: interval) : nil
+        let rawDate = interval > 1 ? Date(timeIntervalSince1970: interval) : nil
+        let alarmDate: Date? = (rawDate != nil && rawDate! > Date()) ? rawDate : nil
         let label = ud?.string(forKey: labelKey) ?? "No Alarm"
 
         var upcomingAlarms: [(date: Date, label: String)] = []

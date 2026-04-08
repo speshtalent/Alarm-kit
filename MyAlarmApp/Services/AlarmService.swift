@@ -29,6 +29,7 @@ final class AlarmService: ObservableObject {
         let alarmIDs: [UUID]
         let fireDate: Date?
         let repeatDays: Set<Int>
+        var isFired: Bool = false  // ✅ new
 
         var repeatLabel: String {
             if repeatDays.isEmpty { return "" }
@@ -151,6 +152,7 @@ final class AlarmService: ObservableObject {
             alarms.removeAll { $0.alarm.id == alarmID }
         }
 
+        removeFiredAlarm(alarmID: groupID.uuidString)
         removeGroup(groupID: groupID)
         rebuildGroups()
         saveNextAlarmForWidget()
@@ -238,9 +240,8 @@ final class AlarmService: ObservableObject {
                    let savedInterval = UserDefaults.standard.object(forKey: "disabledAlarmDate_\(disabledID)") as? TimeInterval,
                    let _ = UUID(uuidString: disabledID) {
                     let fireDate = Date(timeIntervalSince1970: savedInterval)
-                    guard fireDate > Date() else { continue } // skip past alarms
+                    guard fireDate > Date() else { continue }
                     let label = labels[disabledID] ?? "Alarm"
-                    // Create a placeholder alarm item for disabled alarm
                     if let existingAlarm = alarms.first(where: { $0.id.uuidString == disabledID }) {
                         loadedAlarms.append(AlarmListItem(alarm: existingAlarm.alarm, label: label, isEnabled: false))
                     }
@@ -254,7 +255,11 @@ final class AlarmService: ObservableObject {
             print("Load alarms error:", error)
             alarms = []
         }
-        rebuildGroups()
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            rebuildGroups()
+            saveNextAlarmForWidget()
+        }
     }
 
     func rebuildGroups() {
@@ -295,6 +300,32 @@ final class AlarmService: ObservableObject {
                 fireDate: alarm.fireDate,
                 repeatDays: []
             ))
+        }
+
+        // ✅ Add fired one-time alarms as separate groups
+        let firedAlarms = loadFiredAlarms()
+        let existingIDs = Set(groups.map { $0.id.uuidString })
+        for (alarmIDStr, info) in firedAlarms {
+            guard !existingIDs.contains(alarmIDStr),
+                  let groupID = UUID(uuidString: alarmIDStr),
+                  let label = info["label"] as? String,
+                  let firedAt = info["firedAt"] as? TimeInterval else { continue }
+            groups.append(AlarmGroup(
+                id: groupID,
+                label: label,
+                isEnabled: false,
+                alarmIDs: [],
+                fireDate: Date(timeIntervalSince1970: firedAt),
+                repeatDays: [],
+                isFired: true  // ✅
+            ))
+        }
+
+        // ✅ Mark fired one-time alarms that are in groups
+        for i in groups.indices {
+            if firedAlarms[groups[i].id.uuidString] != nil {
+                groups[i].isFired = true
+            }
         }
 
         alarmGroups = groups.sorted { lhs, rhs in
@@ -761,6 +792,10 @@ final class AlarmService: ObservableObject {
         var labels = loadLabels()
         labels[id.uuidString] = label
         UserDefaults.standard.set(labels, forKey: labelsStoreKey)
+
+        // ✅ Also save to App Group so StopAlarmIntent can read labels
+        let appGroup = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
+        appGroup?.set(labels, forKey: labelsStoreKey)
     }
 
     private func removeLabel(for id: UUID) {
@@ -794,9 +829,70 @@ final class AlarmService: ObservableObject {
             UserDefaults.standard.set(json, forKey: historyKey)
         }
     }
+    // ✅ Save fired one-time alarm so it shows as disabled in list
+    func saveFiredAlarm(alarmID: String, label: String, firedAt: Date) {
+        var fired = loadFiredAlarms()
+        fired[alarmID] = [
+            "label": label,
+            "firedAt": firedAt.timeIntervalSince1970
+        ]
+        if let data = try? JSONSerialization.data(withJSONObject: fired),
+           let json = String(data: data, encoding: .utf8) {
+            UserDefaults.standard.set(json, forKey: "FiredOneTimeAlarms")
+        }
+    }
+
+    func loadFiredAlarms() -> [String: [String: Any]] {
+        var fired: [String: [String: Any]] = [:]
+        
+        // ✅ Load manually saved fired alarms
+        if let json = UserDefaults.standard.string(forKey: "FiredOneTimeAlarms"),
+           let data = json.data(using: .utf8),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: [String: Any]] {
+            fired = dict
+        }
+
+        // ✅ Auto-detect fired one-time alarms from AlarmKit
+        let activeAlarmIDs = Set((try? AlarmManager.shared.alarms)?.map { $0.id.uuidString } ?? [])
+        let groupIDs = UserDefaults.standard.dictionary(forKey: groupIDsKey) as? [String: [String]] ?? [:]
+        let repeatDaysDict = UserDefaults.standard.dictionary(forKey: groupRepeatDaysKey) as? [String: [Int]] ?? [:]
+        let labels = loadLabels()
+
+        for (groupIDStr, alarmIDStrs) in groupIDs {
+            guard repeatDaysDict[groupIDStr]?.isEmpty ?? true else { continue }
+            guard fired[groupIDStr] == nil else { continue }
+            guard !alarmIDStrs.isEmpty else { continue }
+            // ✅ Skip if any alarm ID is in disabled list (not fired, just disabled)
+            let disabledIDs = loadDisabledIDs()
+            let allDisabled = alarmIDStrs.allSatisfy { disabledIDs.contains($0) }
+            guard alarmIDStrs.allSatisfy({ !activeAlarmIDs.contains($0) }) else { continue }
+            guard !allDisabled else { continue }
+            let label = labels[groupIDStr] ?? "Alarm"
+            fired[groupIDStr] = ["label": label, "firedAt": Date().timeIntervalSince1970]
+            // ✅ Save it so it persists
+            if let data = try? JSONSerialization.data(withJSONObject: fired),
+               let json = String(data: data, encoding: .utf8) {
+                UserDefaults.standard.set(json, forKey: "FiredOneTimeAlarms")
+            }
+        }
+
+        return fired
+    }
+
+    func removeFiredAlarm(alarmID: String) {
+        var fired = loadFiredAlarms()
+        fired.removeValue(forKey: alarmID)
+        if let data = try? JSONSerialization.data(withJSONObject: fired),
+           let json = String(data: data, encoding: .utf8) {
+            UserDefaults.standard.set(json, forKey: "FiredOneTimeAlarms")
+        }
+    }
 
     func loadHistory() -> [[String: Any]] {
-        guard let json = UserDefaults.standard.string(forKey: historyKey),
+        let appGroup = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
+        let json = appGroup?.string(forKey: "AlarmHistory")
+                   ?? UserDefaults.standard.string(forKey: "AlarmHistory")
+        guard let json,
               let data = json.data(using: .utf8),
               let list = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]
         else { return [] }

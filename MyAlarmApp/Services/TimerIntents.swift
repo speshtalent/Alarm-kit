@@ -2,6 +2,7 @@ import AppIntents
 import AlarmKit
 import SwiftUI
 import ActivityKit
+import WidgetKit
 
 struct StopAlarmIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Stop"
@@ -15,21 +16,79 @@ struct StopAlarmIntent: LiveActivityIntent {
     func perform() async throws -> some IntentResult {
         guard let id = UUID(uuidString: alarmID) else { return .result() }
         try AlarmManager.shared.cancel(id: id)
-        UserDefaults.standard.set(alarmID, forKey: "lastFiredAlarmID")
-        UserDefaults.standard.set(true, forKey: "pendingVoicePlay")
-        NotificationCenter.default.post(name: NSNotification.Name("AlarmDidStop"), object: nil)
-        let savedLabels = UserDefaults.standard.dictionary(forKey: "AlarmLabelsByID") as? [String: String] ?? [:]
+
+        // ✅ Use App Group — shared between extension and main app
+        let appGroup = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
+
+        appGroup?.set(alarmID, forKey: "lastFiredAlarmID")
+        appGroup?.set(true, forKey: "pendingVoicePlay")
+
+        // ✅ Read labels from App Group
+        let savedLabels = appGroup?.dictionary(forKey: "AlarmLabelsByID") as? [String: String] ?? [:]
         let alarmLabel = savedLabels[alarmID] ?? "Alarm"
-        var history = (UserDefaults.standard.string(forKey: "AlarmHistory")
-            .flatMap { $0.data(using: .utf8) }
-            .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [[String: Any]] }) ?? []
-        let entry: [String: Any] = ["alarmID": alarmID, "label": alarmLabel, "firedAt": Date().timeIntervalSince1970]
+
+        // ✅ Save history to App Group
+        var history: [[String: Any]] = []
+        if let json = appGroup?.string(forKey: "AlarmHistory"),
+           let data = json.data(using: .utf8),
+           let list = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+            history = list
+        }
+        let entry: [String: Any] = [
+            "alarmID": alarmID,
+            "label": alarmLabel,
+            "firedAt": Date().timeIntervalSince1970
+        ]
         history.insert(entry, at: 0)
         if history.count > 50 { history = Array(history.prefix(50)) }
         if let data = try? JSONSerialization.data(withJSONObject: history),
            let json = String(data: data, encoding: .utf8) {
-            UserDefaults.standard.set(json, forKey: "AlarmHistory")
+            appGroup?.set(json, forKey: "AlarmHistory")
         }
+
+        // ✅ Save fired one-time alarm to UserDefaults
+        let repeatDaysDict = UserDefaults.standard.dictionary(forKey: "GroupRepeatDays") as? [String: [Int]] ?? [:]
+        let alarmToGroup = UserDefaults.standard.dictionary(forKey: "AlarmToGroupID") as? [String: String] ?? [:]
+        let groupIDStr = alarmToGroup[alarmID]
+        let repeatDays = groupIDStr.flatMap { repeatDaysDict[$0] } ?? []
+
+        if repeatDays.isEmpty {
+            var firedAlarms = (appGroup?.string(forKey: "FiredOneTimeAlarms")
+                .flatMap { $0.data(using: .utf8) }
+                .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: [String: Any]] }) ?? [:]
+            firedAlarms[alarmID] = [
+                "label": alarmLabel,
+                "firedAt": Date().timeIntervalSince1970
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: firedAlarms),
+               let json = String(data: data, encoding: .utf8) {
+                appGroup?.set(json, forKey: "FiredOneTimeAlarms")
+            }
+        }
+
+        // ✅ Remove fired alarm from upcoming list
+        if let json = appGroup?.string(forKey: "widgetUpcomingAlarms"),
+           let data = json.data(using: .utf8),
+           var list = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+            list.removeAll { item in
+                guard let ts = item["date"] as? TimeInterval else { return false }
+                let date = Date(timeIntervalSince1970: ts)
+                return date <= Date()
+            }
+            if let newData = try? JSONSerialization.data(withJSONObject: list),
+               let newJson = String(data: newData, encoding: .utf8) {
+                appGroup?.set(newJson, forKey: "widgetUpcomingAlarms")
+            }
+        }
+
+        // ✅ Clear next alarm so widget refreshes to next one
+        appGroup?.removeObject(forKey: "widgetNextAlarmDate")
+        appGroup?.removeObject(forKey: "widgetNextAlarmLabel")
+        appGroup?.synchronize()
+
+        // ✅ Reload widget
+        WidgetCenter.shared.reloadAllTimelines()
+
         return .result()
     }
 }
