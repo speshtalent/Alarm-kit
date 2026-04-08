@@ -207,7 +207,7 @@ struct MediumView: View {
                         Image(systemName: "alarm.fill")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(orange)
-                        Text("FUTURE ALARM")
+                        Text("NEXT ALARM")
                             .font(.system(size: 9, weight: .heavy, design: .rounded))
                             .foregroundStyle(orange)
                             .tracking(1.2)

@@ -9,14 +9,41 @@ import WidgetKit
 @MainActor
 final class AlarmService: ObservableObject {
 
+    struct CloudAlarm: Codable {
+        let id: String
+        let label: String
+        let fireDate: TimeInterval
+        let repeatDays: [Int]
+        let isEnabled: Bool
+    }
+
     struct AlarmListItem: Identifiable {
-        let alarm: Alarm
+        let alarm: Alarm?
+        let storedID: UUID
         let label: String
         var isEnabled: Bool
+        let storedFireDate: Date?
 
-        var id: UUID { alarm.id }
+        init(alarm: Alarm, label: String, isEnabled: Bool) {
+            self.alarm = alarm
+            self.storedID = alarm.id
+            self.label = label
+            self.isEnabled = isEnabled
+            self.storedFireDate = nil
+        }
+
+        init(id: UUID, label: String, isEnabled: Bool, fireDate: Date?) {
+            self.alarm = nil
+            self.storedID = id
+            self.label = label
+            self.isEnabled = isEnabled
+            self.storedFireDate = fireDate
+        }
+
+        var id: UUID { alarm?.id ?? storedID }
         var fireDate: Date? {
-            guard let schedule = alarm.schedule else { return nil }
+            guard let alarm else { return storedFireDate }
+            guard let schedule = alarm.schedule else { return storedFireDate }
             guard case let .fixed(date) = schedule else { return nil }
             return date
         }
@@ -64,7 +91,11 @@ final class AlarmService: ObservableObject {
     private let groupIDsKey        = "AlarmGroupIDs"
     private let alarmToGroupKey    = "AlarmToGroupID"
     private let groupRepeatDaysKey = "GroupRepeatDays"
-    private let iCloudAlarmsKey    = "iCloudSavedAlarms"
+    private let iCloudAlarmsKey    = "iCloudAlarmBackup"
+    private let hasLaunchedBeforeKey = "hasLaunchedBefore"
+    private let pendingCloudRestoreKey = "PendingCloudAlarmRestore"
+
+    private var backupWorkItem: DispatchWorkItem?
 
     private init() {}
 
@@ -126,6 +157,7 @@ final class AlarmService: ObservableObject {
             sound: .named(sound)
         )
         let alarm = try await AlarmManager.shared.schedule(id: id, configuration: configuration)
+        saveStoredFireDate(scheduleDate, for: id)
         saveLabel(label, for: id)
         upsertAlarmInList(alarm, label: label)
         return id
@@ -149,14 +181,15 @@ final class AlarmService: ObservableObject {
             }
             removeLabel(for: alarmID)
             removeFromDisabled(id: alarmID)
-            alarms.removeAll { $0.alarm.id == alarmID }
+            removeStoredFireDate(for: alarmID)
+            alarms.removeAll { $0.id == alarmID }
         }
 
         removeFiredAlarm(alarmID: groupID.uuidString)
         removeGroup(groupID: groupID)
         rebuildGroups()
         saveNextAlarmForWidget()
-        syncToiCloud()
+        backupToiCloudDebounced()
     }
 
     func toggleAlarm(id: UUID) {
@@ -170,26 +203,31 @@ final class AlarmService: ObservableObject {
                     UserDefaults.standard.set(fireDate.timeIntervalSince1970, forKey: "disabledAlarmDate_\(id.uuidString)")
                 }
                 try AlarmManager.shared.cancel(id: id)
-                alarms[index] = AlarmListItem(alarm: item.alarm, label: item.label, isEnabled: false)
+                alarms[index] = AlarmListItem(id: item.id, label: item.label, isEnabled: false, fireDate: item.fireDate)
                 saveDisabledState(id: id, disabled: true)
                 print("⏸ Alarm disabled: \(id)")
             } catch {
                 print("Disable alarm error:", error)
             }
             saveNextAlarmForWidget()
+            backupToiCloudDebounced()
         } else {
             // ✅ Try to get fireDate from saved UserDefaults if nil
-            let fireDate: Date
+            let storedFireDate: Date
             print("🔍 item.fireDate: \(String(describing: item.fireDate))")
             print("🔍 savedInterval: \(String(describing: UserDefaults.standard.object(forKey: "disabledAlarmDate_\(id.uuidString)")))")
             if let fd = item.fireDate {
-                fireDate = fd
+                storedFireDate = fd
             } else if let savedInterval = UserDefaults.standard.object(forKey: "disabledAlarmDate_\(id.uuidString)") as? TimeInterval {
-                fireDate = Date(timeIntervalSince1970: savedInterval)
+                storedFireDate = Date(timeIntervalSince1970: savedInterval)
             } else {
                 print("⚠️ No fire date found")
                 return
             }
+
+            let groupID = getGroupID(for: id) ?? id
+            let repeatDays = getRepeatDays(forGroup: groupID)
+            let fireDate = repeatDays.isEmpty ? nextEnabledOneTimeDate(from: storedFireDate) : storedFireDate
             Task {
                 do {
                     let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
@@ -197,13 +235,13 @@ final class AlarmService: ObservableObject {
                     let voicePath = libraryURL.appendingPathComponent("Sounds/\(voiceFileName)").path
                     let sound = FileManager.default.fileExists(atPath: voicePath) ? voiceFileName : "nokia.caf"
                     try await scheduleAlarmWithID(id: id, date: fireDate, label: item.label, sound: sound)
-                    alarms[index] = AlarmListItem(alarm: item.alarm, label: item.label, isEnabled: true)
                     saveDisabledState(id: id, disabled: false)
                     print("▶️ Alarm re-enabled with sound: \(sound)")
                 } catch {
                     print("Re-enable alarm error:", error)
                 }
                 saveNextAlarmForWidget()
+                backupToiCloudDebounced()
             }
         }
     }
@@ -221,6 +259,8 @@ final class AlarmService: ObservableObject {
             let all = try AlarmManager.shared.alarms
             let labels = loadLabels()
             let disabled = loadDisabledIDs()
+            let groupIDs = loadGroupIDs()
+            let repeatDaysDict = loadGroupRepeatDays()
 
             // ✅ Active alarms from AlarmKit
             var loadedAlarms = all
@@ -235,16 +275,26 @@ final class AlarmService: ObservableObject {
 
             // ✅ Add disabled alarms that are not in AlarmKit anymore
             let activeIDs = Set(loadedAlarms.map { $0.id.uuidString })
-            for disabledID in disabled {
-                if !activeIDs.contains(disabledID),
-                   let savedInterval = UserDefaults.standard.object(forKey: "disabledAlarmDate_\(disabledID)") as? TimeInterval,
-                   let _ = UUID(uuidString: disabledID) {
+            var localOnlyIDs = disabled
+            for (groupID, alarmIDs) in groupIDs {
+                let repeatDays = repeatDaysDict[groupID] ?? []
+                guard repeatDays.isEmpty, alarmIDs.count == 1, let alarmID = alarmIDs.first else { continue }
+                localOnlyIDs.insert(alarmID)
+            }
+
+            for localID in localOnlyIDs {
+                if !activeIDs.contains(localID),
+                   let savedInterval = UserDefaults.standard.object(forKey: "disabledAlarmDate_\(localID)") as? TimeInterval,
+                   let uuid = UUID(uuidString: localID) {
                     let fireDate = Date(timeIntervalSince1970: savedInterval)
-                    guard fireDate > Date() else { continue }
-                    let label = labels[disabledID] ?? "Alarm"
-                    if let existingAlarm = alarms.first(where: { $0.id.uuidString == disabledID }) {
-                        loadedAlarms.append(AlarmListItem(alarm: existingAlarm.alarm, label: label, isEnabled: false))
+                    let groupID = getGroupID(for: uuid) ?? uuid
+                    let label = labels[localID] ?? labels[groupID.uuidString] ?? "Alarm"
+
+                    if !disabled.contains(localID) {
+                        saveDisabledState(id: uuid, disabled: true)
                     }
+
+                    loadedAlarms.append(AlarmListItem(id: uuid, label: label, isEnabled: false, fireDate: fireDate))
                 }
             }
 
@@ -338,7 +388,7 @@ final class AlarmService: ObservableObject {
                 saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: Set([100]))
                 rebuildGroups()
                 saveNextAlarmForWidget()
-                syncToiCloud()
+                backupToiCloudDebounced()
                 return id
             }
 
@@ -375,7 +425,7 @@ final class AlarmService: ObservableObject {
                 saveGroup(groupID: groupID, alarmIDs: scheduledIDs, label: title, repeatDays: repeatDays)
                 rebuildGroups()
                 saveNextAlarmForWidget()
-                syncToiCloud()
+                backupToiCloudDebounced()
                 return scheduledIDs.first
             }
 
@@ -385,7 +435,7 @@ final class AlarmService: ObservableObject {
                 saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: Set([200]))
                 rebuildGroups()
                 saveNextAlarmForWidget()
-                syncToiCloud()
+                backupToiCloudDebounced()
                 return id
             }
 
@@ -424,7 +474,7 @@ final class AlarmService: ObservableObject {
                 saveGroup(groupID: groupID, alarmIDs: scheduledIDs, label: title, repeatDays: repeatDays)
                 rebuildGroups()
                 saveNextAlarmForWidget()
-                syncToiCloud()
+                backupToiCloudDebounced()
                 return scheduledIDs.first
             }
 
@@ -433,7 +483,7 @@ final class AlarmService: ObservableObject {
                 saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: [])
                 rebuildGroups()
                 saveNextAlarmForWidget()
-                syncToiCloud()
+                backupToiCloudDebounced()
                 return id
             } else {
                 let calendar = Calendar.current
@@ -463,7 +513,7 @@ final class AlarmService: ObservableObject {
                 saveGroup(groupID: groupID, alarmIDs: scheduledIDs, label: title, repeatDays: repeatDays)
                 rebuildGroups()
                 saveNextAlarmForWidget()
-                syncToiCloud()
+                backupToiCloudDebounced()
                 return scheduledIDs.first
             }
         } catch {
@@ -491,6 +541,7 @@ final class AlarmService: ObservableObject {
             sound: .named(sound)
         )
         let alarm = try await AlarmManager.shared.schedule(id: id, configuration: configuration)
+        saveStoredFireDate(scheduleDate, for: id)
         saveLabel(label, for: id)
         upsertAlarmInList(alarm, label: label)
         return id
@@ -568,96 +619,181 @@ final class AlarmService: ObservableObject {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    // MARK: - iCloud Sync
-    func syncToiCloud() {
-        let store = NSUbiquitousKeyValueStore.default
-        var iCloudData: [[String: Any]] = []
+    // MARK: - iCloud Backup
+    func backupToiCloudDebounced() {
+        backupWorkItem?.cancel()
 
-        for group in alarmGroups {
-            guard let fireDate = group.fireDate else { continue }
-            var entry: [String: Any] = [
-                "groupID":    group.id.uuidString,
-                "label":      group.label,
-                "fireDate":   fireDate.timeIntervalSince1970,
-                "repeatDays": Array(group.repeatDays),
-                "isEnabled":  group.isEnabled,
-                "alarmIDs":   group.alarmIDs.map { $0.uuidString },
-                "sound":      "nokia.caf"
-            ]
-            if let firstID = group.alarmIDs.first {
-                let labels = loadLabels()
-                entry["label"] = labels[firstID.uuidString] ?? group.label
-            }
-            iCloudData.append(entry)
+        let work = DispatchWorkItem { [weak self] in
+            self?.backupToiCloud()
         }
 
-        if let jsonData = try? JSONSerialization.data(withJSONObject: iCloudData),
-           let jsonString = String(data: jsonData, encoding: .utf8) {
-            store.set(jsonString, forKey: iCloudAlarmsKey)
+        backupWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1, execute: work)
+    }
+
+    func backupToiCloud() {
+        let store = NSUbiquitousKeyValueStore.default
+        let cloudAlarms = alarmGroups.compactMap { group -> CloudAlarm? in
+            guard let fireDate = group.fireDate else { return nil }
+            return CloudAlarm(
+                id: group.id.uuidString,
+                label: group.label,
+                fireDate: fireDate.timeIntervalSince1970,
+                repeatDays: Array(group.repeatDays).sorted(),
+                isEnabled: group.isEnabled
+            )
+        }
+
+        do {
+            let data = try JSONEncoder().encode(cloudAlarms)
+            store.set(data, forKey: iCloudAlarmsKey)
             store.synchronize()
-            print("✅ iCloud sync: \(iCloudData.count) alarm groups saved")
+            print("✅ iCloud backup success: \(cloudAlarms.count) alarms saved")
+        } catch {
+            print("⚠️ iCloud backup failed: \(error)")
         }
     }
 
-    func restoreFromiCloud() async -> Bool {
-        let store = NSUbiquitousKeyValueStore.default
-        store.synchronize()
+    func hasPendingCloudRestore() -> Bool {
+        UserDefaults.standard.data(forKey: pendingCloudRestoreKey) != nil
+    }
 
-        guard let jsonString = store.string(forKey: iCloudAlarmsKey),
-              let jsonData = jsonString.data(using: .utf8),
-              let iCloudData = try? JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]],
-              !iCloudData.isEmpty else {
-            print("ℹ️ No iCloud alarm data found")
+    func pendingCloudRestoreRequiresAuthorization() -> Bool {
+        hasPendingCloudRestore() && AlarmManager.shared.authorizationState != .authorized
+    }
+
+    @discardableResult
+    func restoreFromiCloudIfNeeded() async -> Bool {
+        if !UserDefaults.standard.bool(forKey: hasLaunchedBeforeKey) {
+            let store = NSUbiquitousKeyValueStore.default
+            store.synchronize()
+
+            guard let data = store.data(forKey: iCloudAlarmsKey) else {
+                UserDefaults.standard.set(true, forKey: hasLaunchedBeforeKey)
+                print("ℹ️ No iCloud alarm backup found")
+                return false
+            }
+
+            let cloudAlarms: [CloudAlarm]
+            do {
+                cloudAlarms = try JSONDecoder().decode([CloudAlarm].self, from: data)
+            } catch {
+                UserDefaults.standard.set(true, forKey: hasLaunchedBeforeKey)
+                print("⚠️ Invalid iCloud alarm backup; skipping restore")
+                return false
+            }
+
+            guard !cloudAlarms.isEmpty else {
+                UserDefaults.standard.set(true, forKey: hasLaunchedBeforeKey)
+                print("ℹ️ iCloud alarm backup is empty")
+                return false
+            }
+
+            savePendingCloudRestore(cloudAlarms)
+            UserDefaults.standard.set(true, forKey: hasLaunchedBeforeKey)
+            print("☁️ Cached \(cloudAlarms.count) alarms from iCloud backup for local restore")
+        }
+
+        return await restorePendingCloudBackupIfPossible()
+    }
+
+    @discardableResult
+    func restorePendingCloudBackupIfPossible() async -> Bool {
+        guard let cloudAlarms = loadPendingCloudRestore() else {
             return false
         }
 
-        let existingAlarms = try? AlarmManager.shared.alarms
-        if let existing = existingAlarms, !existing.isEmpty {
-            print("ℹ️ Alarms already exist — skipping iCloud restore")
+        guard AlarmManager.shared.authorizationState == .authorized else {
+            print("⚠️ iCloud backup fetched, but alarm restore is waiting for AlarmKit authorization")
             return false
         }
 
-        print("🔄 Restoring \(iCloudData.count) alarm groups from iCloud...")
+        print("🔄 Restoring \(cloudAlarms.count) alarms from cached iCloud backup")
         var restoredCount = 0
 
-        for entry in iCloudData {
-            guard
-                let label         = entry["label"] as? String,
-                let fireInterval  = entry["fireDate"] as? TimeInterval,
-                let repeatDaysArr = entry["repeatDays"] as? [Int],
-                let isEnabled     = entry["isEnabled"] as? Bool
-            else { continue }
-
-            let fireDate   = Date(timeIntervalSince1970: fireInterval)
-            let repeatDays = Set(repeatDaysArr)
-            let sound      = entry["sound"] as? String ?? "nokia.caf"
-            let isVoice    = sound.hasPrefix("alarm_voice_")
-            let finalSound = isVoice ? "nokia.caf" : sound
+        for cloudAlarm in cloudAlarms {
+            let fireDate = Date(timeIntervalSince1970: cloudAlarm.fireDate)
+            let repeatDays = Set(cloudAlarm.repeatDays)
 
             if fireDate <= Date() && repeatDays.isEmpty {
-                print("⏭ Skipping past alarm: \(label)")
+                restorePastAlarmAsDisabled(cloudAlarm)
+                restoredCount += 1
+                print("⏭ Restored past one-time alarm as disabled: \(cloudAlarm.label)")
                 continue
             }
 
-            _ = await scheduleFutureAlarm(
+            guard let restoredAlarmID = await scheduleFutureAlarm(
                 date: fireDate,
-                title: label,
-                sound: finalSound,
+                title: cloudAlarm.label,
+                sound: "nokia.caf",
                 repeatDays: repeatDays
-            )
+            ) else {
+                continue
+            }
 
-            if !isEnabled {
-                if let lastAlarm = alarms.last {
-                    toggleAlarm(id: lastAlarm.id)
+            if !cloudAlarm.isEnabled {
+                let groupID = getGroupID(for: restoredAlarmID) ?? restoredAlarmID
+                let alarmIDs = getAlarmIDs(forGroup: groupID)
+                let idsToDisable = alarmIDs.isEmpty ? [restoredAlarmID] : alarmIDs
+
+                for alarmID in idsToDisable {
+                    if alarms.first(where: { $0.id == alarmID })?.isEnabled == true {
+                        toggleAlarm(id: alarmID)
+                    }
                 }
             }
 
             restoredCount += 1
-            print("✅ Restored alarm: \(label)")
         }
 
+        clearPendingCloudRestore()
         print("✅ iCloud restore complete: \(restoredCount) alarms restored")
         return restoredCount > 0
+    }
+
+    private func restorePastAlarmAsDisabled(_ cloudAlarm: CloudAlarm) {
+        guard let alarmID = UUID(uuidString: cloudAlarm.id) else { return }
+
+        let fireDate = Date(timeIntervalSince1970: cloudAlarm.fireDate)
+        saveStoredFireDate(fireDate, for: alarmID)
+        saveLabel(cloudAlarm.label, for: alarmID)
+        saveGroup(groupID: alarmID, alarmIDs: [alarmID], label: cloudAlarm.label, repeatDays: Set(cloudAlarm.repeatDays))
+        saveDisabledState(id: alarmID, disabled: true)
+        removeFiredAlarm(alarmID: alarmID.uuidString)
+        alarms.removeAll { $0.id == alarmID }
+        alarms.append(AlarmListItem(id: alarmID, label: cloudAlarm.label, isEnabled: false, fireDate: fireDate))
+        alarms.sort { lhs, rhs in
+            (lhs.fireDate ?? .distantFuture) < (rhs.fireDate ?? .distantFuture)
+        }
+    }
+
+    private func loadPendingCloudRestore() -> [CloudAlarm]? {
+        guard let data = UserDefaults.standard.data(forKey: pendingCloudRestoreKey) else {
+            return nil
+        }
+
+        let cloudAlarms: [CloudAlarm]
+        do {
+            cloudAlarms = try JSONDecoder().decode([CloudAlarm].self, from: data)
+        } catch {
+            clearPendingCloudRestore()
+            print("⚠️ Pending iCloud restore data was invalid and has been cleared")
+            return nil
+        }
+        return cloudAlarms
+    }
+
+    private func savePendingCloudRestore(_ cloudAlarms: [CloudAlarm]) {
+        do {
+            let data = try JSONEncoder().encode(cloudAlarms)
+            UserDefaults.standard.set(data, forKey: pendingCloudRestoreKey)
+        } catch {
+            print("⚠️ Failed to cache iCloud alarm restore data: \(error)")
+        }
+    }
+
+    private func clearPendingCloudRestore() {
+        UserDefaults.standard.removeObject(forKey: pendingCloudRestoreKey)
     }
 
     // MARK: - Group persistence
@@ -739,6 +875,19 @@ final class AlarmService: ObservableObject {
         return next
     }
 
+    private func nextEnabledOneTimeDate(from storedDate: Date) -> Date {
+        guard storedDate <= Date() else { return storedDate }
+
+        let calendar = Calendar.current
+        let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: storedDate)
+
+        return calendar.nextDate(
+            after: Date(),
+            matching: timeComponents,
+            matchingPolicy: .nextTimePreservingSmallerComponents
+        ) ?? Date().addingTimeInterval(60)
+    }
+
     private func loadDisabledIDs() -> Set<String> {
         Set(UserDefaults.standard.stringArray(forKey: disabledAlarmsKey) ?? [])
     }
@@ -753,6 +902,14 @@ final class AlarmService: ObservableObject {
         var ids = loadDisabledIDs()
         ids.remove(id.uuidString)
         UserDefaults.standard.set(Array(ids), forKey: disabledAlarmsKey)
+    }
+
+    private func saveStoredFireDate(_ date: Date, for id: UUID) {
+        UserDefaults.standard.set(date.timeIntervalSince1970, forKey: "disabledAlarmDate_\(id.uuidString)")
+    }
+
+    private func removeStoredFireDate(for id: UUID) {
+        UserDefaults.standard.removeObject(forKey: "disabledAlarmDate_\(id.uuidString)")
     }
 
     private func loadLabels() -> [String: String] {
@@ -776,7 +933,7 @@ final class AlarmService: ObservableObject {
     }
 
     private func upsertAlarmInList(_ alarm: Alarm, label: String) {
-        alarms.removeAll { $0.alarm.id == alarm.id }
+        alarms.removeAll { $0.id == alarm.id }
         alarms.append(AlarmListItem(alarm: alarm, label: label, isEnabled: true))
         alarms.sort { lhs, rhs in
             (lhs.fireDate ?? .distantFuture) < (rhs.fireDate ?? .distantFuture)

@@ -10,6 +10,7 @@ struct MyAlarmAppApp: App {
     @State private var quickActionMode: String? = nil
     @State private var showFeedbackAlert = false
     @State private var showVoiceRestoredAlert = false
+    @State private var showAlarmRestorePermissionAlert = false
 
     init() {
         Task {
@@ -18,7 +19,6 @@ struct MyAlarmAppApp: App {
         }
         AlarmAppShortcutsProvider.updateAppShortcutParameters()
         setupAlarmStopListener()
-        setupiCloudListener()
     }
 
     private func setupAlarmStopListener() {
@@ -33,22 +33,6 @@ struct MyAlarmAppApp: App {
                 let count = UserDefaults.standard.integer(forKey: "alarmFiredCount") + 1
                 UserDefaults.standard.set(count, forKey: "alarmFiredCount")
                 UserDefaults.standard.set(true, forKey: "alarmFiredSinceLastReview")
-            }
-        }
-    }
-
-    private func setupiCloudListener() {
-        NSUbiquitousKeyValueStore.default.synchronize()
-        NotificationCenter.default.addObserver(
-            forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-            object: NSUbiquitousKeyValueStore.default,
-            queue: .main
-        ) { _ in
-            Task { @MainActor in
-                let restored = await AlarmService.shared.restoreFromiCloud()
-                if restored {
-                    AlarmService.shared.loadAlarms()
-                }
             }
         }
     }
@@ -127,12 +111,14 @@ struct MyAlarmAppApp: App {
 
     private func restoreFromiCloudIfNeeded() {
         Task { @MainActor in
-            let restored = await AlarmService.shared.restoreFromiCloud()
+            let restored = await AlarmService.shared.restoreFromiCloudIfNeeded()
             if restored {
                 AlarmService.shared.loadAlarms()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     showVoiceRestoredAlert = true
                 }
+            } else if AlarmService.shared.pendingCloudRestoreRequiresAuthorization() {
+                showAlarmRestorePermissionAlert = true
             }
         }
     }
@@ -150,6 +136,12 @@ struct MyAlarmAppApp: App {
                     Button("OK", role: .cancel) { }
                 } message: {
                     Text("Your alarms have been restored from iCloud. Note: Voice recordings could not be restored as they are stored locally on your device.")
+                }
+
+                .alert("Allow Alarm Access", isPresented: $showAlarmRestorePermissionAlert) {
+                    Button("OK", role: .cancel) { }
+                } message: {
+                    Text("Your iCloud alarm backup was downloaded to this device, but alarms cannot be recreated until Alarm access is available.")
                 }
 
                 .alert("Enjoying Date Alarm? 🔔", isPresented: $showFeedbackAlert) {
@@ -172,6 +164,13 @@ struct MyAlarmAppApp: App {
                             UserDefaults.standard.removeObject(forKey: "quickAction")
                             try? await Task.sleep(nanoseconds: 300_000_000)
                             quickActionMode = action
+                        }
+                        let restored = await AlarmService.shared.restorePendingCloudBackupIfPossible()
+                        if restored {
+                            AlarmService.shared.loadAlarms()
+                            showVoiceRestoredAlert = true
+                        } else if AlarmService.shared.pendingCloudRestoreRequiresAuthorization() {
+                            showAlarmRestorePermissionAlert = true
                         }
                         try? await Task.sleep(nanoseconds: 200_000_000)
                         requestReviewIfNeeded()

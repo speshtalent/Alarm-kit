@@ -403,7 +403,7 @@ private struct Screen4: View {
                                         .fill(Color.orange)
                                         .frame(width: 20, height: 20)
                                         .overlay(Image(systemName: "alarm").font(.system(size: 10)).foregroundStyle(.black))
-                                    Text("FUTURE ALARM")
+                                    Text("DATE ALARM")
                                         .font(.system(size: 9, weight: .semibold, design: .rounded))
                                         .foregroundStyle(Color.white.opacity(0.45))
                                         .tracking(1)
