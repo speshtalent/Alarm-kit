@@ -385,29 +385,34 @@ struct AlarmAppShortcutsProvider: AppShortcutsProvider {
                 "Schedule a \(.applicationName)",
                 "Plan a \(.applicationName)"
             ],
-            shortTitle: "Date Alarm",
+            shortTitle: "Set Alarm",
             systemImageName: "alarm"
         )
         AppShortcut(
-            intent: SetAlarmIntent(),
+            intent: FiveMinTimerIntent(),
             phrases: [
-                "Set a labeled \(.applicationName)",
-                "Create a labeled \(.applicationName)",
-                "Set a task \(.applicationName)",
-                "Create a named \(.applicationName)"
+                "Start a 5 minute \(.applicationName) timer",
+                "Set a 5 min \(.applicationName) timer"
             ],
-            shortTitle: "Labeled Date Alarm",
-            systemImageName: "calendar.badge.clock"
+            shortTitle: "5 Min Timer",
+            systemImageName: "timer"
         )
         AppShortcut(
-            intent: SetVoiceAlarmIntent(),
+            intent: StartTimerIntent(),
             phrases: [
-                "Create a voice \(.applicationName)",
-                "Record a custom \(.applicationName)",
-                "Schedule a voice \(.applicationName)"
+                "Start a \(.applicationName) timer",
+                "Set a \(.applicationName) timer"
             ],
-            shortTitle: "Voice Date Alarm",
-            systemImageName: "mic.badge.plus"
+            shortTitle: "Start Timer",
+            systemImageName: "timer.circle"
+        )
+        AppShortcut(
+            intent: OpenDateAlarmIntent(),
+            phrases: [
+                "Open \(.applicationName)"
+            ],
+            shortTitle: "Open App",
+            systemImageName: "arrow.up.forward.app"
         )
     }
 }
