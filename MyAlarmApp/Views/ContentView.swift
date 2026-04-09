@@ -1,5 +1,6 @@
 import SwiftUI
 import AlarmKit
+import CoreSpotlight
 
 struct ContentView: View {
 
@@ -292,10 +293,21 @@ struct ContentView: View {
             alarmService.loadAlarms()
             timerService.loadTimers()
             consumePendingIntentAlarmFlowIfNeeded()
+            SpotlightService.shared.indexAlarms(alarmService.alarmGroups)
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             consumePendingIntentAlarmFlowIfNeeded()
-            alarmService.loadAlarms() // ✅ refresh alarms when app becomes active
+            alarmService.loadAlarms()
+        }
+        .onContinueUserActivity(CSSearchableItemActionType) { activity in
+            if let id = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String {
+                let alarmID = id.replacingOccurrences(of: "alarm_", with: "")
+                if let uuid = UUID(uuidString: alarmID),
+                   let group = alarmService.alarmGroups.first(where: { $0.id == uuid }) {
+                    selectedTab = 0
+                    groupToEdit = group
+                }
+            }
         }
     }
 
@@ -861,6 +873,13 @@ struct AlarmGroupRow: View {
         .background(Color("CardBackground"))
         .clipShape(RoundedRectangle(cornerRadius: 18))
         .opacity(group.isFired ? 0.7 : (group.isEnabled ? 1.0 : 0.6))
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: group.isEnabled)
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.orange.opacity(group.isFired ? 0.6 : 0), lineWidth: 2)
+                .scaleEffect(group.isFired ? 1.02 : 1.0)
+                .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: group.isFired)
+        )
     }
 }
 // MARK: - Timer Row
@@ -939,7 +958,7 @@ struct ScheduledView: View {
                     .padding(.top, 80)
                 } else {
                     List {
-                        ForEach(alarmService.alarmGroups) { group in
+                        ForEach(Array(alarmService.alarmGroups.enumerated()), id: \.element.id) { index, group in
                             VStack(spacing: 0) {
                                 ScheduledRowView(group: group, use24Hour: use24HourFormat)
                                     .onTapGesture {
@@ -956,6 +975,11 @@ struct ScheduledView: View {
                             .listRowBackground(Color("AppBackground"))
                             .listRowSeparator(.hidden)
                             .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .bottom).combined(with: .opacity),
+                                removal: .opacity
+                            ))
+                            .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(Double(index) * 0.08), value: alarmService.alarmGroups.count)
                         }
                     }
                     .listStyle(.plain)
