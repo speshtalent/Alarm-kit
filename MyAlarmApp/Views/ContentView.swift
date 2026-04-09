@@ -348,6 +348,7 @@ struct SettingsView: View {
     @AppStorage("appColorScheme") private var appColorScheme: String = "system"
     @AppStorage("use24HourFormat") private var use24HourFormat: Bool = false
     @AppStorage("selectedAppIcon") private var selectedAppIcon: String = "Classic"
+    @State private var showRemoveCalendarAlert = false
     @State private var pendingIcon: String = "Classic"
     @State private var showFeatureRequest = false
     @Environment(\.colorScheme) private var systemColorScheme
@@ -617,6 +618,23 @@ struct SettingsView: View {
                             UIApplication.shared.open(url)
                         }
                     }
+                    
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16).fill(cardColor)
+                        HStack(spacing: 8) {
+                            Image(systemName: "calendar.badge.minus")
+                                .foregroundStyle(.red)
+                            Text("Remove All Calendar Events")
+                                .font(.system(size: 15, weight: .medium, design: .rounded))
+                                .foregroundStyle(.red)
+                            Spacer()
+                        }
+                        .padding(16)
+                    }
+                    .padding(.horizontal, 20)
+                    .onTapGesture {
+                        showRemoveCalendarAlert = true
+                    }
 
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(cardColor)
@@ -639,6 +657,14 @@ struct SettingsView: View {
             }
         }
         .preferredColorScheme(currentColorScheme)
+        .alert("Remove All Calendar Events?", isPresented: $showRemoveCalendarAlert) {
+            Button("Remove", role: .destructive) {
+                CalendarService.shared.removeAllCalendarEvents()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will remove all calendar events added by Date Alarm.")
+        }
         .sheet(isPresented: $showFeatureRequest) {
             FeatureRequestView()
                 .preferredColorScheme(currentColorScheme)
