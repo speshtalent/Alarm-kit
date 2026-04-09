@@ -73,8 +73,23 @@
         <key>AppIcon1</key>
         <dict>
             <key>CFBundleIconFiles</key>
-            <array><string>AppIcon1</string></array>
+            <array>
+                <string>AppIcon1-120</string>
+                <string>AppIcon1-152</string>
+            </array>
+            <key>UIPrerenderedIcon</key>
+            <false/>
         </dict>
+    </dict>
+    <key>CFBundlePrimaryIcon</key>
+    <dict>
+        <key>CFBundleIconFiles</key>
+        <array>
+            <string>AppIcon-120</string>
+            <string>AppIcon-152</string>
+        </array>
+        <key>UIPrerenderedIcon</key>
+        <false/>
     </dict>
 </dict>
 </dict>
