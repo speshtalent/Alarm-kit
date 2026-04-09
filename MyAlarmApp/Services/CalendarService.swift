@@ -84,4 +84,12 @@ final class CalendarService: ObservableObject {
     private func getEventMap() -> [String: String] {
         return UserDefaults.standard.dictionary(forKey: "calendarEventMap") as? [String: String] ?? [:]
     }
+    func removeAllCalendarEvents() {
+        let map = getEventMap()
+        for (alarmID, _) in map {
+            removeAlarmFromCalendar(alarmID: alarmID)
+        }
+        UserDefaults.standard.removeObject(forKey: "calendarEventMap")
+        print("✅ All calendar events removed")
+    }
 }

@@ -114,7 +114,7 @@ struct RepeatAlarmIntent: LiveActivityIntent {
         let label = labels[alarmID] ?? "Alarm"
 
         // ✅ Schedule new alarm after snooze duration
-        let snoozeDate = Date().addingTimeInterval(duration)
+        //let snoozeDate = Date().addingTimeInterval(duration)
 
         do {
             try AlarmManager.shared.cancel(id: id)
@@ -150,15 +150,19 @@ struct RepeatAlarmIntent: LiveActivityIntent {
                     )
                 )
             }
-            let presentation = AlarmPresentation(alert: alert)
+            let presentation = AlarmPresentation(
+                alert: alert,
+                countdown: AlarmPresentation.Countdown(
+                    title: LocalizedStringResource(stringLiteral: label)
+                )
+            )
             let attributes = AlarmAttributes(
                 presentation: presentation,
                 metadata: AppAlarmMetadata(title: label, icon: "alarm"),
                 tintColor: Color.orange
             )
-            let configuration = AlarmManager.AlarmConfiguration(
-                countdownDuration: nil,
-                schedule: .fixed(snoozeDate),
+            let configuration = AlarmManager.AlarmConfiguration.timer(
+                duration: duration,
                 attributes: attributes,
                 stopIntent: StopAlarmIntent(alarmID: alarmID),
                 secondaryIntent: RepeatAlarmIntent(alarmID: alarmID),
@@ -169,7 +173,10 @@ struct RepeatAlarmIntent: LiveActivityIntent {
                     return .named(soundFile)
                 }()
             )
-            _ = try? await AlarmManager.shared.schedule(id: id, configuration: configuration)
+            if let scheduled = try? await AlarmManager.shared.schedule(id: id, configuration: configuration) {
+                print("✅ Snooze scheduled: \(String(describing: scheduled.schedule))")
+                print("✅ Countdown duration: \(String(describing: scheduled.countdownDuration))")
+            }
         }
 
         return .result()
