@@ -15,7 +15,7 @@ struct AddAlarmView: View {
     @State private var snoozeEnabled = true
     @State private var snoozeDuration = 5
     @State private var selectedSound = "nokia.caf"
-    @State private var addToCalendar = true
+    @State private var addToCalendar = false
     @State private var selectedAMPM: Int
 
     @State private var isRecording = false
@@ -645,10 +645,11 @@ struct AddAlarmView: View {
                                                     .foregroundStyle(playingSound == sound.file ? .red : .orange)
                                                     .font(.system(size: 24))
                                             }
+                                            let soundName = sound.name
                                             Button {
                                                 selectedSound = sound.file
                                             } label: {
-                                                Text(sound.name)
+                                                Text(soundName)
                                                     .font(.system(size: 15, weight: .medium, design: .rounded))
                                                     .foregroundStyle(Color("PrimaryText"))
                                             }
@@ -708,7 +709,15 @@ struct AddAlarmView: View {
                                 .font(.system(size: 16, weight: .semibold, design: .rounded))
                                 .foregroundStyle(Color("PrimaryText"))
                             Spacer()
-                            Toggle("", isOn: $addToCalendar).tint(.orange)
+                            Toggle("", isOn: $addToCalendar)
+                                .tint(.orange)
+                                .onChange(of: addToCalendar) { _, newValue in
+                                    if newValue {
+                                        Task {
+                                            await CalendarService.shared.requestPermissionIfNeeded()
+                                        }
+                                    }
+                                }
                         }
                         .padding(16)
                     }
