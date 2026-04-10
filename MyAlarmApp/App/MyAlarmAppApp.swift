@@ -18,6 +18,7 @@ struct MyAlarmAppApp: App {
             Self.requestSiriAuthorizationIfNeeded()
         }
         AlarmAppShortcutsProvider.updateAppShortcutParameters()
+        NotificationService.shared.requestPermission()
         setupAlarmStopListener()
     }
 
@@ -55,20 +56,21 @@ struct MyAlarmAppApp: App {
     }
 
     private func requestReviewIfNeeded() {
-        // ✅ Only show after at least 2 alarms have fired
-        let alarmFiredCount = UserDefaults.standard.integer(forKey: "alarmFiredCount")
-        guard alarmFiredCount >= 2 else { return }
+        let appGroup = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
 
-        // ✅ Only show if alarm fired since last review check
-        let alarmFired = UserDefaults.standard.bool(forKey: "alarmFiredSinceLastReview")
-        guard alarmFired else { return }
+        var firedCount = 0
+        if let json = appGroup?.string(forKey: "AlarmHistory"),
+           let data = json.data(using: .utf8),
+           let list = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+            firedCount = list.count
+        }
 
-        // ✅ Only show if not shown in last 30 days
+        guard firedCount >= 2 else { return }
+
         let lastReviewDate = UserDefaults.standard.double(forKey: "lastReviewRequestDate")
         let daysSinceLastReview = (Date().timeIntervalSince1970 - lastReviewDate) / 86400
         guard daysSinceLastReview >= 30 || lastReviewDate == 0 else { return }
 
-        UserDefaults.standard.set(false, forKey: "alarmFiredSinceLastReview")
         UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "lastReviewRequestDate")
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
