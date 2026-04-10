@@ -92,4 +92,8 @@ final class CalendarService: ObservableObject {
         UserDefaults.standard.removeObject(forKey: "calendarEventMap")
         print("✅ All calendar events removed")
     }
+    func requestPermissionIfNeeded() async {
+        let store = EKEventStore()
+        _ = try? await store.requestFullAccessToEvents()
+    }
 }
