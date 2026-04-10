@@ -160,6 +160,7 @@ final class AlarmService: ObservableObject {
         saveStoredFireDate(scheduleDate, for: id)
         saveLabel(label, for: id)
         upsertAlarmInList(alarm, label: label)
+        NotificationService.shared.scheduleNotifications(for: id, label: label, fireDate: scheduleDate)
         return id
     }
 
@@ -179,6 +180,7 @@ final class AlarmService: ObservableObject {
             } catch {
                 print("Cancel alarm error:", error)
             }
+            NotificationService.shared.cancelNotifications(for: alarmID)
             removeLabel(for: alarmID)
             removeFromDisabled(id: alarmID)
             removeStoredFireDate(for: alarmID)
@@ -544,6 +546,7 @@ final class AlarmService: ObservableObject {
         saveStoredFireDate(scheduleDate, for: id)
         saveLabel(label, for: id)
         upsertAlarmInList(alarm, label: label)
+        NotificationService.shared.scheduleNotifications(for: id, label: label, fireDate: scheduleDate)
         return id
     }
 
