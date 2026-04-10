@@ -30,8 +30,8 @@ struct OnboardingView: View {
                     Spacer()
                     if currentPage < 5 {
                         Button("Skip") {
-                            // ✅ UPDATED — skip goes directly to main app, not last onboarding screen
                             hasSeenOnboarding = true
+                            NotificationCenter.default.post(name: NSNotification.Name("OnboardingCompleted"), object: nil)
                         }
                         .font(.system(size: 16, weight: .medium, design: .rounded))
                         .foregroundStyle(Color.white.opacity(0.38))
@@ -89,6 +89,7 @@ struct OnboardingView: View {
                     Button {
                         if currentPage == 5 {
                             hasSeenOnboarding = true
+                            NotificationCenter.default.post(name: NSNotification.Name("OnboardingCompleted"), object: nil)
                         } else {
                             navigate(to: currentPage + 1)
                         }

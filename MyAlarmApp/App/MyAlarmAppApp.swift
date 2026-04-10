@@ -6,6 +6,7 @@ import Intents
 
 @main
 struct MyAlarmAppApp: App {
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var quickActionMode: String? = nil
     @State private var showFeedbackAlert = false
@@ -14,11 +15,9 @@ struct MyAlarmAppApp: App {
 
     init() {
         Task {
-            await AlarmService.shared.requestAuthorizationIfNeeded()
             Self.requestSiriAuthorizationIfNeeded()
         }
         AlarmAppShortcutsProvider.updateAppShortcutParameters()
-        NotificationService.shared.requestPermission()
         setupAlarmStopListener()
     }
 
@@ -130,8 +129,16 @@ struct MyAlarmAppApp: App {
             ContentView(quickActionMode: $quickActionMode)
                 .onAppear {
                     setupQuickActions()
-                    restoreFromiCloudIfNeeded()
+                    if hasSeenOnboarding {
+                        restoreFromiCloudIfNeeded()
+                    }
                     print("✅ App launched")
+                }
+                .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OnboardingCompleted"))) { _ in
+                    Task { @MainActor in
+                        await AlarmService.shared.requestAuthorizationIfNeeded()
+                        restoreFromiCloudIfNeeded()
+                    }
                 }
 
                 .alert("Alarms Restored 🔔", isPresented: $showVoiceRestoredAlert) {

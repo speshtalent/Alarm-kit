@@ -18,6 +18,7 @@ final class NotificationService {
 
     // ✅ Schedule both notifications for an alarm
     func scheduleNotifications(for alarmID: UUID, label: String, fireDate: Date) {
+        guard UserDefaults.standard.bool(forKey: "alarmNotificationsEnabled") else { return }
         let calendar = Calendar.current
 
         // ✅ Case 1 — 10 mins before

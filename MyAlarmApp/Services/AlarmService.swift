@@ -232,6 +232,7 @@ final class AlarmService: ObservableObject {
             let fireDate = repeatDays.isEmpty ? nextEnabledOneTimeDate(from: storedFireDate) : storedFireDate
             Task {
                 do {
+                    await requestAuthorizationIfNeeded()
                     let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
                     let voiceFileName = "alarm_voice_\(id.uuidString).caf"
                     let voicePath = libraryURL.appendingPathComponent("Sounds/\(voiceFileName)").path
