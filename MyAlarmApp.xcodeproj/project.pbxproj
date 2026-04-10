@@ -371,7 +371,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = CountdownLiveActivityExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 28;
+				CURRENT_PROJECT_VERSION = 29;
 				INFOPLIST_FILE = CountdownLiveActivity/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = CountdownLiveActivity;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -401,7 +401,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = CountdownLiveActivityExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 28;
+				CURRENT_PROJECT_VERSION = 29;
 				INFOPLIST_FILE = CountdownLiveActivity/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = CountdownLiveActivity;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -458,7 +458,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 28;
+				CURRENT_PROJECT_VERSION = 29;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -525,7 +525,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 28;
+				CURRENT_PROJECT_VERSION = 29;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = BK8PTBP6K2;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -560,7 +560,7 @@
 				CODE_SIGN_ENTITLEMENTS = MyAlarmApp/MyAlarmApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 28;
+				CURRENT_PROJECT_VERSION = 29;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MyAlarmApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Date Alarm";
@@ -601,7 +601,7 @@
 				CODE_SIGN_ENTITLEMENTS = MyAlarmApp/MyAlarmApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 28;
+				CURRENT_PROJECT_VERSION = 29;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MyAlarmApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Date Alarm";
@@ -641,7 +641,7 @@
 				CODE_SIGN_ENTITLEMENTS = FutureAlarmWidgetExtension.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 28;
+				CURRENT_PROJECT_VERSION = 29;
 				INFOPLIST_FILE = FutureAlarmWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DateAlarmWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -673,7 +673,7 @@
 				CODE_SIGN_ENTITLEMENTS = FutureAlarmWidgetExtension.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 28;
+				CURRENT_PROJECT_VERSION = 29;
 				INFOPLIST_FILE = FutureAlarmWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DateAlarmWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
