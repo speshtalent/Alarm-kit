@@ -14,7 +14,6 @@ struct MyAlarmAppApp: App {
 
     init() {
         Task {
-            await AlarmService.shared.requestAuthorizationIfNeeded()
             Self.requestSiriAuthorizationIfNeeded()
         }
         AlarmAppShortcutsProvider.updateAppShortcutParameters()
