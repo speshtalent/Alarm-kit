@@ -43,24 +43,24 @@ struct FutureAlarmProvider: TimelineProvider {
         var entries: [FutureAlarmEntry] = [entry]
         
         // ✅ If there's an upcoming alarm, schedule a refresh entry exactly when it fires
-        if let alarmDate = entry.alarmDate, alarmDate > Date() {
-            // Create a new entry at exact alarm fire time with that alarm removed
-            let upcomingWithoutFirst = entry.upcomingAlarms.filter { $0.date > alarmDate }
-            let nextAlarmDate = upcomingWithoutFirst.first?.date
-            let nextAlarmLabel = upcomingWithoutFirst.first?.label ?? "No Alarm"
+        let remaining = entry.upcomingAlarms.filter { $0.date > Date() }
+        for i in 0..<remaining.count {
+            let fireDate = remaining[i].date
+            let upcomingAfter = Array(remaining.dropFirst(i + 1))
+            let nextAlarm = upcomingAfter.first
             
             let fireEntry = FutureAlarmEntry(
-                date: alarmDate, // ✅ widget switches at exact alarm time
-                alarmDate: nextAlarmDate,
-                alarmLabel: nextAlarmLabel,
-                upcomingAlarms: upcomingWithoutFirst,
+                date: fireDate,
+                alarmDate: nextAlarm?.date,
+                alarmLabel: nextAlarm?.label ?? "No Alarm",
+                upcomingAlarms: upcomingAfter,
                 use24Hour: entry.use24Hour
             )
             entries.append(fireEntry)
         }
         
         // ✅ No need for frequent refresh — only updates at alarm time
-        completion(Timeline(entries: entries, policy: .never))
+        completion(Timeline(entries: entries, policy: .atEnd))
     }
 
     private func readEntry() -> FutureAlarmEntry {
