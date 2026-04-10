@@ -797,10 +797,12 @@ struct FeatureRequestView: View {
         let body = requestText
         let urlString = "mailto:\(supportEmail)?subject=\(subject)&body=\(body)"
             .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        if let url = URL(string: urlString), UIApplication.shared.canOpenURL(url) {
-            UIApplication.shared.open(url)
-        } else {
-            showNoMailAlert = true
+        if let url = URL(string: urlString) {
+            UIApplication.shared.open(url) { success in
+                if !success {
+                    showNoMailAlert = true
+                }
+            }
         }
     }
 }
