@@ -78,7 +78,9 @@ struct FutureAlarmProvider: TimelineProvider {
             upcomingAlarms = list.compactMap { item -> (Date, String)? in
                 guard let ts = item["date"] as? TimeInterval,
                       let lbl = item["label"] as? String else { return nil }
-                return (Date(timeIntervalSince1970: ts), lbl)
+                let date = Date(timeIntervalSince1970: ts)
+                guard date > Date() else { return nil }
+                return (date, lbl)
             }
         }
 
