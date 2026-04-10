@@ -357,6 +357,7 @@ struct ContentView: View {
 
 // MARK: - Settings View
 struct SettingsView: View {
+    @AppStorage("alarmNotificationsEnabled") private var alarmNotificationsEnabled: Bool = false
     @AppStorage("appColorScheme") private var appColorScheme: String = "system"
     @AppStorage("use24HourFormat") private var use24HourFormat: Bool = false
     @AppStorage("selectedAppIcon") private var selectedAppIcon: String = "Classic"
@@ -566,6 +567,34 @@ struct SettingsView: View {
                         RoundedRectangle(cornerRadius: 16).fill(cardColor)
                         VStack(spacing: 0) {
                             HStack(spacing: 8) {
+                                Image(systemName: "bell.fill")
+                                    .foregroundStyle(.orange)
+                                Text("Alarm Notifications")
+                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(primaryText)
+                                Spacer()
+                                Toggle("", isOn: $alarmNotificationsEnabled)
+                                    .tint(.orange)
+                                    .onChange(of: alarmNotificationsEnabled) { _, newValue in
+                                        if newValue {
+                                            NotificationService.shared.requestPermission()
+                                        }
+                                    }
+                            }
+                            .padding(16)
+                            Divider()
+                            Text("Get notified 10 mins before your alarm and the day before.")
+                                .font(.system(size: 12, design: .rounded))
+                                .foregroundStyle(secondaryText)
+                                .padding(16)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16).fill(cardColor)
+                        VStack(spacing: 0) {
+                            HStack(spacing: 8) {
                                 Image(systemName: "clock.fill")
                                     .foregroundStyle(.orange)
                                 Text("Time Format")
@@ -626,7 +655,7 @@ struct SettingsView: View {
                     }
                     .padding(.horizontal, 20)
                     .onTapGesture {
-                        if let url = URL(string: "https://yourwebsite.com/privacy") {
+                        if let url = URL(string: "https://speshtalent.com/datealarm") {
                             UIApplication.shared.open(url)
                         }
                     }

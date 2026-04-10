@@ -18,7 +18,6 @@ struct MyAlarmAppApp: App {
             Self.requestSiriAuthorizationIfNeeded()
         }
         AlarmAppShortcutsProvider.updateAppShortcutParameters()
-        NotificationService.shared.requestPermission()
         setupAlarmStopListener()
     }
 
