@@ -26,7 +26,7 @@ final class CalendarService: ObservableObject {
 
     // add alarm to iPhone Calendar
     // returns eventIdentifier so we can delete it later
-    func addAlarmToCalendar(title: String, date: Date, alarmID: String) async -> Bool {
+    func addAlarmToCalendar(title: String, date: Date, alarmID: String, weekday: Int? = nil) async -> Bool {
         let granted = await requestAccess()
         guard granted else { return false }
 
@@ -37,10 +37,25 @@ final class CalendarService: ObservableObject {
         event.calendar = eventStore.defaultCalendarForNewEvents
         event.notes = "Alarm set from Date Alarm app"
 
+        // ✅ Add weekly recurrence if weekday is provided
+        if let weekday = weekday {
+            let dayOfWeek = EKRecurrenceDayOfWeek(EKWeekday(rawValue: weekday)!)
+            let rule = EKRecurrenceRule(
+                recurrenceWith: .weekly,
+                interval: 1,
+                daysOfTheWeek: [dayOfWeek],
+                daysOfTheMonth: nil,
+                monthsOfTheYear: nil,
+                weeksOfTheYear: nil,
+                daysOfTheYear: nil,
+                setPositions: nil,
+                end: nil
+            )
+            event.recurrenceRules = [rule]
+        }
+
         do {
             try eventStore.save(event, span: .thisEvent)
-            // save eventIdentifier linked to alarmID
-            // so we can find and delete it later
             saveEventID(event.eventIdentifier, for: alarmID)
             print("✅ Added to calendar: \(title)")
             return true
@@ -55,7 +70,8 @@ final class CalendarService: ObservableObject {
         guard let eventID = getEventID(for: alarmID) else { return }
         guard let event = eventStore.event(withIdentifier: eventID) else { return }
         do {
-            try eventStore.remove(event, span: .thisEvent)
+            // ✅ Use .futureEvents to remove all recurring occurrences
+            try eventStore.remove(event, span: .futureEvents)
             removeEventID(for: alarmID)
             print("✅ Removed from calendar: \(alarmID)")
         } catch {
@@ -85,15 +101,53 @@ final class CalendarService: ObservableObject {
         return UserDefaults.standard.dictionary(forKey: "calendarEventMap") as? [String: String] ?? [:]
     }
     func removeAllCalendarEvents() {
-        let map = getEventMap()
-        for (alarmID, _) in map {
-            removeAlarmFromCalendar(alarmID: alarmID)
+        Task {
+            // ✅ Always request permission
+            _ = await requestAccess()
+            guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return }
+            
+            // ✅ Remove using saved map
+            let map = getEventMap()
+            for (alarmID, _) in map {
+                removeAlarmFromCalendar(alarmID: alarmID)
+            }
+            UserDefaults.standard.removeObject(forKey: "calendarEventMap")
+            
+            // ✅ Also search and remove any remaining events by note
+            let start = Calendar.current.date(byAdding: .year, value: -1, to: Date()) ?? Date()
+            let end = Calendar.current.date(byAdding: .year, value: 5, to: Date()) ?? Date()
+            let predicate = eventStore.predicateForEvents(withStart: start, end: end, calendars: nil)
+            let events = eventStore.events(matching: predicate)
+            for event in events {
+                if event.notes == "Alarm set from Date Alarm app" {
+                    try? eventStore.remove(event, span: .futureEvents)
+                }
+            }
+            print("✅ All calendar events removed")
         }
-        UserDefaults.standard.removeObject(forKey: "calendarEventMap")
-        print("✅ All calendar events removed")
     }
     func requestPermissionIfNeeded() async {
         let store = EKEventStore()
         _ = try? await store.requestFullAccessToEvents()
+    }
+    func removeAllDateAlarmEvents() async {
+        // ✅ Only run if already authorized — don't ask for permission
+        guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return }
+        let granted = await requestAccess()
+        guard granted else { return }
+        
+        // ✅ Search for events with our app note in next 5 years
+        let start = Date()
+        let end = Calendar.current.date(byAdding: .year, value: 5, to: start) ?? start
+        let predicate = eventStore.predicateForEvents(withStart: start, end: end, calendars: nil)
+        let events = eventStore.events(matching: predicate)
+        
+        for event in events {
+            if event.notes == "Alarm set from Date Alarm app" {
+                try? eventStore.remove(event, span: .futureEvents)
+            }
+        }
+        UserDefaults.standard.removeObject(forKey: "calendarEventMap")
+        print("✅ Cleared all Date Alarm calendar events")
     }
 }

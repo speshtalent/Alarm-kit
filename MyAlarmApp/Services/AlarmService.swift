@@ -173,6 +173,9 @@ final class AlarmService: ObservableObject {
             if let item = alarms.first(where: { $0.id == alarmID }), let fireDate = item.fireDate {
                 let key = fireDate.timeIntervalSince1970.description
                 CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
+            } else if let savedInterval = UserDefaults.standard.object(forKey: "disabledAlarmDate_\(alarmID.uuidString)") as? TimeInterval {
+                let key = savedInterval.description
+                CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
             }
             deleteVoiceFile(for: alarmID.uuidString)
             do {
@@ -211,10 +214,15 @@ final class AlarmService: ObservableObject {
                 }
                 alarms[index] = AlarmListItem(id: item.id, label: item.label, isEnabled: false, fireDate: item.fireDate)
                 saveDisabledState(id: id, disabled: true)
-                // ✅ Remove from iPhone calendar when disabled
-                if let fireDate = item.fireDate {
-                    let key = fireDate.timeIntervalSince1970.description
-                    CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
+                // ✅ Remove ALL alarms in group from iPhone calendar when disabled
+                let groupID = getGroupID(for: id) ?? id
+                let groupAlarmIDs = getAlarmIDs(forGroup: groupID)
+                let idsToRemove = groupAlarmIDs.isEmpty ? [id] : groupAlarmIDs
+                for alarmID in idsToRemove {
+                    if let alarmFireDate = alarms.first(where: { $0.id == alarmID })?.fireDate {
+                        let key = alarmFireDate.timeIntervalSince1970.description
+                        CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
+                    }
                 }
                 print("⏸ Alarm disabled: \(id)")
             }
@@ -246,12 +254,21 @@ final class AlarmService: ObservableObject {
                     let sound = FileManager.default.fileExists(atPath: voicePath) ? voiceFileName : "nokia.caf"
                     try await scheduleAlarmWithID(id: id, date: fireDate, label: item.label, sound: sound)
                     saveDisabledState(id: id, disabled: false)
-                    // ✅ Add back to iPhone calendar when re-enabled
-                    if let fireDate = item.fireDate {
-                        let key = fireDate.timeIntervalSince1970.description
-                        _ = await CalendarService.shared.addAlarmToCalendar(
-                            title: item.label, date: fireDate, alarmID: key
-                        )
+                    // ✅ Add back to iPhone calendar when re-enabled — add all alarms in group
+                    let groupID = getGroupID(for: id) ?? id
+                    let groupAlarmIDs = getAlarmIDs(forGroup: groupID)
+                    let idsToAdd = groupAlarmIDs.isEmpty ? [id] : groupAlarmIDs
+                    let isWeekly = repeatDays.contains { $0 >= 1 && $0 <= 7 }
+                    for alarmID in idsToAdd {
+                        if let alarmFireDate = alarms.first(where: { $0.id == alarmID })?.fireDate {
+                            let key = alarmFireDate.timeIntervalSince1970.description
+                            // ✅ Remove existing event first to avoid duplicates
+                            CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
+                            let weekday = isWeekly ? Calendar.current.component(.weekday, from: alarmFireDate) : nil
+                            _ = await CalendarService.shared.addAlarmToCalendar(
+                                title: item.label, date: alarmFireDate, alarmID: key, weekday: weekday
+                            )
+                        }
                     }
                     print("▶️ Alarm re-enabled with sound: \(sound)")
                 } catch {

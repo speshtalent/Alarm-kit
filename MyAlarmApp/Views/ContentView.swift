@@ -725,22 +725,27 @@ struct SettingsView: View {
                             if hasCloudData { showClearCloudAlert = true }
                         }
                         
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 16).fill(cardColor)
-                            HStack(spacing: 8) {
-                                Image(systemName: "calendar.badge.minus")
-                                    .foregroundStyle(.red)
-                                Text("Remove All Calendar Events")
-                                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                                    .foregroundStyle(.red)
-                                Spacer()
-                            }
-                            .padding(16)
+                    let hasCalendarEvents = !(UserDefaults.standard.dictionary(forKey: "calendarEventMap") as? [String: String] ?? [:]).isEmpty
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16).fill(cardColor)
+                        HStack(spacing: 8) {
+                            Image(systemName: "calendar.badge.minus")
+                                .foregroundStyle(hasCalendarEvents ? .orange : secondaryText)
+                            Text("Remove All Calendar Events")
+                                .font(.system(size: 15, weight: .medium, design: .rounded))
+                                .foregroundStyle(hasCalendarEvents ? primaryText : secondaryText)
+                            Spacer()
+                            Text(hasCalendarEvents ? "Active" : "No Events")
+                                .font(.system(size: 12, design: .rounded))
+                                .foregroundStyle(hasCalendarEvents ? .orange : secondaryText)
                         }
-                        .padding(.horizontal, 20)
-                        .onTapGesture {
-                            showRemoveCalendarAlert = true
-                        }
+                        .padding(16)
+                    }
+                    .padding(.horizontal, 20)
+                    .opacity(hasCalendarEvents ? 1.0 : 0.4)
+                    .onTapGesture {
+                        if hasCalendarEvents { showRemoveCalendarAlert = true }
+                    }
                         
                         ZStack {
                             RoundedRectangle(cornerRadius: 16).fill(cardColor)

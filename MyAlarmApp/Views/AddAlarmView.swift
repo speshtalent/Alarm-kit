@@ -1035,12 +1035,16 @@
                                 alarmID: savedDate.timeIntervalSince1970.description
                             )
                         } else {
-                            // ✅ Multiple alarms (monthly/weekly) — add each one
+                            // ✅ Multiple alarms (monthly/weekly) — add each one with recurrence
                             for alarmID in alarmIDs {
                                 if let fireDate = AlarmService.shared.alarms.first(where: { $0.id == alarmID })?.fireDate {
+                                    // ✅ Get weekday for this alarm (1=Sun, 2=Mon...7=Sat)
+                                    let weekday = Calendar.current.component(.weekday, from: fireDate)
+                                    let isWeekly = finalRepeatDays.contains { $0 >= 1 && $0 <= 7 }
                                     _ = await CalendarService.shared.addAlarmToCalendar(
                                         title: savedTitle, date: fireDate,
-                                        alarmID: fireDate.timeIntervalSince1970.description
+                                        alarmID: fireDate.timeIntervalSince1970.description,
+                                        weekday: isWeekly ? weekday : nil
                                     )
                                 }
                             }

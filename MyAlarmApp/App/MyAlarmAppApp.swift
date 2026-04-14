@@ -123,18 +123,14 @@ struct MyAlarmAppApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(quickActionMode: $quickActionMode)
-                .onAppear {
-                    setupQuickActions()
-                    if hasSeenOnboarding {
-                        restoreFromiCloudIfNeeded()
-                    }
-                    print("✅ App launched")
-                }
-                .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OnboardingCompleted"))) { _ in
-                    // ✅ No automatic restore — user controls it from Settings
-                }
-
+                    ContentView(quickActionMode: $quickActionMode)
+                        .onAppear {
+                            setupQuickActions()
+                            print("✅ App launched")
+                        }
+                        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OnboardingCompleted"))) { _ in
+                            // ✅ No automatic restore — user controls it from Settings
+                        }
                 .alert("Alarms Restored 🔔", isPresented: $showVoiceRestoredAlert) {
                     Button("OK", role: .cancel) { }
                 } message: {
