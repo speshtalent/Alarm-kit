@@ -204,12 +204,19 @@ final class AlarmService: ObservableObject {
                 if let fireDate = item.fireDate {
                     UserDefaults.standard.set(fireDate.timeIntervalSince1970, forKey: "disabledAlarmDate_\(id.uuidString)")
                 }
-                try AlarmManager.shared.cancel(id: id)
+                do {
+                    try AlarmManager.shared.cancel(id: id)
+                } catch {
+                    print("Cancel alarm error:", error)
+                }
                 alarms[index] = AlarmListItem(id: item.id, label: item.label, isEnabled: false, fireDate: item.fireDate)
                 saveDisabledState(id: id, disabled: true)
+                // ✅ Remove from iPhone calendar when disabled
+                if let fireDate = item.fireDate {
+                    let key = fireDate.timeIntervalSince1970.description
+                    CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
+                }
                 print("⏸ Alarm disabled: \(id)")
-            } catch {
-                print("Disable alarm error:", error)
             }
             saveNextAlarmForWidget()
             backupToiCloudDebounced()
@@ -239,6 +246,13 @@ final class AlarmService: ObservableObject {
                     let sound = FileManager.default.fileExists(atPath: voicePath) ? voiceFileName : "nokia.caf"
                     try await scheduleAlarmWithID(id: id, date: fireDate, label: item.label, sound: sound)
                     saveDisabledState(id: id, disabled: false)
+                    // ✅ Add back to iPhone calendar when re-enabled
+                    if let fireDate = item.fireDate {
+                        let key = fireDate.timeIntervalSince1970.description
+                        _ = await CalendarService.shared.addAlarmToCalendar(
+                            title: item.label, date: fireDate, alarmID: key
+                        )
+                    }
                     print("▶️ Alarm re-enabled with sound: \(sound)")
                 } catch {
                     print("Re-enable alarm error:", error)
@@ -272,7 +286,7 @@ final class AlarmService: ObservableObject {
                     AlarmListItem(
                         alarm: alarm,
                         label: labels[alarm.id.uuidString] ?? "Alarm",
-                        isEnabled: !disabled.contains(alarm.id.uuidString)
+                        isEnabled: !disabled.contains(alarm.id.uuidString) || UserDefaults.standard.bool(forKey: "isSnoozed_\(alarm.id.uuidString)")
                     )
                 }
 
@@ -369,17 +383,21 @@ final class AlarmService: ObservableObject {
             let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
             let tempURL = libraryURL.appendingPathComponent("Sounds/alarm_voice_temp.caf")
             let tempExists = FileManager.default.fileExists(atPath: tempURL.path)
+            let customSoundURL = sound.hasPrefix("custom_voice_") ? libraryURL.appendingPathComponent("Sounds/\(sound)") : nil
+            let customSoundExists = customSoundURL.map { FileManager.default.fileExists(atPath: $0.path) } ?? false
+            let sourceURL = customSoundExists ? customSoundURL! : tempURL
+            let sourceExists = customSoundExists || tempExists
 
             let alarmID = UUID()
             var finalSound = sound
 
             let isMonthly = repeatDays == Set([100]) || repeatDays.allSatisfy { $0 >= 101 && $0 <= 112 }
             let isYearly = repeatDays == Set([200]) || repeatDays.allSatisfy { $0 >= 2025 }
-            if tempExists && (repeatDays.isEmpty || isMonthly || isYearly) {
+            if sourceExists && (repeatDays.isEmpty || isMonthly || isYearly) {
                 let voiceFileName = "alarm_voice_\(alarmID.uuidString).caf"
                 let destURL = libraryURL.appendingPathComponent("Sounds/\(voiceFileName)")
                 try? FileManager.default.removeItem(at: destURL)
-                try? FileManager.default.copyItem(at: tempURL, to: destURL)
+                try? FileManager.default.copyItem(at: sourceURL, to: destURL)
                 finalSound = voiceFileName
                 print("✅ Voice file saved as: \(voiceFileName)")
             }
@@ -389,6 +407,7 @@ final class AlarmService: ObservableObject {
             if repeatDays == Set([100]) {
                 let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
                 saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: Set([100]))
+                UserDefaults.standard.set(sound, forKey: "alarmSound_\(id.uuidString)")
                 rebuildGroups()
                 saveNextAlarmForWidget()
                 backupToiCloudDebounced()
@@ -400,7 +419,7 @@ final class AlarmService: ObservableObject {
             if !selectedMonths.isEmpty {
                 let calendar = Calendar.current
                 let timeComponents = calendar.dateComponents([.hour, .minute], from: date)
-                let dayOfMonth = calendar.component(.day, from: date)
+                let dayOfMonth = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? calendar.component(.day, from: date)
                 let groupID = UUID()
                 var scheduledIDs: [UUID] = []
                 for month in selectedMonths.sorted() {
@@ -414,11 +433,11 @@ final class AlarmService: ObservableObject {
                     let nextDate = calendar.nextDate(after: Date(), matching: components, matchingPolicy: .nextTimePreservingSmallerComponents) ?? date
                     let recurringID = UUID()
                     var recurringSound = sound
-                    if tempExists {
+                    if sourceExists {
                         let voiceFileName = "alarm_voice_\(recurringID.uuidString).caf"
                         let destURL = libraryURL.appendingPathComponent("Sounds/\(voiceFileName)")
                         try? FileManager.default.removeItem(at: destURL)
-                        try? FileManager.default.copyItem(at: tempURL, to: destURL)
+                        try? FileManager.default.copyItem(at: sourceURL, to: destURL)
                         recurringSound = voiceFileName
                     }
                     _ = try await scheduleAlarmWithID(id: recurringID, date: nextDate, label: title, sound: recurringSound)
@@ -426,6 +445,7 @@ final class AlarmService: ObservableObject {
                     print("✅ Monthly alarm set for month \(monthNumber) at \(nextDate)")
                 }
                 saveGroup(groupID: groupID, alarmIDs: scheduledIDs, label: title, repeatDays: repeatDays)
+                UserDefaults.standard.set(sound, forKey: "alarmSound_\(groupID.uuidString)")
                 rebuildGroups()
                 saveNextAlarmForWidget()
                 backupToiCloudDebounced()
@@ -436,6 +456,7 @@ final class AlarmService: ObservableObject {
             if repeatDays == Set([200]) {
                 let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
                 saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: Set([200]))
+                UserDefaults.standard.set(sound, forKey: "alarmSound_\(id.uuidString)")
                 rebuildGroups()
                 saveNextAlarmForWidget()
                 backupToiCloudDebounced()
@@ -463,11 +484,11 @@ final class AlarmService: ObservableObject {
                     guard let yearDate = calendar.date(from: components), yearDate > Date() else { continue }
                     let recurringID = UUID()
                     var recurringSound = sound
-                    if tempExists {
+                    if sourceExists {
                         let voiceFileName = "alarm_voice_\(recurringID.uuidString).caf"
                         let destURL = libraryURL.appendingPathComponent("Sounds/\(voiceFileName)")
                         try? FileManager.default.removeItem(at: destURL)
-                        try? FileManager.default.copyItem(at: tempURL, to: destURL)
+                        try? FileManager.default.copyItem(at: sourceURL, to: destURL)
                         recurringSound = voiceFileName
                     }
                     _ = try await scheduleAlarmWithID(id: recurringID, date: yearDate, label: title, sound: recurringSound)
@@ -475,6 +496,7 @@ final class AlarmService: ObservableObject {
                     print("✅ Yearly alarm set for \(year) at \(yearDate)")
                 }
                 saveGroup(groupID: groupID, alarmIDs: scheduledIDs, label: title, repeatDays: repeatDays)
+                UserDefaults.standard.set(sound, forKey: "alarmSound_\(groupID.uuidString)")
                 rebuildGroups()
                 saveNextAlarmForWidget()
                 backupToiCloudDebounced()
@@ -484,6 +506,8 @@ final class AlarmService: ObservableObject {
             if repeatDays.isEmpty {
                 let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
                 saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: [])
+                // ✅ Save sound so edit screen can load it
+                UserDefaults.standard.set(sound, forKey: "alarmSound_\(id.uuidString)")
                 rebuildGroups()
                 saveNextAlarmForWidget()
                 backupToiCloudDebounced()
@@ -499,11 +523,11 @@ final class AlarmService: ObservableObject {
                     let recurringID = UUID()
 
                     var recurringSound = sound
-                    if tempExists {
+                    if sourceExists {
                         let voiceFileName = "alarm_voice_\(recurringID.uuidString).caf"
                         let destURL = libraryURL.appendingPathComponent("Sounds/\(voiceFileName)")
                         try? FileManager.default.removeItem(at: destURL)
-                        try? FileManager.default.copyItem(at: tempURL, to: destURL)
+                        try? FileManager.default.copyItem(at: sourceURL, to: destURL)
                         recurringSound = voiceFileName
                         print("✅ Voice file copied for recurring alarm: \(voiceFileName)")
                     }
@@ -514,6 +538,7 @@ final class AlarmService: ObservableObject {
                 }
 
                 saveGroup(groupID: groupID, alarmIDs: scheduledIDs, label: title, repeatDays: repeatDays)
+                UserDefaults.standard.set(sound, forKey: "alarmSound_\(groupID.uuidString)")
                 rebuildGroups()
                 saveNextAlarmForWidget()
                 backupToiCloudDebounced()

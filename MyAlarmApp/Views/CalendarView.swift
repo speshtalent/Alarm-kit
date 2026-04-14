@@ -8,6 +8,7 @@ struct CalendarView: View {
     @State private var showAddAlarm = false
     @State private var viewMode: ViewMode = .monthly
     @State private var editingItem: AlarmService.AlarmListItem? = nil
+    @State private var showPastDateAlert = false
 
     enum ViewMode: String, CaseIterable {
         case daily = "Day"
@@ -22,19 +23,101 @@ struct CalendarView: View {
     private var alarmDates: Set<String> {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        return Set(alarmService.alarms.compactMap { item in
-            guard let date = item.fireDate else { return nil }
-            return formatter.string(from: date)
-        })
+        var dates = Set<String>()
+
+        for item in alarmService.alarms {
+            guard let fireDate = item.fireDate else { continue }
+            let groupID = alarmService.getGroupID(for: item.id) ?? item.id
+            let repeatDays = alarmService.getRepeatDays(forGroup: groupID)
+            let hasWeekDays = repeatDays.contains { $0 >= 1 && $0 <= 7 }
+            let hasMonths = repeatDays.contains { $0 >= 101 && $0 <= 112 }
+            let dayValues = repeatDays.filter { $0 >= 1 && $0 <= 31 }
+
+            if hasWeekDays {
+                // ✅ Add dot for every day in current month that matches weekday
+                guard let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: currentMonth)) else { continue }
+                let daysCount = calendar.range(of: .day, in: .month, for: monthStart)?.count ?? 30
+                for dayOffset in 0..<daysCount {
+                    if let date = calendar.date(byAdding: .day, value: dayOffset, to: monthStart) {
+                        let weekday = calendar.component(.weekday, from: date)
+                        if repeatDays.contains(weekday) {
+                            dates.insert(formatter.string(from: date))
+                        }
+                    }
+                }
+            } else if hasMonths || repeatDays.contains(100) {
+                // ✅ Add dot for matching day in selected months
+                let currentMonthValue = 100 + calendar.component(.month, from: currentMonth)
+                let monthMatches = hasMonths ? repeatDays.contains(currentMonthValue) : true
+                if monthMatches, let dayOfMonth = dayValues.first {
+                    var comps = calendar.dateComponents([.year, .month], from: currentMonth)
+                    comps.day = dayOfMonth
+                    if let matchDate = calendar.date(from: comps) {
+                        dates.insert(formatter.string(from: matchDate))
+                    }
+                }
+            } else {
+                // ✅ One-time or exact date
+                dates.insert(formatter.string(from: fireDate))
+            }
+        }
+        return dates
     }
 
     private var alarmsForSelectedDate: [AlarmService.AlarmListItem] {
-        alarmService.alarms.filter { item in
+        var seenGroupIDs = Set<UUID>()
+        return alarmService.alarms.filter { item in
             guard let date = item.fireDate else { return false }
-            return calendar.isDate(date, inSameDayAs: selectedDate)
+
+            let groupID = alarmService.getGroupID(for: item.id) ?? item.id
+            let repeatDays = alarmService.getRepeatDays(forGroup: groupID)
+            let hasWeekDays = repeatDays.contains { $0 >= 1 && $0 <= 7 }
+            let hasMonths = repeatDays.contains { $0 >= 101 && $0 <= 112 }
+            let dayValues = repeatDays.filter { $0 >= 1 && $0 <= 31 }
+            let selectedDay = calendar.component(.day, from: selectedDate)
+            let selectedMonth = calendar.component(.month, from: selectedDate)
+            let selectedWeekday = calendar.component(.weekday, from: selectedDate)
+
+            var matches = false
+
+            // ✅ Exact date match
+            if calendar.isDate(date, inSameDayAs: selectedDate) {
+                matches = true
+            }
+            // ✅ Weekly repeat
+            else if hasWeekDays && repeatDays.contains(selectedWeekday) {
+                matches = true
+            }
+            // ✅ Monthly with selected months
+            else if hasMonths {
+                let monthValue = 100 + selectedMonth
+                if repeatDays.contains(monthValue) && dayValues.contains(selectedDay) {
+                    matches = true
+                }
+            }
+            // ✅ Monthly generic
+            else if repeatDays.contains(100) && dayValues.contains(selectedDay) {
+                matches = true
+            }
+            // ✅ Yearly
+            else if repeatDays.contains(where: { $0 >= 2025 }) {
+                let selectedYear = calendar.component(.year, from: selectedDate)
+                if repeatDays.contains(selectedYear) &&
+                   calendar.component(.day, from: date) == selectedDay &&
+                   calendar.component(.month, from: date) == selectedMonth {
+                    matches = true
+                }
+            }
+
+            if matches {
+                // ✅ Only show one alarm per group
+                if seenGroupIDs.contains(groupID) { return false }
+                seenGroupIDs.insert(groupID)
+                return true
+            }
+            return false
         }
     }
-
     private var daysInMonth: [Date?] {
         guard let monthStart = calendar.date(
             from: calendar.dateComponents([.year, .month], from: currentMonth)
@@ -143,10 +226,17 @@ struct CalendarView: View {
                 }
             }
         }
+        .alert("Date Already Passed", isPresented: $showPastDateAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Please select a future date to add an alarm.")
+        }
         .sheet(item: $editingItem, onDismiss: {
             alarmService.loadAlarms()
         }) { item in
-            AddAlarmView(editingItem: item) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays in
+            let groupID = alarmService.getGroupID(for: item.id) ?? item.id
+            let groupRepeatDays = alarmService.getRepeatDays(forGroup: groupID)
+            AddAlarmView(editingItem: item, repeatDaysToLoad: groupRepeatDays) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays in
                 Task {
                     alarmService.cancelAlarm(id: item.id)
                     _ = await alarmService.scheduleFutureAlarm(
@@ -167,6 +257,36 @@ struct CalendarView: View {
     var monthlyView: some View {
         ScrollView {
             VStack(spacing: 0) {
+                // Year navigation
+                HStack {
+                    Button {
+                        withAnimation {
+                            currentMonth = calendar.date(byAdding: .year, value: -1, to: currentMonth) ?? currentMonth
+                        }
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .foregroundStyle(.orange)
+                            .font(.system(size: 18, weight: .semibold))
+                    }
+                    Spacer()
+                    Text(currentMonth.formatted(.dateTime.year()))
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color("PrimaryText"))
+                    Spacer()
+                    Button {
+                        withAnimation {
+                            currentMonth = calendar.date(byAdding: .year, value: 1, to: currentMonth) ?? currentMonth
+                        }
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(.orange)
+                            .font(.system(size: 18, weight: .semibold))
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 8)
+
+                // Month navigation
                 HStack {
                     Button {
                         withAnimation {
@@ -178,7 +298,7 @@ struct CalendarView: View {
                             .font(.system(size: 18, weight: .semibold))
                     }
                     Spacer()
-                    Text(currentMonth.formatted(.dateTime.month(.wide).year()))
+                    Text(currentMonth.formatted(.dateTime.month(.wide)))
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(Color("PrimaryText"))
                     Spacer()
@@ -194,7 +314,6 @@ struct CalendarView: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 16)
-
                 HStack(spacing: 0) {
                     ForEach(weekdays, id: \.self) { day in
                         Text(day)
@@ -224,7 +343,11 @@ struct CalendarView: View {
                         .foregroundStyle(Color("PrimaryText"))
                     Spacer()
                     Button {
-                        showAddAlarm = true
+                        if selectedDate < calendar.startOfDay(for: Date()) {
+                            showPastDateAlert = true
+                        } else {
+                            showAddAlarm = true
+                        }
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "plus")
@@ -521,7 +644,7 @@ struct CalendarView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.label)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Color("PrimaryText"))
+                    .foregroundStyle(item.isEnabled ? Color("PrimaryText") : Color("SecondaryText"))
                 Text(item.fireDate?.formatted(
                     Date.FormatStyle()
                         .hour(.defaultDigits(amPM: .abbreviated))
@@ -531,6 +654,15 @@ struct CalendarView: View {
                 .foregroundStyle(Color("SecondaryText"))
             }
             Spacer()
+            if !item.isEnabled {
+                Text("Disabled")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.gray)
+                    .clipShape(Capsule())
+            }
         }
         .padding(14)
         .background(Color("CardBackground"))

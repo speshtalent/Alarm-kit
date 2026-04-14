@@ -257,30 +257,33 @@ struct ContentView: View {
             }
         }
         .sheet(item: $groupToEdit, onDismiss: {
-            alarmService.loadAlarms()
-        }) { group in
-            AddAlarmView(
-                initialTitle: group.isFired ? group.label : nil,
-                editingItem: group.isFired ? nil : alarmService.alarms.first(where: { group.alarmIDs.contains($0.id) }),
-                repeatDaysToLoad: group.repeatDays
-            ) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays in
-                Task {
-                    if let firstID = group.alarmIDs.first {
-                        alarmService.cancelAlarm(id: firstID)
+                    alarmService.loadAlarms()
+                }) { group in
+                    AddAlarmView(
+                        initialTitle: group.isFired ? group.label : nil,
+                        editingItem: group.isFired ? nil : alarmService.alarms.first(where: { group.alarmIDs.contains($0.id) }),
+                        repeatDaysToLoad: group.repeatDays,
+                        soundToLoad: UserDefaults.standard.string(forKey: "alarmSound_\(group.id.uuidString)") ?? "nokia.caf"
+                    ) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays in
+                        Task {
+                            if let firstID = group.alarmIDs.first {
+                                alarmService.cancelAlarm(id: firstID)
+                            }
+                            _ = await alarmService.scheduleFutureAlarm(
+                                date: date, title: title,
+                                snoozeEnabled: snoozeEnabled,
+                                snoozeDuration: snoozeDuration,
+                                sound: sound,
+                                repeatDays: repeatDays
+                            )
+                            // ✅ Save sound with group ID so it persists after reschedule
+                            UserDefaults.standard.set(sound, forKey: "alarmSound_\(group.id.uuidString)")
+                            await MainActor.run { alarmService.loadAlarms() }
+                        }
                     }
-                    _ = await alarmService.scheduleFutureAlarm(
-                        date: date, title: title,
-                        snoozeEnabled: snoozeEnabled,
-                        snoozeDuration: snoozeDuration,
-                        sound: sound,
-                        repeatDays: repeatDays
-                    )
-                    await MainActor.run { alarmService.loadAlarms() }
                 }
-            }
-        }
-        .sheet(isPresented: $showAddTimer, onDismiss: {
-            timerService.loadTimers()
+                .sheet(isPresented: $showAddTimer, onDismiss: {
+                    timerService.loadTimers()
         }) {
             AddTimerView { duration, title, sound in
                 Task {
@@ -361,6 +364,8 @@ struct SettingsView: View {
     @AppStorage("appColorScheme") private var appColorScheme: String = "system"
     @AppStorage("use24HourFormat") private var use24HourFormat: Bool = false
     @AppStorage("selectedAppIcon") private var selectedAppIcon: String = "Classic"
+    @AppStorage("globalSnoozeEnabled") private var globalSnoozeEnabled: Bool = true
+    @AppStorage("globalSnoozeDuration") private var globalSnoozeDuration: Int = 5
     @State private var showRemoveCalendarAlert = false
     @State private var pendingIcon: String = "Classic"
     @State private var showFeatureRequest = false
@@ -619,6 +624,36 @@ struct SettingsView: View {
                         }
                     }
                     .padding(.horizontal, 20)
+                    
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16).fill(cardColor)
+                        VStack(spacing: 0) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "moon.zzz.fill")
+                                    .foregroundStyle(.orange)
+                                Text("Snooze")
+                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(primaryText)
+                                Spacer()
+                                Toggle("", isOn: $globalSnoozeEnabled).tint(.orange)
+                            }
+                            .padding(16)
+                            if globalSnoozeEnabled {
+                                Divider()
+                                HStack {
+                                    Text("Default Duration")
+                                        .font(.system(size: 14, design: .rounded))
+                                        .foregroundStyle(secondaryText)
+                                    Spacer()
+                                    Stepper("\(globalSnoozeDuration) min", value: $globalSnoozeDuration, in: 1...30)
+                                        .foregroundStyle(primaryText)
+                                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                                }
+                                .padding(16)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
 
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(cardColor)
@@ -700,7 +735,20 @@ struct SettingsView: View {
         .preferredColorScheme(currentColorScheme)
         .alert("Remove All Calendar Events?", isPresented: $showRemoveCalendarAlert) {
             Button("Remove", role: .destructive) {
+                let map = UserDefaults.standard.dictionary(forKey: "calendarEventMap") as? [String: String] ?? [:]
                 CalendarService.shared.removeAllCalendarEvents()
+                let alarmService = AlarmService.shared
+                for group in alarmService.alarmGroups {
+                    for alarmID in group.alarmIDs {
+                        if let fireDate = alarmService.alarms.first(where: { $0.id == alarmID })?.fireDate {
+                            let key = fireDate.timeIntervalSince1970.description
+                            if map[key] != nil && group.isEnabled {
+                                alarmService.toggleAlarm(id: alarmID)
+                            }
+                        }
+                    }
+                }
+                alarmService.loadAlarms()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -855,7 +903,11 @@ struct AlarmGroupRow: View {
         // ✅ Monthly with selected months
         let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
         let selectedMonths = group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
-        if !selectedMonths.isEmpty { return "\(selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", ")) • \(timeOnly)" }
+        let dayOfMonth = group.repeatDays.filter { $0 >= 1 && $0 <= 31 }.first
+        if !selectedMonths.isEmpty {
+            let dayStr = dayOfMonth.map { " \($0)" } ?? ""
+            return "\(selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", ")) •\(dayStr) • \(timeOnly)"
+        }
         // ✅ Yearly with selected years
         let selectedYears = group.repeatDays.filter { $0 >= 2025 }.sorted()
         if !selectedYears.isEmpty { return "\(selectedYears.map { "\($0)" }.joined(separator: ", ")) • \(timeOnly)" }

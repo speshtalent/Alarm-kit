@@ -15,6 +15,8 @@ struct StopAlarmIntent: LiveActivityIntent {
 
     func perform() async throws -> some IntentResult {
         guard let id = UUID(uuidString: alarmID) else { return .result() }
+        // ✅ Clear snooze flag
+        UserDefaults.standard.removeObject(forKey: "isSnoozed_\(alarmID)")
         try AlarmManager.shared.cancel(id: id)
 
         // ✅ Use App Group — shared between extension and main app
@@ -118,6 +120,8 @@ struct RepeatAlarmIntent: LiveActivityIntent {
 
         do {
             try AlarmManager.shared.cancel(id: id)
+            // ✅ Mark as snoozed
+            UserDefaults.standard.set(true, forKey: "isSnoozed_\(alarmID)")
         } catch {
             print("❌ Cancel error:", error)
         }
@@ -168,9 +172,17 @@ struct RepeatAlarmIntent: LiveActivityIntent {
                 secondaryIntent: RepeatAlarmIntent(alarmID: alarmID),
                 sound: {
                     let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+                    // ✅ Check custom voice file first
                     let voicePath = libraryURL.appendingPathComponent("Sounds/alarm_voice_\(alarmID).caf").path
-                    let soundFile = FileManager.default.fileExists(atPath: voicePath) ? "alarm_voice_\(alarmID).caf" : "nokia.caf"
-                    return .named(soundFile)
+                    if FileManager.default.fileExists(atPath: voicePath) {
+                        return .named("alarm_voice_\(alarmID).caf")
+                    }
+                    // ✅ Check saved ringtone for this alarm
+                    let alarmToGroup = UserDefaults.standard.dictionary(forKey: "AlarmToGroupID") as? [String: String] ?? [:]
+                    let groupID = alarmToGroup[alarmID] ?? alarmID
+                    let savedSound = UserDefaults.standard.string(forKey: "alarmSound_\(groupID)") ??
+                                     UserDefaults.standard.string(forKey: "alarmSound_\(alarmID)") ?? "nokia.caf"
+                    return .named(savedSound)
                 }()
             )
             if let scheduled = try? await AlarmManager.shared.schedule(id: id, configuration: configuration) {
