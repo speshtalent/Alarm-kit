@@ -90,7 +90,14 @@ struct ContentView: View {
                     .padding(.trailing, 8)
 
                     Button {
-                        mode == .alarms ? (showAddAlarm = true) : (showAddTimer = true)
+                        if mode == .alarms {
+                            Task {
+                                await AlarmService.shared.requestAuthorizationIfNeeded()
+                                showAddAlarm = true
+                            }
+                        } else {
+                            showAddTimer = true
+                        }
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 16, weight: .bold))
@@ -367,18 +374,24 @@ struct SettingsView: View {
     @AppStorage("globalSnoozeEnabled") private var globalSnoozeEnabled: Bool = true
     @AppStorage("globalSnoozeDuration") private var globalSnoozeDuration: Int = 5
     @State private var showRemoveCalendarAlert = false
+    @State private var showClearCloudAlert = false
+    @State private var showClearCloudSuccess = false
+    @State private var showRestoreAlert = false
+    @State private var showRestoreSuccessAlert = false
+    @State private var showNoBackupAlert = false
+    @State private var isRestoring = false
     @State private var pendingIcon: String = "Classic"
     @State private var showFeatureRequest = false
     @Environment(\.colorScheme) private var systemColorScheme
     @Environment(\.dismiss) private var dismiss
-
+    
     var preferredColorScheme: ColorScheme?
-
+    
     private let appIcons: [(name: String, imageName: String, iconName: String?)] = [
         ("Storm", "AppIcon", nil),
         ("Blaze", "AppIcon1", "AppIcon1"),
     ]
-
+    
     private var useSystemDefault: Binding<Bool> {
         Binding(
             get: { appColorScheme == "system" },
@@ -398,7 +411,7 @@ struct SettingsView: View {
             }
         )
     }
-
+    
     private var effectiveScheme: ColorScheme {
         switch appColorScheme {
         case "light": return .light
@@ -406,27 +419,27 @@ struct SettingsView: View {
         default: return systemColorScheme
         }
     }
-
+    
     private var bgColor: Color {
         effectiveScheme == .dark
-            ? Color(UIColor(red: 0.071, green: 0.071, blue: 0.078, alpha: 1))
-            : Color(UIColor.systemGroupedBackground)
+        ? Color(UIColor(red: 0.071, green: 0.071, blue: 0.078, alpha: 1))
+        : Color(UIColor.systemGroupedBackground)
     }
-
+    
     private var cardColor: Color {
         effectiveScheme == .dark
-            ? Color(UIColor(red: 0.13, green: 0.13, blue: 0.14, alpha: 1))
-            : Color(UIColor.secondarySystemGroupedBackground)
+        ? Color(UIColor(red: 0.13, green: 0.13, blue: 0.14, alpha: 1))
+        : Color(UIColor.secondarySystemGroupedBackground)
     }
-
+    
     private var primaryText: Color {
         effectiveScheme == .dark ? .white : Color(UIColor.label)
     }
-
+    
     private var secondaryText: Color {
         effectiveScheme == .dark ? Color(white: 0.55) : Color(UIColor.secondaryLabel)
     }
-
+    
     private var currentColorScheme: ColorScheme? {
         switch appColorScheme {
         case "light": return .light
@@ -434,29 +447,29 @@ struct SettingsView: View {
         default: return nil
         }
     }
-
+    
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
         return "Version \(version) (\(build))"
     }
-
+    
     var body: some View {
         ZStack {
             bgColor.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 16) {
-
+                    
                     RoundedRectangle(cornerRadius: 3)
                         .fill(secondaryText.opacity(0.4))
                         .frame(width: 40, height: 5)
                         .padding(.top, 12)
-
+                    
                     Text("Settings")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundStyle(primaryText)
                         .padding(.bottom, 4)
-
+                    
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(cardColor)
                         VStack(spacing: 0) {
@@ -470,7 +483,7 @@ struct SettingsView: View {
                             }
                             .padding(16)
                             Divider()
-
+                            
                             HStack {
                                 Text("System Default")
                                     .font(.system(size: 15, weight: .medium, design: .rounded))
@@ -480,7 +493,7 @@ struct SettingsView: View {
                                     .tint(.orange)
                             }
                             .padding(16)
-
+                            
                             if appColorScheme != "system" {
                                 Divider()
                                 appearanceRow(title: "Light Mode", value: "light")
@@ -490,7 +503,7 @@ struct SettingsView: View {
                         }
                     }
                     .padding(.horizontal, 20)
-
+                    
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(cardColor)
                         VStack(spacing: 0) {
@@ -504,7 +517,7 @@ struct SettingsView: View {
                             }
                             .padding(16)
                             Divider()
-
+                            
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 16) {
                                     ForEach(appIcons, id: \.name) { icon in
@@ -526,11 +539,11 @@ struct SettingsView: View {
                                                     .stroke(pendingIcon == icon.name ? Color.orange : Color.clear, lineWidth: 3)
                                             )
                                             .shadow(color: pendingIcon == icon.name ? .orange.opacity(0.4) : .clear, radius: 6)
-
+                                            
                                             Text(icon.name)
                                                 .font(.system(size: 11, weight: .medium, design: .rounded))
                                                 .foregroundStyle(pendingIcon == icon.name ? .orange : secondaryText)
-
+                                            
                                             if selectedAppIcon == icon.name {
                                                 Text("Active")
                                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
@@ -546,7 +559,7 @@ struct SettingsView: View {
                                 }
                                 .padding(16)
                             }
-
+                            
                             if pendingIcon != selectedAppIcon {
                                 Button {
                                     applyIcon()
@@ -567,7 +580,7 @@ struct SettingsView: View {
                     }
                     .padding(.horizontal, 20)
                     .onAppear { pendingIcon = selectedAppIcon }
-
+                    
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(cardColor)
                         VStack(spacing: 0) {
@@ -595,7 +608,7 @@ struct SettingsView: View {
                         }
                     }
                     .padding(.horizontal, 20)
-
+                    
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(cardColor)
                         VStack(spacing: 0) {
@@ -648,421 +661,718 @@ struct SettingsView: View {
                                     Stepper("\(globalSnoozeDuration) min", value: $globalSnoozeDuration, in: 1...30)
                                         .foregroundStyle(primaryText)
                                         .font(.system(size: 14, weight: .medium, design: .rounded))
+                                        .onChange(of: globalSnoozeDuration) { _, newValue in
+                                            let appGroup = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
+                                            appGroup?.set(newValue, forKey: "globalSnoozeDuration")
+                                        }
                                 }
                                 .padding(16)
                             }
                         }
                     }
                     .padding(.horizontal, 20)
-
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(cardColor)
-                        HStack(spacing: 8) {
-                            Image(systemName: "lightbulb.fill")
-                                .foregroundStyle(.orange)
-                            Text("Request a Feature")
-                                .font(.system(size: 15, weight: .medium, design: .rounded))
-                                .foregroundStyle(primaryText)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundStyle(secondaryText)
-                                .font(.system(size: 13))
-                        }
-                        .padding(16)
-                    }
-                    .padding(.horizontal, 20)
-                    .onTapGesture { showFeatureRequest = true }
-
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(cardColor)
-                        HStack(spacing: 8) {
-                            Image(systemName: "lock.shield.fill")
-                                .foregroundStyle(.orange)
-                            Text("Privacy & Security")
-                                .font(.system(size: 15, weight: .medium, design: .rounded))
-                                .foregroundStyle(primaryText)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundStyle(secondaryText)
-                                .font(.system(size: 13))
-                        }
-                        .padding(16)
-                    }
-                    .padding(.horizontal, 20)
-                    .onTapGesture {
-                        if let url = URL(string: "https://speshtalent.com/datealarm") {
-                            UIApplication.shared.open(url)
-                        }
-                    }
-                    
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(cardColor)
-                        HStack(spacing: 8) {
-                            Image(systemName: "calendar.badge.minus")
-                                .foregroundStyle(.red)
-                            Text("Remove All Calendar Events")
-                                .font(.system(size: 15, weight: .medium, design: .rounded))
-                                .foregroundStyle(.red)
-                            Spacer()
-                        }
-                        .padding(16)
-                    }
-                    .padding(.horizontal, 20)
-                    .onTapGesture {
-                        showRemoveCalendarAlert = true
-                    }
-
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(cardColor)
-                        HStack(spacing: 8) {
-                            Image(systemName: "info.circle.fill")
-                                .foregroundStyle(.orange)
-                            Text("Version")
-                                .font(.system(size: 15, weight: .medium, design: .rounded))
-                                .foregroundStyle(primaryText)
-                            Spacer()
-                            Text(appVersion)
-                                .font(.system(size: 14, design: .rounded))
-                                .foregroundStyle(secondaryText)
-                        }
-                        .padding(16)
-                    }
-                    .padding(.horizontal, 20)
-                }
-                .padding(.bottom, 40)
-            }
-        }
-        .preferredColorScheme(currentColorScheme)
-        .alert("Remove All Calendar Events?", isPresented: $showRemoveCalendarAlert) {
-            Button("Remove", role: .destructive) {
-                let map = UserDefaults.standard.dictionary(forKey: "calendarEventMap") as? [String: String] ?? [:]
-                CalendarService.shared.removeAllCalendarEvents()
-                let alarmService = AlarmService.shared
-                for group in alarmService.alarmGroups {
-                    for alarmID in group.alarmIDs {
-                        if let fireDate = alarmService.alarms.first(where: { $0.id == alarmID })?.fireDate {
-                            let key = fireDate.timeIntervalSince1970.description
-                            if map[key] != nil && group.isEnabled {
-                                alarmService.toggleAlarm(id: alarmID)
-                            }
-                        }
-                    }
-                }
-                alarmService.loadAlarms()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This will remove all calendar events added by Date Alarm.")
-        }
-        .sheet(isPresented: $showFeatureRequest) {
-            FeatureRequestView()
-                .preferredColorScheme(currentColorScheme)
-        }
-    }
-
-    private func applyIcon() {
-        guard let icon = appIcons.first(where: { $0.name == pendingIcon }) else { return }
-        print("🎨 Setting icon to: \(String(describing: icon.iconName))")
-        print("🎨 Icon files in bundle: \(Bundle.main.paths(forResourcesOfType: "png", inDirectory: nil).filter { $0.contains("AppIcon") })")
-        UIApplication.shared.setAlternateIconName(icon.iconName) { error in
-            if let error = error {
-                print("❌ Error: \(error.localizedDescription)")
-            } else {
-                print("✅ Icon changed successfully!")
-                DispatchQueue.main.async {
-                    selectedAppIcon = pendingIcon
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func appearanceRow(title: String, value: String) -> some View {
-        HStack {
-            Text(title)
-                .font(.system(size: 15, weight: .medium, design: .rounded))
-                .foregroundStyle(primaryText)
-            Spacer()
-            if appColorScheme == value {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.orange)
-            }
-        }
-        .padding(16)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                appColorScheme = value
-            }
-        }
-    }
-}
-
-// MARK: - Feature Request View
-struct FeatureRequestView: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var requestText = ""
-    @State private var showNoMailAlert = false
-
-    private let supportEmail = "robin@speshtalent.com"
-
-    var body: some View {
-        ZStack {
-            Color("AppBackground").ignoresSafeArea()
-            VStack(spacing: 20) {
-
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color("SecondaryText").opacity(0.4))
-                    .frame(width: 40, height: 5)
-                    .padding(.top, 12)
-
-                Text("Request a Feature")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color("PrimaryText"))
-
-                Text("Tell us what you'd like to see in Date Alarm!")
-                    .font(.system(size: 14, design: .rounded))
-                    .foregroundStyle(Color("SecondaryText"))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 20)
-
-                ZStack(alignment: .topLeading) {
-                    RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
-                    if requestText.isEmpty {
-                        Text("Describe your feature idea...")
-                            .font(.system(size: 15, design: .rounded))
-                            .foregroundStyle(Color("SecondaryText").opacity(0.5))
-                            .padding(16)
-                    }
-                    TextEditor(text: $requestText)
-                        .font(.system(size: 15, design: .rounded))
-                        .foregroundStyle(Color("PrimaryText"))
-                        .scrollContentBackground(.hidden)
-                        .background(Color.clear)
-                        .padding(12)
-                        .frame(height: 160)
-                }
-                .frame(height: 160)
-                .padding(.horizontal, 20)
-
-                Button {
-                    sendFeatureRequest()
-                } label: {
-                    Text("Send Request")
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 18)
-                        .background(requestText.isEmpty ? Color.orange.opacity(0.4) : Color.orange)
-                        .clipShape(RoundedRectangle(cornerRadius: 18))
-                }
-                .disabled(requestText.isEmpty)
-                .padding(.horizontal, 20)
-
-                Spacer()
-            }
-        }
-        .alert("Mail Not Set Up", isPresented: $showNoMailAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Please set up the Mail app on your iPhone to send feature requests.")
-        }
-    }
-
-    private func sendFeatureRequest() {
-        let subject = "Feature Request — Date Alarm"
-        let body = requestText
-        let urlString = "mailto:\(supportEmail)?subject=\(subject)&body=\(body)"
-            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        if let url = URL(string: urlString) {
-            UIApplication.shared.open(url) { success in
-                if !success {
-                    showNoMailAlert = true
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Alarm Group Row
-struct AlarmGroupRow: View {
-    let group: AlarmService.AlarmGroup
-    let use24Hour: Bool
-    let onToggle: () -> Void
-    
-    // ✅ Only this changed — added Monthly/Yearly support
-    private var subtitleText: String {
-        let f = DateFormatter()
-        f.dateFormat = use24Hour ? "EEE, MMM d • HH:mm" : "EEE, MMM d • h:mm a"
-        let tf = DateFormatter()
-        tf.dateFormat = use24Hour ? "HH:mm" : "h:mm a"
-        let timeOnly = group.fireDate.flatMap { tf.string(from: $0) } ?? ""
-        
-        if group.repeatDays == Set([100]) { return "Monthly • \(timeOnly)" }
-        if group.repeatDays == Set([200]) { return "Yearly • \(timeOnly)" }
-        // ✅ Monthly with selected months
-        let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-        let selectedMonths = group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
-        let dayOfMonth = group.repeatDays.filter { $0 >= 1 && $0 <= 31 }.first
-        if !selectedMonths.isEmpty {
-            let dayStr = dayOfMonth.map { " \($0)" } ?? ""
-            return "\(selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", ")) •\(dayStr) • \(timeOnly)"
-        }
-        // ✅ Yearly with selected years
-        let selectedYears = group.repeatDays.filter { $0 >= 2025 }.sorted()
-        if !selectedYears.isEmpty { return "\(selectedYears.map { "\($0)" }.joined(separator: ", ")) • \(timeOnly)" }
-        if group.repeatLabel.isEmpty {
-            return group.fireDate.flatMap { f.string(from: $0) } ?? ""
-        } else {
-            return "\(group.repeatLabel) • \(timeOnly)"
-        }
-    }
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(group.isFired ? Color.green.opacity(0.15) : (group.isEnabled ? .orange.opacity(0.15) : .gray.opacity(0.1)))
-                    .frame(width: 48, height: 48)
-                Image(systemName: group.isFired ? "checkmark.circle.fill" : (group.repeatDays.isEmpty ? "alarm" : "repeat"))
-                    .foregroundStyle(group.isFired ? .green : (group.isEnabled ? .orange : .gray))
-                    .font(.system(size: 20))
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                Text(group.label)
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundStyle(group.isFired ? Color("SecondaryText") : (group.isEnabled ? Color("PrimaryText") : Color("SecondaryText")))
-                if group.isFired {
-                    Text("Fired • Tap to reschedule")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundStyle(.green.opacity(0.8))
-                } else {
-                    Text(subtitleText)
-                        .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundStyle(Color("SecondaryText"))
-                }
-            }
-            Spacer()
-            if !group.isFired {
-                Toggle("", isOn: Binding(
-                    get: { group.isEnabled },
-                    set: { _ in onToggle() }
-                ))
-                .tint(.orange)
-                .labelsHidden()
-            }
-        }
-        .padding(16)
-        .background(Color("CardBackground"))
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-        .opacity(group.isFired ? 0.7 : (group.isEnabled ? 1.0 : 0.6))
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: group.isEnabled)
-        .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.orange.opacity(group.isFired ? 0.6 : 0), lineWidth: 2)
-                .scaleEffect(group.isFired ? 1.02 : 1.0)
-                .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: group.isFired)
-        )
-    }
-}
-// MARK: - Timer Row
-struct TimerRow: View {
-    let timer: Alarm
-
-    private var durationText: String {
-        guard let duration = timer.countdownDuration else { return "Timer" }
-        let total = Int(duration.preAlert ?? duration.postAlert ?? 0)
-        let hours = total / 3600
-        let minutes = (total % 3600) / 60
-        let seconds = total % 60
-        if hours > 0 && minutes > 0 { return "\(hours)h \(minutes)m" }
-        else if hours > 0 { return "\(hours) hr" }
-        else if minutes > 0 && seconds > 0 { return "\(minutes)m \(seconds)s" }
-        else if minutes > 0 { return "\(minutes) min" }
-        else { return "\(seconds) sec" }
-    }
-
-    var body: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(.orange.opacity(0.15))
-                    .frame(width: 48, height: 48)
-                Image(systemName: "timer")
-                    .foregroundStyle(.orange)
-                    .font(.system(size: 20))
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                Text(durationText)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color("PrimaryText"))
-                Text("Timer")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color("SecondaryText"))
-            }
-            Spacer()
-        }
-        .padding(16)
-        .background(Color("CardBackground"))
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-    }
-}
-
-// MARK: - History View
-struct ScheduledView: View {
-    @AppStorage("use24HourFormat") private var use24HourFormat: Bool = false
-    @StateObject private var alarmService = AlarmService.shared
-    @State private var expandedGroupID: UUID? = nil
-
-    var body: some View {
-        ZStack {
-            Color("AppBackground").ignoresSafeArea()
-            VStack(spacing: 0) {
-                HStack {
-                    Text("Scheduled")
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color("PrimaryText"))
-                    Spacer()
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 16)
-
-                if alarmService.alarmGroups.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "list.bullet.clipboard")
-                            .font(.system(size: 48))
-                            .foregroundStyle(.orange.opacity(0.4))
-                        Text("No scheduled alarms")
-                            .font(.system(size: 16, weight: .medium, design: .rounded))
-                            .foregroundStyle(Color("SecondaryText"))
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.top, 80)
-                } else {
-                    List {
-                        ForEach(Array(alarmService.alarmGroups.enumerated()), id: \.element.id) { index, group in
-                            VStack(spacing: 0) {
-                                ScheduledRowView(group: group, use24Hour: use24HourFormat)
-                                    .onTapGesture {
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            expandedGroupID = expandedGroupID == group.id ? nil : group.id
-                                        }
-                                    }
-
-                                if expandedGroupID == group.id {
-                                    AlarmDetailInlineView(group: group, use24Hour: use24HourFormat)
-                                        .transition(.opacity)
+                        
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16).fill(cardColor)
+                            HStack(spacing: 8) {
+                                Image(systemName: "icloud.and.arrow.down.fill")
+                                    .foregroundStyle(.orange)
+                                Text("Restore from iCloud")
+                                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                                    .foregroundStyle(primaryText)
+                                Spacer()
+                                if isRestoring {
+                                    ProgressView()
+                                        .tint(.orange)
+                                } else {
+                                    Image(systemName: "chevron.right")
+                                        .foregroundStyle(secondaryText)
+                                        .font(.system(size: 13))
                                 }
                             }
+                            .padding(16)
+                        }
+                        .padding(.horizontal, 20)
+                        .onTapGesture {
+                            let store = NSUbiquitousKeyValueStore.default
+                            store.synchronize()
+                            if store.data(forKey: "iCloudAlarmBackup") != nil {
+                                showRestoreAlert = true
+                            } else {
+                                showNoBackupAlert = true
+                            }
+                        }
+                        
+                        let hasCloudData = NSUbiquitousKeyValueStore.default.data(forKey: "iCloudAlarmBackup") != nil
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16).fill(cardColor)
+                            HStack(spacing: 8) {
+                                Image(systemName: "icloud.fill")
+                                    .foregroundStyle(hasCloudData ? .orange : secondaryText)
+                                Text("Clear iCloud Backup")
+                                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                                    .foregroundStyle(hasCloudData ? primaryText : secondaryText)
+                                Spacer()
+                                Text(hasCloudData ? "Active" : "No Backup")
+                                    .font(.system(size: 12, design: .rounded))
+                                    .foregroundStyle(hasCloudData ? .orange : secondaryText)
+                            }
+                            .padding(16)
+                        }
+                        .padding(.horizontal, 20)
+                        .opacity(hasCloudData ? 1.0 : 0.4)
+                        .onTapGesture {
+                            if hasCloudData { showClearCloudAlert = true }
+                        }
+                        
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16).fill(cardColor)
+                            HStack(spacing: 8) {
+                                Image(systemName: "calendar.badge.minus")
+                                    .foregroundStyle(.red)
+                                Text("Remove All Calendar Events")
+                                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.red)
+                                Spacer()
+                            }
+                            .padding(16)
+                        }
+                        .padding(.horizontal, 20)
+                        .onTapGesture {
+                            showRemoveCalendarAlert = true
+                        }
+                        
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16).fill(cardColor)
+                            HStack(spacing: 8) {
+                                Image(systemName: "lightbulb.fill")
+                                    .foregroundStyle(.orange)
+                                Text("Request a Feature")
+                                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                                    .foregroundStyle(primaryText)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundStyle(secondaryText)
+                                    .font(.system(size: 13))
+                            }
+                            .padding(16)
+                        }
+                        .padding(.horizontal, 20)
+                        .onTapGesture { showFeatureRequest = true }
+                        
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16).fill(cardColor)
+                            HStack(spacing: 8) {
+                                Image(systemName: "lock.shield.fill")
+                                    .foregroundStyle(.orange)
+                                Text("Privacy & Security")
+                                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                                    .foregroundStyle(primaryText)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundStyle(secondaryText)
+                                    .font(.system(size: 13))
+                            }
+                            .padding(16)
+                        }
+                        .padding(.horizontal, 20)
+                        .onTapGesture {
+                            if let url = URL(string: "https://speshtalent.com/datealarm") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                        
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16).fill(cardColor)
+                            HStack(spacing: 8) {
+                                Image(systemName: "info.circle.fill")
+                                    .foregroundStyle(.orange)
+                                Text("Version")
+                                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                                    .foregroundStyle(primaryText)
+                                Spacer()
+                                Text(appVersion)
+                                    .font(.system(size: 14, design: .rounded))
+                                    .foregroundStyle(secondaryText)
+                            }
+                            .padding(16)
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                    .padding(.bottom, 40)
+                }
+            }
+            .preferredColorScheme(currentColorScheme)
+            .alert("Remove All Calendar Events?", isPresented: $showRemoveCalendarAlert) {
+                Button("Remove", role: .destructive) {
+                    let map = UserDefaults.standard.dictionary(forKey: "calendarEventMap") as? [String: String] ?? [:]
+                    CalendarService.shared.removeAllCalendarEvents()
+                    let alarmService = AlarmService.shared
+                    for group in alarmService.alarmGroups {
+                        for alarmID in group.alarmIDs {
+                            if let fireDate = alarmService.alarms.first(where: { $0.id == alarmID })?.fireDate {
+                                let key = fireDate.timeIntervalSince1970.description
+                                if map[key] != nil && group.isEnabled {
+                                    alarmService.toggleAlarm(id: alarmID)
+                                }
+                            }
+                        }
+                    }
+                    alarmService.loadAlarms()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will remove all calendar events added by Date Alarm.")
+            }
+            .alert("Clear All Data?", isPresented: $showClearCloudAlert) {
+                Button("Yes, Delete Everything", role: .destructive) {
+                    // ✅ Clear iCloud
+                    let store = NSUbiquitousKeyValueStore.default
+                    store.removeObject(forKey: "iCloudAlarmBackup")
+                    store.removeObject(forKey: "customRecordingsList")
+                    store.synchronize()
+                    UserDefaults.standard.removeObject(forKey: "hasLaunchedBefore")
+                    // ✅ Clear local recordings
+                    let saved = UserDefaults.standard.array(forKey: "customRecordingsList") as? [[String: String]] ?? []
+                    let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+                    for recording in saved {
+                        if let file = recording["file"] {
+                            let url = libraryURL.appendingPathComponent("Sounds/\(file)")
+                            try? FileManager.default.removeItem(at: url)
+                        }
+                    }
+                    UserDefaults.standard.removeObject(forKey: "customRecordingsList")
+                    showClearCloudSuccess = true
+                }
+                Button("No", role: .cancel) {}
+            } message: {
+                Text("This will permanently delete all your recordings and iCloud backup data. This cannot be undone.")
+            }
+            .alert("iCloud Backup Cleared", isPresented: $showClearCloudSuccess) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Your iCloud backup has been successfully cleared.")
+            }
+            .alert("Restore from iCloud?", isPresented: $showRestoreAlert) {
+                Button("Yes, Restore") {
+                    isRestoring = true
+                    Task {
+                        UserDefaults.standard.removeObject(forKey: "hasLaunchedBefore")
+                        await AlarmService.shared.requestAuthorizationIfNeeded()
+                        let restored = await AlarmService.shared.restoreFromiCloudIfNeeded()
+                        await MainActor.run {
+                            isRestoring = false
+                            AlarmService.shared.loadAlarms()
+                            showRestoreSuccessAlert = restored
+                        }
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will restore your previously backed up alarms and recordings from iCloud.")
+            }
+            .alert("Restore Complete ✅", isPresented: $showRestoreSuccessAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Your alarms have been restored from iCloud successfully!")
+            }
+            .alert("No Backup Found", isPresented: $showNoBackupAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("No iCloud backup was found for this account.")
+            }
+            .sheet(isPresented: $showFeatureRequest) {
+                FeatureRequestView()
+                    .preferredColorScheme(currentColorScheme)
+            }
+        }
+        
+        private func applyIcon() {
+            guard let icon = appIcons.first(where: { $0.name == pendingIcon }) else { return }
+            print("🎨 Setting icon to: \(String(describing: icon.iconName))")
+            print("🎨 Icon files in bundle: \(Bundle.main.paths(forResourcesOfType: "png", inDirectory: nil).filter { $0.contains("AppIcon") })")
+            UIApplication.shared.setAlternateIconName(icon.iconName) { error in
+                if let error = error {
+                    print("❌ Error: \(error.localizedDescription)")
+                } else {
+                    print("✅ Icon changed successfully!")
+                    DispatchQueue.main.async {
+                        selectedAppIcon = pendingIcon
+                    }
+                }
+            }
+        }
+        
+        @ViewBuilder
+        private func appearanceRow(title: String, value: String) -> some View {
+            HStack {
+                Text(title)
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundStyle(primaryText)
+                Spacer()
+                if appColorScheme == value {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.orange)
+                }
+            }
+            .padding(16)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    appColorScheme = value
+                }
+            }
+        }
+    }
+    
+    // MARK: - Feature Request View
+    struct FeatureRequestView: View {
+        @Environment(\.dismiss) private var dismiss
+        @State private var requestText = ""
+        @State private var showNoMailAlert = false
+        
+        private let supportEmail = "robin@speshtalent.com"
+        
+        var body: some View {
+            ZStack {
+                Color("AppBackground").ignoresSafeArea()
+                VStack(spacing: 20) {
+                    
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color("SecondaryText").opacity(0.4))
+                        .frame(width: 40, height: 5)
+                        .padding(.top, 12)
+                    
+                    Text("Request a Feature")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color("PrimaryText"))
+                    
+                    Text("Tell us what you'd like to see in Date Alarm!")
+                        .font(.system(size: 14, design: .rounded))
+                        .foregroundStyle(Color("SecondaryText"))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                    
+                    ZStack(alignment: .topLeading) {
+                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
+                        if requestText.isEmpty {
+                            Text("Describe your feature idea...")
+                                .font(.system(size: 15, design: .rounded))
+                                .foregroundStyle(Color("SecondaryText").opacity(0.5))
+                                .padding(16)
+                        }
+                        TextEditor(text: $requestText)
+                            .font(.system(size: 15, design: .rounded))
+                            .foregroundStyle(Color("PrimaryText"))
+                            .scrollContentBackground(.hidden)
+                            .background(Color.clear)
+                            .padding(12)
+                            .frame(height: 160)
+                    }
+                    .frame(height: 160)
+                    .padding(.horizontal, 20)
+                    
+                    Button {
+                        sendFeatureRequest()
+                    } label: {
+                        Text("Send Request")
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(requestText.isEmpty ? Color.orange.opacity(0.4) : Color.orange)
+                            .clipShape(RoundedRectangle(cornerRadius: 18))
+                    }
+                    .disabled(requestText.isEmpty)
+                    .padding(.horizontal, 20)
+                    
+                    Spacer()
+                }
+            }
+            .alert("Mail Not Set Up", isPresented: $showNoMailAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Please set up the Mail app on your iPhone to send feature requests.")
+            }
+        }
+        
+        private func sendFeatureRequest() {
+            let subject = "Feature Request — Date Alarm"
+            let body = requestText
+            let urlString = "mailto:\(supportEmail)?subject=\(subject)&body=\(body)"
+                .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            if let url = URL(string: urlString) {
+                UIApplication.shared.open(url) { success in
+                    if !success {
+                        showNoMailAlert = true
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Alarm Group Row
+    struct AlarmGroupRow: View {
+        let group: AlarmService.AlarmGroup
+        let use24Hour: Bool
+        let onToggle: () -> Void
+        
+        // ✅ Only this changed — added Monthly/Yearly support
+        private var subtitleText: String {
+            let f = DateFormatter()
+            f.dateFormat = use24Hour ? "EEE, MMM d • HH:mm" : "EEE, MMM d • h:mm a"
+            let tf = DateFormatter()
+            tf.dateFormat = use24Hour ? "HH:mm" : "h:mm a"
+            let timeOnly = group.fireDate.flatMap { tf.string(from: $0) } ?? ""
+            
+            if group.repeatDays == Set([100]) { return "Monthly • \(timeOnly)" }
+            if group.repeatDays == Set([200]) { return "Yearly • \(timeOnly)" }
+            // ✅ Monthly with selected months
+            let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+            let selectedMonths = group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+            let dayOfMonth = group.repeatDays.filter { $0 >= 1 && $0 <= 31 }.first
+            if !selectedMonths.isEmpty {
+                let dayStr = dayOfMonth.map { " \($0)" } ?? ""
+                return "\(selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", ")) •\(dayStr) • \(timeOnly)"
+            }
+            // ✅ Yearly with selected years
+            let selectedYears = group.repeatDays.filter { $0 >= 2025 }.sorted()
+            if !selectedYears.isEmpty { return "\(selectedYears.map { "\($0)" }.joined(separator: ", ")) • \(timeOnly)" }
+            if group.repeatLabel.isEmpty {
+                return group.fireDate.flatMap { f.string(from: $0) } ?? ""
+            } else {
+                return "\(group.repeatLabel) • \(timeOnly)"
+            }
+        }
+        
+        var body: some View {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(group.isFired ? Color.green.opacity(0.15) : (group.isEnabled ? .orange.opacity(0.15) : .gray.opacity(0.1)))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: group.isFired ? "checkmark.circle.fill" : (group.repeatDays.isEmpty ? "alarm" : "repeat"))
+                        .foregroundStyle(group.isFired ? .green : (group.isEnabled ? .orange : .gray))
+                        .font(.system(size: 20))
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(group.label)
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .foregroundStyle(group.isFired ? Color("SecondaryText") : (group.isEnabled ? Color("PrimaryText") : Color("SecondaryText")))
+                    if group.isFired {
+                        Text("Fired • Tap to reschedule")
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundStyle(.green.opacity(0.8))
+                    } else {
+                        Text(subtitleText)
+                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .foregroundStyle(Color("SecondaryText"))
+                    }
+                }
+                Spacer()
+                if !group.isFired {
+                    Toggle("", isOn: Binding(
+                        get: { group.isEnabled },
+                        set: { _ in onToggle() }
+                    ))
+                    .tint(.orange)
+                    .labelsHidden()
+                }
+            }
+            .padding(16)
+            .background(Color("CardBackground"))
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .opacity(group.isFired ? 0.7 : (group.isEnabled ? 1.0 : 0.6))
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: group.isEnabled)
+            .overlay(
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(Color.orange.opacity(group.isFired ? 0.6 : 0), lineWidth: 2)
+                    .scaleEffect(group.isFired ? 1.02 : 1.0)
+                    .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: group.isFired)
+            )
+        }
+    }
+    // MARK: - Timer Row
+    struct TimerRow: View {
+        let timer: Alarm
+        
+        private var durationText: String {
+            guard let duration = timer.countdownDuration else { return "Timer" }
+            let total = Int(duration.preAlert ?? duration.postAlert ?? 0)
+            let hours = total / 3600
+            let minutes = (total % 3600) / 60
+            let seconds = total % 60
+            if hours > 0 && minutes > 0 { return "\(hours)h \(minutes)m" }
+            else if hours > 0 { return "\(hours) hr" }
+            else if minutes > 0 && seconds > 0 { return "\(minutes)m \(seconds)s" }
+            else if minutes > 0 { return "\(minutes) min" }
+            else { return "\(seconds) sec" }
+        }
+        
+        var body: some View {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(.orange.opacity(0.15))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "timer")
+                        .foregroundStyle(.orange)
+                        .font(.system(size: 20))
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(durationText)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color("PrimaryText"))
+                    Text("Timer")
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color("SecondaryText"))
+                }
+                Spacer()
+            }
+            .padding(16)
+            .background(Color("CardBackground"))
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+        }
+    }
+    
+    // MARK: - History View
+    struct ScheduledView: View {
+        @AppStorage("use24HourFormat") private var use24HourFormat: Bool = false
+        @StateObject private var alarmService = AlarmService.shared
+        @State private var expandedGroupID: UUID? = nil
+        
+        var body: some View {
+            ZStack {
+                Color("AppBackground").ignoresSafeArea()
+                VStack(spacing: 0) {
+                    HStack {
+                        Text("Scheduled")
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color("PrimaryText"))
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 16)
+                    
+                    if alarmService.alarmGroups.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "list.bullet.clipboard")
+                                .font(.system(size: 48))
+                                .foregroundStyle(.orange.opacity(0.4))
+                            Text("No scheduled alarms")
+                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                .foregroundStyle(Color("SecondaryText"))
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.top, 80)
+                    } else {
+                        List {
+                            ForEach(Array(alarmService.alarmGroups.enumerated()), id: \.element.id) { index, group in
+                                VStack(spacing: 0) {
+                                    ScheduledRowView(group: group, use24Hour: use24HourFormat)
+                                        .onTapGesture {
+                                            withAnimation(.easeInOut(duration: 0.3)) {
+                                                expandedGroupID = expandedGroupID == group.id ? nil : group.id
+                                            }
+                                        }
+                                    
+                                    if expandedGroupID == group.id {
+                                        AlarmDetailInlineView(group: group, use24Hour: use24HourFormat)
+                                            .transition(.opacity)
+                                    }
+                                }
+                                .listRowBackground(Color("AppBackground"))
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                                .transition(.asymmetric(
+                                    insertion: .move(edge: .bottom).combined(with: .opacity),
+                                    removal: .opacity
+                                ))
+                                .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(Double(index) * 0.08), value: alarmService.alarmGroups.count)
+                            }
+                        }
+                        .listStyle(.plain)
+                        .background(Color("AppBackground"))
+                        .scrollContentBackground(.hidden)
+                    }
+                }
+            }
+            .onAppear {
+                alarmService.loadAlarms()
+            }
+        }
+    }
+    
+    // MARK: - Scheduled Row
+    struct ScheduledRowView: View {
+        let group: AlarmService.AlarmGroup
+        let use24Hour: Bool
+        
+        private var timeText: String {
+            let f = DateFormatter()
+            f.dateFormat = use24Hour ? "HH:mm" : "h:mm a"
+            return group.fireDate.flatMap { f.string(from: $0) } ?? ""
+        }
+        
+        private var dateText: String {
+            let f = DateFormatter()
+            f.dateFormat = "EEE, MMM d"
+            return group.fireDate.flatMap { f.string(from: $0) } ?? ""
+        }
+        
+        private var repeatText: String {
+            let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+            if group.repeatDays == Set([100]) { return "Every month" }
+            if group.repeatDays == Set([200]) { return "Every year" }
+            let selectedMonths = group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+            if !selectedMonths.isEmpty { return "Monthly • \(selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", "))" }
+            let selectedYears = group.repeatDays.filter { $0 >= 2025 }.sorted()
+            if !selectedYears.isEmpty { return "Yearly • \(selectedYears.map { "\($0)" }.joined(separator: ", "))" }
+            if !group.repeatDays.isEmpty { return "Weekly • \(group.repeatLabel)" }
+            return ""
+        }
+        
+        var body: some View {
+            HStack(spacing: 14) {
+                // Left orange line
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(.orange)
+                    .frame(width: 4)
+                    .frame(maxHeight: .infinity)
+                
+                VStack(alignment: .leading, spacing: 6) {
+                    // Alarm name
+                    Text(group.label)
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color("PrimaryText"))
+                    
+                    // Date and time
+                    HStack(spacing: 6) {
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.orange)
+                        Text("\(dateText) • \(timeText)")
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(Color("SecondaryText"))
+                    }
+                    
+                    // Repeat info
+                    if !repeatText.isEmpty {
+                        HStack(spacing: 6) {
+                            Image(systemName: "repeat")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.orange)
+                            Text(repeatText)
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                }
+                
+                Spacer()
+                
+                // Status indicator
+                Circle()
+                    .fill(group.isEnabled ? .orange : .gray.opacity(0.3))
+                    .frame(width: 10, height: 10)
+            }
+            .padding(16)
+            .background(Color("CardBackground"))
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+        }
+    }
+    // MARK: - Alarm Detail View
+    struct AlarmDetailView: View {
+        let group: AlarmService.AlarmGroup
+        let use24Hour: Bool
+        @Environment(\.dismiss) private var dismiss
+        
+        private let weekDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        private let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+        
+        private var firedAlarmIDs: Set<String> {
+            let history = AlarmService.shared.loadHistory()
+            var fired = Set(history.compactMap { $0["alarmID"] as? String })
+            
+            // ✅ If alarm ID is not in active alarms → it fired
+            let activeAlarmIDs = Set(AlarmService.shared.alarms.map { $0.id.uuidString })
+            for alarmID in group.alarmIDs {
+                if !activeAlarmIDs.contains(alarmID.uuidString) {
+                    fired.insert(alarmID.uuidString)
+                }
+            }
+            return fired
+        }
+        private var timeText: String {
+            let f = DateFormatter()
+            f.dateFormat = use24Hour ? "HH:mm" : "h:mm a"
+            return group.fireDate.flatMap { f.string(from: $0) } ?? ""
+        }
+        
+        var body: some View {
+            ZStack {
+                Color("AppBackground").ignoresSafeArea()
+                VStack(spacing: 0) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color("SecondaryText").opacity(0.4))
+                        .frame(width: 40, height: 5)
+                        .padding(.top, 12)
+                        .padding(.bottom, 16)
+                    
+                    Text(group.label)
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color("PrimaryText"))
+                        .padding(.bottom, 4)
+                    
+                    Text(timeText)
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                        .foregroundStyle(.orange)
+                        .padding(.bottom, 20)
+                    
+                    List {
+                        ForEach(Array(group.alarmIDs.enumerated()), id: \.offset) { index, alarmID in
+                            let fired = firedAlarmIDs.contains(alarmID.uuidString)
+                            let alarm = AlarmService.shared.alarms.first(where: { $0.id == alarmID })
+                            
+                            HStack(spacing: 16) {
+                                ZStack {
+                                    Circle()
+                                        .fill(fired ? Color.green.opacity(0.15) : Color.orange.opacity(0.15))
+                                        .frame(width: 40, height: 40)
+                                    Image(systemName: fired ? "checkmark.circle.fill" : "clock.fill")
+                                        .foregroundStyle(fired ? .green : .orange)
+                                        .font(.system(size: 18))
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(itemLabel(index: index))
+                                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(Color("PrimaryText"))
+                                    
+                                    if let fireDate = alarm?.fireDate {
+                                        Text(formatDate(fireDate))
+                                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                                            .foregroundStyle(Color("SecondaryText"))
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                Text(fired ? "Fired" : "Pending")
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(fired ? .green : .orange)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(fired ? Color.green.opacity(0.15) : Color.orange.opacity(0.15))
+                                    .clipShape(Capsule())
+                            }
+                            .padding(14)
+                            .background(Color("CardBackground"))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
                             .listRowBackground(Color("AppBackground"))
                             .listRowSeparator(.hidden)
                             .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .bottom).combined(with: .opacity),
-                                removal: .opacity
-                            ))
-                            .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(Double(index) * 0.08), value: alarmService.alarmGroups.count)
                         }
                     }
                     .listStyle(.plain)
@@ -1071,293 +1381,111 @@ struct ScheduledView: View {
                 }
             }
         }
-        .onAppear {
-            alarmService.loadAlarms()
-        }
-    }
-}
-
-// MARK: - Scheduled Row
-struct ScheduledRowView: View {
-    let group: AlarmService.AlarmGroup
-    let use24Hour: Bool
-
-    private var timeText: String {
-        let f = DateFormatter()
-        f.dateFormat = use24Hour ? "HH:mm" : "h:mm a"
-        return group.fireDate.flatMap { f.string(from: $0) } ?? ""
-    }
-
-    private var dateText: String {
-        let f = DateFormatter()
-        f.dateFormat = "EEE, MMM d"
-        return group.fireDate.flatMap { f.string(from: $0) } ?? ""
-    }
-
-    private var repeatText: String {
-        let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-        if group.repeatDays == Set([100]) { return "Every month" }
-        if group.repeatDays == Set([200]) { return "Every year" }
-        let selectedMonths = group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
-        if !selectedMonths.isEmpty { return "Monthly • \(selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", "))" }
-        let selectedYears = group.repeatDays.filter { $0 >= 2025 }.sorted()
-        if !selectedYears.isEmpty { return "Yearly • \(selectedYears.map { "\($0)" }.joined(separator: ", "))" }
-        if !group.repeatDays.isEmpty { return "Weekly • \(group.repeatLabel)" }
-        return ""
-    }
-
-    var body: some View {
-        HStack(spacing: 14) {
-            // Left orange line
-            RoundedRectangle(cornerRadius: 3)
-                .fill(.orange)
-                .frame(width: 4)
-                .frame(maxHeight: .infinity)
-
-            VStack(alignment: .leading, spacing: 6) {
-                // Alarm name
-                Text(group.label)
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Color("PrimaryText"))
-
-                // Date and time
-                HStack(spacing: 6) {
-                    Image(systemName: "clock.fill")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.orange)
-                    Text("\(dateText) • \(timeText)")
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(Color("SecondaryText"))
-                }
-
-                // Repeat info
-                if !repeatText.isEmpty {
-                    HStack(spacing: 6) {
-                        Image(systemName: "repeat")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.orange)
-                        Text(repeatText)
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundStyle(.orange)
-                    }
-                }
-            }
-
-            Spacer()
-
-            // Status indicator
-            Circle()
-                .fill(group.isEnabled ? .orange : .gray.opacity(0.3))
-                .frame(width: 10, height: 10)
-        }
-        .padding(16)
-        .background(Color("CardBackground"))
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-    }
-}
-// MARK: - Alarm Detail View
-struct AlarmDetailView: View {
-    let group: AlarmService.AlarmGroup
-    let use24Hour: Bool
-    @Environment(\.dismiss) private var dismiss
-
-    private let weekDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    private let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-
-    private var firedAlarmIDs: Set<String> {
-        let history = AlarmService.shared.loadHistory()
-        var fired = Set(history.compactMap { $0["alarmID"] as? String })
         
-        // ✅ If alarm ID is not in active alarms → it fired
-        let activeAlarmIDs = Set(AlarmService.shared.alarms.map { $0.id.uuidString })
-        for alarmID in group.alarmIDs {
-            if !activeAlarmIDs.contains(alarmID.uuidString) {
-                fired.insert(alarmID.uuidString)
+        private func itemLabel(index: Int) -> String {
+            // Weekly
+            let weekdays = group.repeatDays.filter { $0 >= 1 && $0 <= 7 }.sorted()
+            if !weekdays.isEmpty && index < weekdays.count {
+                return weekDayNames[weekdays[index] - 1]
             }
-        }
-        return fired
-    }
-    private var timeText: String {
-        let f = DateFormatter()
-        f.dateFormat = use24Hour ? "HH:mm" : "h:mm a"
-        return group.fireDate.flatMap { f.string(from: $0) } ?? ""
-    }
-
-    var body: some View {
-        ZStack {
-            Color("AppBackground").ignoresSafeArea()
-            VStack(spacing: 0) {
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color("SecondaryText").opacity(0.4))
-                    .frame(width: 40, height: 5)
-                    .padding(.top, 12)
-                    .padding(.bottom, 16)
-
-                Text(group.label)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color("PrimaryText"))
-                    .padding(.bottom, 4)
-
-                Text(timeText)
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundStyle(.orange)
-                    .padding(.bottom, 20)
-
-                List {
-                    ForEach(Array(group.alarmIDs.enumerated()), id: \.offset) { index, alarmID in
-                        let fired = firedAlarmIDs.contains(alarmID.uuidString)
-                        let alarm = AlarmService.shared.alarms.first(where: { $0.id == alarmID })
-
-                        HStack(spacing: 16) {
-                            ZStack {
-                                Circle()
-                                    .fill(fired ? Color.green.opacity(0.15) : Color.orange.opacity(0.15))
-                                    .frame(width: 40, height: 40)
-                                Image(systemName: fired ? "checkmark.circle.fill" : "clock.fill")
-                                    .foregroundStyle(fired ? .green : .orange)
-                                    .font(.system(size: 18))
-                            }
-
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(itemLabel(index: index))
-                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(Color("PrimaryText"))
-
-                                if let fireDate = alarm?.fireDate {
-                                    Text(formatDate(fireDate))
-                                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                                        .foregroundStyle(Color("SecondaryText"))
-                                }
-                            }
-
-                            Spacer()
-
-                            Text(fired ? "Fired" : "Pending")
-                                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                .foregroundStyle(fired ? .green : .orange)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(fired ? Color.green.opacity(0.15) : Color.orange.opacity(0.15))
-                                .clipShape(Capsule())
-                        }
-                        .padding(14)
-                        .background(Color("CardBackground"))
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .listRowBackground(Color("AppBackground"))
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
-                    }
-                }
-                .listStyle(.plain)
-                .background(Color("AppBackground"))
-                .scrollContentBackground(.hidden)
+            // Monthly with months
+            let months = group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+            if !months.isEmpty && index < months.count {
+                return monthNames[months[index] - 101]
             }
+            // Yearly with years
+            let years = group.repeatDays.filter { $0 >= 2025 }.sorted()
+            if !years.isEmpty && index < years.count {
+                return "\(years[index])"
+            }
+            return "Alarm \(index + 1)"
         }
-    }
-
-    private func itemLabel(index: Int) -> String {
-        // Weekly
-        let weekdays = group.repeatDays.filter { $0 >= 1 && $0 <= 7 }.sorted()
-        if !weekdays.isEmpty && index < weekdays.count {
-            return weekDayNames[weekdays[index] - 1]
-        }
-        // Monthly with months
-        let months = group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
-        if !months.isEmpty && index < months.count {
-            return monthNames[months[index] - 101]
-        }
-        // Yearly with years
-        let years = group.repeatDays.filter { $0 >= 2025 }.sorted()
-        if !years.isEmpty && index < years.count {
-            return "\(years[index])"
-        }
-        return "Alarm \(index + 1)"
-    }
-
-    private func formatDate(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = use24Hour ? "EEE, MMM d • HH:mm" : "EEE, MMM d • h:mm a"
-        return f.string(from: date)
-    }
-}
-// MARK: - Alarm Detail Inline View
-struct AlarmDetailInlineView: View {
-    let group: AlarmService.AlarmGroup
-    let use24Hour: Bool
-
-    private let weekDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    private let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-
-    private var firedAlarmIDs: Set<String> {
-        let history = AlarmService.shared.loadHistory()
-        var fired = Set(history.compactMap { $0["alarmID"] as? String })
         
-        // ✅ If alarm ID is not in active alarms → it fired
-        let activeAlarmIDs = Set(AlarmService.shared.alarms.map { $0.id.uuidString })
-        for alarmID in group.alarmIDs {
-            if !activeAlarmIDs.contains(alarmID.uuidString) {
-                fired.insert(alarmID.uuidString)
-            }
+        private func formatDate(_ date: Date) -> String {
+            let f = DateFormatter()
+            f.dateFormat = use24Hour ? "EEE, MMM d • HH:mm" : "EEE, MMM d • h:mm a"
+            return f.string(from: date)
         }
-        return fired
     }
-
-    var body: some View {
-        VStack(spacing: 8) {
-            ForEach(Array(group.alarmIDs.enumerated()), id: \.offset) { index, alarmID in
-                let fired = firedAlarmIDs.contains(alarmID.uuidString)
-                let alarm = AlarmService.shared.alarms.first(where: { $0.id == alarmID })
-
-                HStack(spacing: 12) {
-                    Image(systemName: fired ? "checkmark.circle.fill" : "clock.fill")
-                        .foregroundStyle(fired ? .green : .orange)
-                        .font(.system(size: 16))
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(itemLabel(index: index))
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color("PrimaryText"))
-                        if let fireDate = alarm?.fireDate {
-                            Text(formatDate(fireDate))
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
-                                .foregroundStyle(Color("SecondaryText"))
-                        }
-                    }
-
-                    Spacer()
-
-                    Text(fired ? "Fired ✅" : "Pending ⏳")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundStyle(fired ? .green : .orange)
+    // MARK: - Alarm Detail Inline View
+    struct AlarmDetailInlineView: View {
+        let group: AlarmService.AlarmGroup
+        let use24Hour: Bool
+        
+        private let weekDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        private let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+        
+        private var firedAlarmIDs: Set<String> {
+            let history = AlarmService.shared.loadHistory()
+            var fired = Set(history.compactMap { $0["alarmID"] as? String })
+            
+            // ✅ If alarm ID is not in active alarms → it fired
+            let activeAlarmIDs = Set(AlarmService.shared.alarms.map { $0.id.uuidString })
+            for alarmID in group.alarmIDs {
+                if !activeAlarmIDs.contains(alarmID.uuidString) {
+                    fired.insert(alarmID.uuidString)
                 }
-                .padding(12)
-                .background(Color("AppBackground"))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
+            return fired
         }
-        .padding(.horizontal, 4)
-        .padding(.bottom, 8)
+        
+        var body: some View {
+            VStack(spacing: 8) {
+                ForEach(Array(group.alarmIDs.enumerated()), id: \.offset) { index, alarmID in
+                    let fired = firedAlarmIDs.contains(alarmID.uuidString)
+                    let alarm = AlarmService.shared.alarms.first(where: { $0.id == alarmID })
+                    
+                    HStack(spacing: 12) {
+                        Image(systemName: fired ? "checkmark.circle.fill" : "clock.fill")
+                            .foregroundStyle(fired ? .green : .orange)
+                            .font(.system(size: 16))
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(itemLabel(index: index))
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color("PrimaryText"))
+                            if let fireDate = alarm?.fireDate {
+                                Text(formatDate(fireDate))
+                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                                    .foregroundStyle(Color("SecondaryText"))
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        Text(fired ? "Fired ✅" : "Pending ⏳")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(fired ? .green : .orange)
+                    }
+                    .padding(12)
+                    .background(Color("AppBackground"))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+            .padding(.horizontal, 4)
+            .padding(.bottom, 8)
+        }
+        
+        private func itemLabel(index: Int) -> String {
+            let weekdays = group.repeatDays.filter { $0 >= 1 && $0 <= 7 }.sorted()
+            if !weekdays.isEmpty && index < weekdays.count {
+                return weekDayNames[weekdays[index] - 1]
+            }
+            let months = group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+            if !months.isEmpty && index < months.count {
+                return monthNames[months[index] - 101]
+            }
+            let years = group.repeatDays.filter { $0 >= 2025 }.sorted()
+            if !years.isEmpty && index < years.count {
+                return "\(years[index])"
+            }
+            return "Alarm \(index + 1)"
+        }
+        
+        private func formatDate(_ date: Date) -> String {
+            let f = DateFormatter()
+            f.dateFormat = use24Hour ? "EEE, MMM d • HH:mm" : "EEE, MMM d • h:mm a"
+            return f.string(from: date)
+        }
     }
 
-    private func itemLabel(index: Int) -> String {
-        let weekdays = group.repeatDays.filter { $0 >= 1 && $0 <= 7 }.sorted()
-        if !weekdays.isEmpty && index < weekdays.count {
-            return weekDayNames[weekdays[index] - 1]
-        }
-        let months = group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
-        if !months.isEmpty && index < months.count {
-            return monthNames[months[index] - 101]
-        }
-        let years = group.repeatDays.filter { $0 >= 2025 }.sorted()
-        if !years.isEmpty && index < years.count {
-            return "\(years[index])"
-        }
-        return "Alarm \(index + 1)"
-    }
-
-    private func formatDate(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = use24Hour ? "EEE, MMM d • HH:mm" : "EEE, MMM d • h:mm a"
-        return f.string(from: date)
-    }
-}

@@ -99,6 +99,13 @@ final class TimerService: ObservableObject {
                 id: id,
                 configuration: configuration
             )
+            // ✅ Save timer duration so RepeatAlarmIntent can use it
+            UserDefaults.standard.set(duration, forKey: "timerDuration_\(id.uuidString)")
+            UserDefaults.standard.set(sound, forKey: "timerSound_\(id.uuidString)")
+            // ✅ Also save to App Group so intent extension can read it
+            let appGroup = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
+            appGroup?.set(duration, forKey: "timerDuration_\(id.uuidString)")
+            appGroup?.set(sound, forKey: "timerSound_\(id.uuidString)")
 
             timers.append(timer)
             print("⏱️ Timer started:", duration, "sound:", sound)

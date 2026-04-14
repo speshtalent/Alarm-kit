@@ -108,12 +108,18 @@ struct RepeatAlarmIntent: LiveActivityIntent {
         guard let id = UUID(uuidString: alarmID) else { return .result() }
 
         // ✅ Get snooze duration from UserDefaults
+        // ✅ Use original timer duration first, then snooze duration, then default
+        let appGroup = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
+        let timerDuration = appGroup?.double(forKey: "timerDuration_\(alarmID)") ?? 0
+        // ✅ Always use global snooze setting for alarms
+        let globalSnoozeDuration = appGroup?.double(forKey: "globalSnoozeDuration") ?? 0
         let snoozeDuration = UserDefaults.standard.double(forKey: "snoozeDuration_\(alarmID)")
-        let duration = snoozeDuration > 0 ? snoozeDuration : 300
+        let duration = timerDuration > 0 ? timerDuration : (globalSnoozeDuration > 0 ? globalSnoozeDuration * 60 : (snoozeDuration > 0 ? snoozeDuration : 300))
 
         // ✅ Get alarm label
+        let isTimer = (appGroup?.double(forKey: "timerDuration_\(alarmID)") ?? 0) > 0
         let labels = UserDefaults.standard.dictionary(forKey: "AlarmLabelsByID") as? [String: String] ?? [:]
-        let label = labels[alarmID] ?? "Alarm"
+        let label = labels[alarmID] ?? (isTimer ? "Timer" : "Alarm")
 
         // ✅ Schedule new alarm after snooze duration
         //let snoozeDate = Date().addingTimeInterval(duration)
@@ -122,6 +128,14 @@ struct RepeatAlarmIntent: LiveActivityIntent {
             try AlarmManager.shared.cancel(id: id)
             // ✅ Mark as snoozed
             UserDefaults.standard.set(true, forKey: "isSnoozed_\(alarmID)")
+            appGroup?.set(true, forKey: "isSnoozed_\(alarmID)")
+            // ✅ Save snooze fire date so UI can show it
+            let snoozeFireDate = Date().addingTimeInterval(duration)
+            UserDefaults.standard.set(snoozeFireDate.timeIntervalSince1970, forKey: "disabledAlarmDate_\(alarmID)")
+            // ✅ Remove from disabled list
+            var disabled = UserDefaults.standard.stringArray(forKey: "DisabledAlarmIDs") ?? []
+            disabled.removeAll { $0 == alarmID }
+            UserDefaults.standard.set(disabled, forKey: "DisabledAlarmIDs")
         } catch {
             print("❌ Cancel error:", error)
         }
@@ -129,30 +143,53 @@ struct RepeatAlarmIntent: LiveActivityIntent {
         Task {
             let titleResource = LocalizedStringResource(stringLiteral: label)
             let alert: AlarmPresentation.Alert
-            if #available(iOS 26.1, *) {
-                alert = AlarmPresentation.Alert(
-                    title: titleResource,
-                    stopButton: AlarmButton(
-                        text: "Stop Alarm",
-                        textColor: .white,
-                        systemImageName: "alarm.fill"
-                    ),
-                    secondaryButton: AlarmButton(
-                        text: "Snooze",
-                        textColor: .white,
-                        systemImageName: "moon.zzz.fill"
-                    ),
-                    secondaryButtonBehavior: .countdown
-                )
-            } else {
-                alert = AlarmPresentation.Alert(
-                    title: titleResource,
-                    stopButton: AlarmButton(
-                        text: "Stop Alarm",
-                        textColor: .white,
-                        systemImageName: "alarm.fill"
+            if isTimer {
+                if #available(iOS 26.1, *) {
+                    alert = AlarmPresentation.Alert(
+                        title: titleResource,
+                        secondaryButton: AlarmButton(
+                            text: "Repeat",
+                            textColor: .white,
+                            systemImageName: "repeat"
+                        ),
+                        secondaryButtonBehavior: .countdown
                     )
-                )
+                } else {
+                    alert = AlarmPresentation.Alert(
+                        title: titleResource,
+                        stopButton: AlarmButton(
+                            text: "Stop",
+                            textColor: .white,
+                            systemImageName: "stop.fill"
+                        )
+                    )
+                }
+            } else {
+                if #available(iOS 26.1, *) {
+                    alert = AlarmPresentation.Alert(
+                        title: titleResource,
+                        stopButton: AlarmButton(
+                            text: "Stop Alarm",
+                            textColor: .white,
+                            systemImageName: "alarm.fill"
+                        ),
+                        secondaryButton: AlarmButton(
+                            text: "Snooze",
+                            textColor: .white,
+                            systemImageName: "moon.zzz.fill"
+                        ),
+                        secondaryButtonBehavior: .countdown
+                    )
+                } else {
+                    alert = AlarmPresentation.Alert(
+                        title: titleResource,
+                        stopButton: AlarmButton(
+                            text: "Stop Alarm",
+                            textColor: .white,
+                            systemImageName: "alarm.fill"
+                        )
+                    )
+                }
             }
             let presentation = AlarmPresentation(
                 alert: alert,
@@ -162,7 +199,7 @@ struct RepeatAlarmIntent: LiveActivityIntent {
             )
             let attributes = AlarmAttributes(
                 presentation: presentation,
-                metadata: AppAlarmMetadata(title: label, icon: "alarm"),
+                metadata: AppAlarmMetadata(title: label, icon: isTimer ? "timer" : "alarm"),
                 tintColor: Color.orange
             )
             let configuration = AlarmManager.AlarmConfiguration.timer(

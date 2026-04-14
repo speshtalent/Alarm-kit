@@ -24,12 +24,12 @@ final class AlarmService: ObservableObject {
         var isEnabled: Bool
         let storedFireDate: Date?
 
-        init(alarm: Alarm, label: String, isEnabled: Bool) {
+        init(alarm: Alarm, label: String, isEnabled: Bool, storedFireDate: Date? = nil) {
             self.alarm = alarm
             self.storedID = alarm.id
             self.label = label
             self.isEnabled = isEnabled
-            self.storedFireDate = nil
+            self.storedFireDate = storedFireDate
         }
 
         init(id: UUID, label: String, isEnabled: Bool, fireDate: Date?) {
@@ -281,12 +281,18 @@ final class AlarmService: ObservableObject {
 
             // ✅ Active alarms from AlarmKit
             var loadedAlarms = all
-                .filter { $0.schedule != nil }
+                .filter { $0.schedule != nil || UserDefaults.standard.bool(forKey: "isSnoozed_\($0.id.uuidString)") }
                 .map { alarm in
-                    AlarmListItem(
+                    let isSnoozed = UserDefaults.standard.bool(forKey: "isSnoozed_\(alarm.id.uuidString)")
+                    let snoozeDate: Date? = isSnoozed ? {
+                        guard let interval = UserDefaults.standard.object(forKey: "disabledAlarmDate_\(alarm.id.uuidString)") as? TimeInterval else { return nil }
+                        return Date(timeIntervalSince1970: interval)
+                    }() : nil
+                    return AlarmListItem(
                         alarm: alarm,
                         label: labels[alarm.id.uuidString] ?? "Alarm",
-                        isEnabled: !disabled.contains(alarm.id.uuidString) || UserDefaults.standard.bool(forKey: "isSnoozed_\(alarm.id.uuidString)")
+                        isEnabled: !disabled.contains(alarm.id.uuidString) || isSnoozed,
+                        storedFireDate: snoozeDate
                     )
                 }
 
@@ -648,6 +654,69 @@ final class AlarmService: ObservableObject {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
+    // MARK: - iCloud Recordings Backup
+    private func iCloudRecordingsURL() -> URL? {
+        guard let containerURL = FileManager.default.url(
+            forUbiquityContainerIdentifier: "iCloud.com.speshtalent.FutureAlarm26"
+        ) else { return nil }
+        let recordingsURL = containerURL.appendingPathComponent("Documents/Recordings")
+        try? FileManager.default.createDirectory(at: recordingsURL, withIntermediateDirectories: true)
+        return recordingsURL
+    }
+
+    func uploadRecordingToiCloud(fileName: String, name: String) {
+        let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+        let localURL = libraryURL.appendingPathComponent("Sounds/\(fileName)")
+        guard FileManager.default.fileExists(atPath: localURL.path),
+              let cloudDir = iCloudRecordingsURL() else { return }
+        let cloudURL = cloudDir.appendingPathComponent(fileName)
+        try? FileManager.default.removeItem(at: cloudURL)
+        try? FileManager.default.copyItem(at: localURL, to: cloudURL)
+        // ✅ Save metadata to iCloud key-value store
+        let store = NSUbiquitousKeyValueStore.default
+        var recordings = store.array(forKey: "customRecordingsList") as? [[String: String]] ?? []
+        if !recordings.contains(where: { $0["file"] == fileName }) {
+            recordings.append(["name": name, "file": fileName])
+            store.set(recordings, forKey: "customRecordingsList")
+            store.synchronize()
+        }
+        print("✅ Recording uploaded to iCloud: \(fileName)")
+    }
+
+    func downloadRecordingsFromiCloud() {
+        guard let cloudDir = iCloudRecordingsURL() else { return }
+        let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+        let soundsURL = libraryURL.appendingPathComponent("Sounds")
+        try? FileManager.default.createDirectory(at: soundsURL, withIntermediateDirectories: true)
+
+        // ✅ Get recording list from iCloud key-value store
+        let store = NSUbiquitousKeyValueStore.default
+        store.synchronize()
+        let cloudRecordings = store.array(forKey: "customRecordingsList") as? [[String: String]] ?? []
+
+        // ✅ Merge with local list
+        var localRecordings = UserDefaults.standard.array(forKey: "customRecordingsList") as? [[String: String]] ?? []
+        let localFiles = Set(localRecordings.compactMap { $0["file"] })
+
+        for recording in cloudRecordings {
+            guard let fileName = recording["file"], let name = recording["name"] else { continue }
+            // ✅ Download file if not already local
+            if !localFiles.contains(fileName) {
+                let cloudURL = cloudDir.appendingPathComponent(fileName)
+                let localURL = soundsURL.appendingPathComponent(fileName)
+                if FileManager.default.fileExists(atPath: cloudURL.path) {
+                    try? FileManager.default.copyItem(at: cloudURL, to: localURL)
+                    localRecordings.append(["name": name, "file": fileName])
+                    print("✅ Recording downloaded from iCloud: \(fileName)")
+                } else {
+                    // ✅ Trigger iCloud download
+                    try? FileManager.default.startDownloadingUbiquitousItem(at: cloudURL)
+                }
+            }
+        }
+        UserDefaults.standard.set(localRecordings, forKey: "customRecordingsList")
+        print("✅ iCloud recordings sync complete")
+    }
     // MARK: - iCloud Backup
     func backupToiCloudDebounced() {
         backupWorkItem?.cancel()
@@ -676,6 +745,9 @@ final class AlarmService: ObservableObject {
         do {
             let data = try JSONEncoder().encode(cloudAlarms)
             store.set(data, forKey: iCloudAlarmsKey)
+            // ✅ Also backup custom recordings list
+            let recordings = UserDefaults.standard.array(forKey: "customRecordingsList") ?? []
+            store.set(recordings, forKey: "customRecordingsList")
             store.synchronize()
             print("✅ iCloud backup success: \(cloudAlarms.count) alarms saved")
         } catch {
@@ -722,7 +794,8 @@ final class AlarmService: ObservableObject {
             UserDefaults.standard.set(true, forKey: hasLaunchedBeforeKey)
             print("☁️ Cached \(cloudAlarms.count) alarms from iCloud backup for local restore")
         }
-
+        // ✅ Download recordings from iCloud
+        downloadRecordingsFromiCloud()
         return await restorePendingCloudBackupIfPossible()
     }
 
@@ -748,6 +821,16 @@ final class AlarmService: ObservableObject {
                 restorePastAlarmAsDisabled(cloudAlarm)
                 restoredCount += 1
                 print("⏭ Restored past one-time alarm as disabled: \(cloudAlarm.label)")
+                continue
+            }
+
+            // ✅ Skip if alarm with same label and date already exists
+            let alreadyExists = alarmGroups.contains { group in
+                group.label == cloudAlarm.label &&
+                abs((group.fireDate?.timeIntervalSince1970 ?? 0) - cloudAlarm.fireDate) < 60
+            }
+            if alreadyExists {
+                print("⏭ Skipping duplicate alarm: \(cloudAlarm.label)")
                 continue
             }
 

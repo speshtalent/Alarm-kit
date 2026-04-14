@@ -1,8 +1,11 @@
 import SwiftUI
+import AppIntents
+import Intents
  
 struct OnboardingView: View {
     @AppStorage("hasSeenOnboarding") var hasSeenOnboarding: Bool = false
     @State private var currentPage = 0
+    @State private var showSiriAlert = false
     @State private var opacity: Double = 1.0
  
     var body: some View {
@@ -30,8 +33,10 @@ struct OnboardingView: View {
                     Spacer()
                     if currentPage < 5 {
                         Button("Skip") {
-                            hasSeenOnboarding = true
-                            NotificationCenter.default.post(name: NSNotification.Name("OnboardingCompleted"), object: nil)
+                            requestSiriPermission {
+                                hasSeenOnboarding = true
+                                NotificationCenter.default.post(name: NSNotification.Name("OnboardingCompleted"), object: nil)
+                            }
                         }
                         .font(.system(size: 16, weight: .medium, design: .rounded))
                         .foregroundStyle(Color.white.opacity(0.38))
@@ -90,6 +95,11 @@ struct OnboardingView: View {
                         if currentPage == 5 {
                             hasSeenOnboarding = true
                             NotificationCenter.default.post(name: NSNotification.Name("OnboardingCompleted"), object: nil)
+                        } else if currentPage == 0 {
+                            // ✅ Request Siri permission before going to page 2
+                            requestSiriPermission {
+                                navigate(to: currentPage + 1)
+                            }
                         } else {
                             navigate(to: currentPage + 1)
                         }
@@ -111,12 +121,33 @@ struct OnboardingView: View {
         // ✅ ADDED — force dark mode for onboarding always
         .preferredColorScheme(.dark)
     }
- 
+    func requestSiriPermission(completion: @escaping () -> Void) {
+        Task {
+            do {
+                let status = try await SiriAuthorization.requestSiriAuthorization()
+                print("✅ Siri authorization: \(status)")
+            } catch {
+                print("⚠️ Siri authorization error: \(error)")
+            }
+            await MainActor.run {
+                completion()
+            }
+        }
+    }
     func navigate(to page: Int) {
         withAnimation(.easeOut(duration: 0.18)) { opacity = 0 }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             currentPage = page
             withAnimation(.easeIn(duration: 0.18)) { opacity = 1 }
+        }
+    }
+}
+enum SiriAuthorization {
+    static func requestSiriAuthorization() async throws -> String {
+        return await withCheckedContinuation { continuation in
+            INPreferences.requestSiriAuthorization { status in
+                continuation.resume(returning: "\(status)")
+            }
         }
     }
 }
