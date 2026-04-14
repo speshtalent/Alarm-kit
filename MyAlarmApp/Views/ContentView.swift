@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var showSettings = false
     @State private var selectedTab: Int = 0
     @State private var groupToEdit: AlarmService.AlarmGroup? = nil
+    @State private var showAlarmPermissionAlert = false
     @State private var pendingIntentAlarmDraft: PendingSetAlarmIntentDraft? = nil
 
     @StateObject private var alarmService = AlarmService.shared
@@ -93,7 +94,11 @@ struct ContentView: View {
                         if mode == .alarms {
                             Task {
                                 await AlarmService.shared.requestAuthorizationIfNeeded()
-                                showAddAlarm = true
+                                if AlarmManager.shared.authorizationState == .denied {
+                                    showAlarmPermissionAlert = true
+                                } else {
+                                    showAddAlarm = true
+                                }
                             }
                         } else {
                             showAddTimer = true
@@ -299,6 +304,11 @@ struct ContentView: View {
                 }
             }
         }
+        .alert("Permission Required", isPresented: $showAlarmPermissionAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Please allow Alarms in Settings → Date Alarm → Alarms")
+        }
         .onAppear {
             alarmService.loadAlarms()
             timerService.loadTimers()
@@ -382,6 +392,7 @@ struct SettingsView: View {
     @State private var isRestoring = false
     @State private var pendingIcon: String = "Classic"
     @State private var showFeatureRequest = false
+    @State private var showNotificationPermissionAlert = false
     @Environment(\.colorScheme) private var systemColorScheme
     @Environment(\.dismiss) private var dismiss
     
@@ -595,7 +606,14 @@ struct SettingsView: View {
                                     .tint(.orange)
                                     .onChange(of: alarmNotificationsEnabled) { _, newValue in
                                         if newValue {
-                                            NotificationService.shared.requestPermission()
+                                            Task {
+                                                let settings = await UNUserNotificationCenter.current().notificationSettings()
+                                                if settings.authorizationStatus == .denied {
+                                                    showNotificationPermissionAlert = true
+                                                } else {
+                                                    NotificationService.shared.requestPermission()
+                                                }
+                                            }
                                         }
                                     }
                             }
@@ -885,6 +903,11 @@ struct SettingsView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text("No iCloud backup was found for this account.")
+            }
+            .alert("Permission Required", isPresented: $showNotificationPermissionAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Please allow Notifications in Settings → Date Alarm → Notifications")
             }
             .sheet(isPresented: $showFeatureRequest) {
                 FeatureRequestView()

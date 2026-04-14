@@ -1,6 +1,7 @@
 import Foundation
 import EventKit
 import Combine
+import UIKit
 
 @MainActor
 final class CalendarService: ObservableObject {
@@ -28,7 +29,9 @@ final class CalendarService: ObservableObject {
     // returns eventIdentifier so we can delete it later
     func addAlarmToCalendar(title: String, date: Date, alarmID: String, weekday: Int? = nil) async -> Bool {
         let granted = await requestAccess()
-        guard granted else { return false }
+        guard granted else {
+            return false
+        }
 
         let event = EKEvent(eventStore: eventStore)
         event.title = "⏰ \(title)"

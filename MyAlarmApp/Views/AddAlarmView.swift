@@ -1056,7 +1056,11 @@
 
             private func startRecording() {
                 AVAudioApplication.requestRecordPermission { granted in
-                    guard granted else { return }
+                    guard granted else {
+                        DispatchQueue.main.async {
+                        }
+                        return
+                    }
                     DispatchQueue.main.async {
                         try? FileManager.default.removeItem(at: self.tempRecordingURL)
                         let settings: [String: Any] = [
