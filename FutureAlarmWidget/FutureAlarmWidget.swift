@@ -257,7 +257,7 @@ struct MediumView: View {
                         .font(.system(size: 8, weight: .heavy, design: .rounded))
                         .foregroundStyle(textSec)
                         .tracking(1.2)
-                        .padding(.top, 20)
+                        .padding(.top, 25)
                         .padding(.bottom, 8)
 
                     let upcoming = entry.upcomingAlarms.filter { !isAlarmPast($0.date) }.prefix(3)
@@ -297,7 +297,7 @@ struct MediumView: View {
                 .padding(.trailing, 12)
                 .padding(.top, 14)
                 .padding(.bottom, 20)
-                .frame(width: 120, alignment: .topLeading)
+                .frame(width: 130, alignment: .topLeading)
             }
             .containerBackground(bg, for: .widget)
         } else {

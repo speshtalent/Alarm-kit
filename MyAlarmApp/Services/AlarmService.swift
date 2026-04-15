@@ -15,6 +15,7 @@ final class AlarmService: ObservableObject {
         let fireDate: TimeInterval
         let repeatDays: [Int]
         let isEnabled: Bool
+        let sound: String?
     }
 
     struct AlarmListItem: Identifiable {
@@ -750,12 +751,14 @@ final class AlarmService: ObservableObject {
         let store = NSUbiquitousKeyValueStore.default
         let cloudAlarms = alarmGroups.compactMap { group -> CloudAlarm? in
             guard let fireDate = group.fireDate else { return nil }
+            let savedSound = UserDefaults.standard.string(forKey: "alarmSound_\(group.id.uuidString)") ?? "nokia.caf"
             return CloudAlarm(
                 id: group.id.uuidString,
                 label: group.label,
                 fireDate: fireDate.timeIntervalSince1970,
                 repeatDays: Array(group.repeatDays).sorted(),
-                isEnabled: group.isEnabled
+                isEnabled: group.isEnabled,
+                sound: savedSound
             )
         }
 
@@ -846,19 +849,34 @@ final class AlarmService: ObservableObject {
                 group.label == cloudAlarm.label &&
                 abs((group.fireDate?.timeIntervalSince1970 ?? 0) - cloudAlarm.fireDate) < 60
             }
-            if alreadyExists {
+            // ✅ Also check AlarmKit directly for duplicates
+            let alarmKitDuplicate = (try? AlarmManager.shared.alarms)?.contains { alarm in
+                guard let schedule = alarm.schedule,
+                      case let .fixed(date) = schedule else { return false }
+                let label = loadLabels()[alarm.id.uuidString] ?? ""
+                return label == cloudAlarm.label &&
+                       abs(date.timeIntervalSince1970 - cloudAlarm.fireDate) < 60
+            } ?? false
+
+            if alreadyExists || alarmKitDuplicate {
                 print("⏭ Skipping duplicate alarm: \(cloudAlarm.label)")
                 continue
             }
 
+            let restoreSound = cloudAlarm.sound ?? "nokia.caf"
             guard let restoredAlarmID = await scheduleFutureAlarm(
                 date: fireDate,
                 title: cloudAlarm.label,
-                sound: "nokia.caf",
+                sound: restoreSound,
                 repeatDays: repeatDays
             ) else {
                 continue
             }
+
+            // ✅ Save sound key for restored alarm so edit screen can load it
+            let restoredGroupID = getGroupID(for: restoredAlarmID) ?? restoredAlarmID
+            UserDefaults.standard.set(restoreSound, forKey: "alarmSound_\(restoredGroupID.uuidString)")
+            UserDefaults.standard.set(restoreSound, forKey: "alarmSound_\(restoredAlarmID.uuidString)")
 
             if !cloudAlarm.isEnabled {
                 let groupID = getGroupID(for: restoredAlarmID) ?? restoredAlarmID

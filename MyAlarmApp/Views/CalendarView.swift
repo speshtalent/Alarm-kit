@@ -336,6 +336,25 @@ struct CalendarView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.bottom, 20)
+                .gesture(
+                    DragGesture()
+                        .onEnded { value in
+                            let horizontal = abs(value.translation.width)
+                            let vertical = abs(value.translation.height)
+                            guard horizontal > vertical else { return }
+                            if value.translation.width < -50 {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                    currentMonth = calendar.date(byAdding: .month, value: 1, to: currentMonth) ?? currentMonth
+                                }
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            } else if value.translation.width > 50 {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                    currentMonth = calendar.date(byAdding: .month, value: -1, to: currentMonth) ?? currentMonth
+                                }
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            }
+                        }
+                )
 
                 HStack {
                     Text(selectedDate.formatted(.dateTime.weekday(.wide).month().day()))
@@ -438,7 +457,7 @@ struct CalendarView: View {
                                     .font(.system(size: 11, weight: .medium, design: .rounded))
                                     .foregroundStyle(isSelected ? .orange : Color("SecondaryText"))
                                 Text("\(calendar.component(.day, from: date))")
-                                    .font(.system(size: 16, weight: isToday ? .bold : .medium, design: .rounded))
+                                    .font(.system(size: 14, weight: isToday ? .bold : .medium, design: .rounded))
                                     .foregroundStyle(isSelected ? .black : isToday ? .orange : Color("PrimaryText"))
                                     .frame(width: 34, height: 34)
                                     .background(isSelected ? Color.orange : Color.clear)
@@ -453,6 +472,25 @@ struct CalendarView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.bottom, 16)
+                .gesture(
+                    DragGesture()
+                        .onEnded { value in
+                            let horizontal = abs(value.translation.width)
+                            let vertical = abs(value.translation.height)
+                            guard horizontal > vertical else { return }
+                            if value.translation.width < -50 {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                    selectedDate = calendar.date(byAdding: .weekOfYear, value: 1, to: selectedDate) ?? selectedDate
+                                }
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            } else if value.translation.width > 50 {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                    selectedDate = calendar.date(byAdding: .weekOfYear, value: -1, to: selectedDate) ?? selectedDate
+                                }
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            }
+                        }
+                )
 
                 Divider().padding(.bottom, 8)
 
@@ -620,12 +658,12 @@ struct CalendarView: View {
                 Text("\(calendar.component(.day, from: date))")
                     .font(.system(size: 16, weight: isToday ? .bold : .medium, design: .rounded))
                     .foregroundStyle(isSelected ? .black : isToday ? .orange : Color("PrimaryText"))
-                    .frame(width: 36, height: 36)
+                    .frame(width: 32, height: 32)
                     .background(isSelected ? Color.orange : Color.clear)
                     .clipShape(Circle())
                 Circle()
                     .fill(hasAlarm ? Color.orange : Color.clear)
-                    .frame(width: 5, height: 5)
+                    .frame(width: 4, height: 4)
             }
         }
     }

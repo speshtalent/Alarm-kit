@@ -13,6 +13,8 @@ struct ContentView: View {
     @State private var selectedTab: Int = 0
     @State private var groupToEdit: AlarmService.AlarmGroup? = nil
     @State private var showAlarmPermissionAlert = false
+    @State private var showMicPermissionAlert = false
+    @State private var showCalendarPermissionAlert = false
     @State private var pendingIntentAlarmDraft: PendingSetAlarmIntentDraft? = nil
 
     @StateObject private var alarmService = AlarmService.shared
@@ -150,6 +152,12 @@ struct ContentView: View {
                                     for alarmID in group.alarmIDs {
                                         alarmService.toggleAlarm(id: alarmID)
                                     }
+                                    Task {
+                                        try? await Task.sleep(nanoseconds: 800_000_000)
+                                        await MainActor.run {
+                                            alarmService.loadAlarms()
+                                        }
+                                    }
                                     alarmService.rebuildGroups()
                                     Task {
                                         try? await Task.sleep(nanoseconds: 800_000_000)
@@ -273,7 +281,7 @@ struct ContentView: View {
                 }) { group in
                     AddAlarmView(
                         initialTitle: group.isFired ? group.label : nil,
-                        editingItem: group.isFired ? nil : alarmService.alarms.first(where: { group.alarmIDs.contains($0.id) }),
+                        editingItem: alarmService.alarms.first(where: { group.alarmIDs.contains($0.id) }),
                         repeatDaysToLoad: group.repeatDays,
                         soundToLoad: UserDefaults.standard.string(forKey: "alarmSound_\(group.id.uuidString)") ?? "nokia.caf"
                     ) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays in
@@ -309,11 +317,27 @@ struct ContentView: View {
         } message: {
             Text("Please allow Alarms in Settings → Date Alarm → Alarms")
         }
+        .alert("Permission Required", isPresented: $showMicPermissionAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Please allow Microphone in Settings → Date Alarm → Microphone")
+        }
+        .alert("Permission Required", isPresented: $showCalendarPermissionAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Please allow Calendar in Settings → Date Alarm → Calendars")
+        }
         .onAppear {
             alarmService.loadAlarms()
             timerService.loadTimers()
             consumePendingIntentAlarmFlowIfNeeded()
             SpotlightService.shared.indexAlarms(alarmService.alarmGroups)
+            NotificationCenter.default.addObserver(forName: NSNotification.Name("showMicPermission"), object: nil, queue: .main) { _ in
+                showMicPermissionAlert = true
+            }
+            NotificationCenter.default.addObserver(forName: NSNotification.Name("showCalendarPermission"), object: nil, queue: .main) { _ in
+                showCalendarPermissionAlert = true
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             consumePendingIntentAlarmFlowIfNeeded()
@@ -374,6 +398,13 @@ struct ContentView: View {
         .padding(.top, 80)
     }
 }
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
 
 // MARK: - Settings View
 struct SettingsView: View {
@@ -392,6 +423,7 @@ struct SettingsView: View {
     @State private var isRestoring = false
     @State private var pendingIcon: String = "Classic"
     @State private var showFeatureRequest = false
+    @State private var showShareSheet = false
     @State private var showNotificationPermissionAlert = false
     @Environment(\.colorScheme) private var systemColorScheme
     @Environment(\.dismiss) private var dismiss
@@ -475,7 +507,7 @@ struct SettingsView: View {
                         .fill(secondaryText.opacity(0.4))
                         .frame(width: 40, height: 5)
                         .padding(.top, 12)
-                    
+
                     Text("Settings")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundStyle(primaryText)
@@ -765,23 +797,44 @@ struct SettingsView: View {
                         if hasCalendarEvents { showRemoveCalendarAlert = true }
                     }
                         
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 16).fill(cardColor)
-                            HStack(spacing: 8) {
-                                Image(systemName: "lightbulb.fill")
-                                    .foregroundStyle(.orange)
-                                Text("Request a Feature")
-                                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                                    .foregroundStyle(primaryText)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .foregroundStyle(secondaryText)
-                                    .font(.system(size: 13))
-                            }
-                            .padding(16)
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16).fill(cardColor)
+                        HStack(spacing: 8) {
+                            Image(systemName: "square.and.arrow.up.fill")
+                                .foregroundStyle(.orange)
+                            Text("Share App")
+                                .font(.system(size: 15, weight: .medium, design: .rounded))
+                                .foregroundStyle(primaryText)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(secondaryText)
+                                .font(.system(size: 13))
                         }
-                        .padding(.horizontal, 20)
-                        .onTapGesture { showFeatureRequest = true }
+                        .padding(16)
+                    }
+                    .padding(.horizontal, 20)
+                    .onTapGesture { showShareSheet = true }
+                    .sheet(isPresented: $showShareSheet) {
+                        ShareSheet(items: ["Check out Date Alarm! 🔔"])
+                    }
+
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16).fill(cardColor)
+                        HStack(spacing: 8) {
+                            Image(systemName: "lightbulb.fill")
+                                .foregroundStyle(.orange)
+                            Text("Request a Feature")
+                                .font(.system(size: 15, weight: .medium, design: .rounded))
+                                .foregroundStyle(primaryText)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(secondaryText)
+                                .font(.system(size: 13))
+                        }
+                        .padding(16)
+                    }
+                    .padding(.horizontal, 20)
+                    .onTapGesture { showFeatureRequest = true }
                         
                         ZStack {
                             RoundedRectangle(cornerRadius: 16).fill(cardColor)
@@ -865,6 +918,20 @@ struct SettingsView: View {
                         }
                     }
                     UserDefaults.standard.removeObject(forKey: "customRecordingsList")
+                    // ✅ Clear all alarm voice recording references
+                    let allKeys = UserDefaults.standard.dictionaryRepresentation().keys
+                    for key in allKeys {
+                        if key.hasPrefix("voiceRecordingName_") || key.hasPrefix("voiceRecordingFile_") {
+                            UserDefaults.standard.removeObject(forKey: key)
+                        }
+                        // ✅ Only clear alarmSound_ if it's a custom voice recording
+                        if key.hasPrefix("alarmSound_") {
+                            let value = UserDefaults.standard.string(forKey: key) ?? ""
+                            if value.hasPrefix("custom_voice_") || value.hasPrefix("alarm_voice_") {
+                                UserDefaults.standard.removeObject(forKey: key)
+                            }
+                        }
+                    }
                     showClearCloudSuccess = true
                 }
                 Button("No", role: .cancel) {}
@@ -886,7 +953,11 @@ struct SettingsView: View {
                         await MainActor.run {
                             isRestoring = false
                             AlarmService.shared.loadAlarms()
-                            showRestoreSuccessAlert = restored
+                            if restored {
+                                showRestoreSuccessAlert = true
+                            } else {
+                                showNoBackupAlert = true
+                            }
                         }
                     }
                 }
@@ -902,7 +973,7 @@ struct SettingsView: View {
             .alert("No Backup Found", isPresented: $showNoBackupAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("No iCloud backup was found for this account.")
+                Text("No iCloud backup was found, or your alarms have already been restored.")
             }
             .alert("Permission Required", isPresented: $showNotificationPermissionAlert) {
                 Button("OK", role: .cancel) {}
@@ -1061,7 +1132,9 @@ struct SettingsView: View {
             let dayOfMonth = group.repeatDays.filter { $0 >= 1 && $0 <= 31 }.first
             if !selectedMonths.isEmpty {
                 let dayStr = dayOfMonth.map { " \($0)" } ?? ""
-                return "\(selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", ")) •\(dayStr) • \(timeOnly)"
+                let selectedYears = group.repeatDays.filter { $0 >= 2025 }.sorted()
+                let yearStr = selectedYears.isEmpty ? "" : " \(selectedYears.map { "\($0)" }.joined(separator: ", "))"
+                return "\(selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", "))\(yearStr) •\(dayStr) • \(timeOnly)"
             }
             // ✅ Yearly with selected years
             let selectedYears = group.repeatDays.filter { $0 >= 2025 }.sorted()
