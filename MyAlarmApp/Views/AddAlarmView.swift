@@ -32,8 +32,11 @@ struct AddAlarmView: View {
     @State private var repeatDays: Set<Int> = []
     @State private var showPastDateAlert = false
     @State private var didAutoStartRecording = false
+    @State private var showScheduleSheet = false
+    @State private var scheduledDate: Date? = nil
+    @State private var showHourPicker = false
+    @State private var showMinutePicker = false
     
-    @State private var showMonthlySheet = false
     @State private var customRecordings: [(name: String, file: String)] = []
     @State private var saveToList: Bool = false
     @State private var showMyRecordings: Bool = false
@@ -52,6 +55,7 @@ struct AddAlarmView: View {
     @State private var originalSnoozeEnabled: Bool = true
     @State private var originalSnoozeDuration: Int = 5
     @State private var originalAddToCalendar: Bool = false
+    @State private var originalScheduledDate: Date? = nil
 
     // ✅ "" = no repeat, "weekly", "monthly", "yearly"
     @State private var repeatType: String = ""
@@ -105,15 +109,26 @@ struct AddAlarmView: View {
 
         // ✅ Fix repeatDays to only contain months (101-112) not day/year values
         let monthsOnly = repeatDaysToLoad.filter { $0 >= 101 && $0 <= 112 }
-        _repeatDays = State(initialValue: monthsOnly.isEmpty && !repeatDaysToLoad.isEmpty && repeatDaysToLoad != Set([100]) && repeatDaysToLoad != Set([200]) ? repeatDaysToLoad : monthsOnly)
+        let hasYearsInLoad = repeatDaysToLoad.contains { $0 >= 2025 }
+        let hasMonthsOrGeneric = !monthsOnly.isEmpty || repeatDaysToLoad.contains(100)
+        if hasYearsInLoad {
+            // ✅ Yearly — keep everything
+            _repeatDays = State(initialValue: repeatDaysToLoad)
+        } else {
+            _repeatDays = State(initialValue: hasMonthsOrGeneric ? repeatDaysToLoad : (monthsOnly.isEmpty && !repeatDaysToLoad.isEmpty ? repeatDaysToLoad : monthsOnly))
+        }
 
-        // ✅ Detect repeatType from repeatDaysToLoad
+
+
         let hasMonths = repeatDaysToLoad.contains { $0 >= 101 && $0 <= 112 }
         let hasWeekDays = repeatDaysToLoad.contains { $0 >= 1 && $0 <= 7 }
+        let hasYears = repeatDaysToLoad.contains { $0 >= 2025 }
         let isMonthlyGeneric = repeatDaysToLoad == Set([100])
         let isDayInMonth = repeatDaysToLoad.contains { $0 >= 1 && $0 <= 31 } && !hasWeekDays
 
-        if isMonthlyGeneric || hasMonths || isDayInMonth {
+        if hasYears {
+            _repeatType = State(initialValue: "yearly")
+        } else if isMonthlyGeneric || hasMonths || isDayInMonth {
             _repeatType = State(initialValue: "monthly")
         } else if hasWeekDays {
             _repeatType = State(initialValue: "weekly")
@@ -200,16 +215,23 @@ struct AddAlarmView: View {
             if selectedAMPM == 1 { h += 12 }
             hour24 = h
         }
-
+        // ✅ If scheduledDate is set, use it as base (one-time or yearly)
+        if let scheduled = scheduledDate, (repeatType == "" || repeatType == "yearly") {
+            var components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: scheduled)
+            components.hour = hour24
+            components.minute = selectedMinute
+            components.second = 0
+            return Calendar.current.date(from: components) ?? Date()
+        }
         let baseDate: Date
         if repeatType == "monthly" {
-            // ✅ Build date from selectedDayOfMonth + selected month
             let month = repeatDays.filter { $0 >= 101 && $0 <= 112 }.min().map { $0 - 100 } ?? Calendar.current.component(.month, from: Date())
             let year = selectedYears.min() ?? Calendar.current.component(.year, from: Date())
+            let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? selectedDayOfMonth
             var comps = DateComponents()
             comps.year = year
             comps.month = month
-            comps.day = selectedDayOfMonth
+            comps.day = day
             baseDate = Calendar.current.date(from: comps) ?? selectedDate
         } else {
             if editingAlarmID != nil && Calendar.current.isDateInToday(selectedDate) {
@@ -241,41 +263,51 @@ struct AddAlarmView: View {
 
         // ✅ Weekly
         if repeatType == "weekly" && !repeatDays.isEmpty {
-            let ordered = weekDays.filter { repeatDays.contains($0.value) }.map { $0.label }
-            let daysStr = ordered.joined(separator: ", ")
-            return "Rings every \(daysStr) at \(timeStr)"
+            let dayStr: String
+            if repeatDays.count == 7 {
+                dayStr = "every day"
+            } else if repeatDays == Set([2,3,4,5,6]) {
+                dayStr = "weekdays"
+            } else if repeatDays == Set([7,1]) {
+                dayStr = "weekends"
+            } else {
+                let ordered = weekDays.filter { repeatDays.contains($0.value) }.map { $0.label }
+                dayStr = ordered.joined(separator: ", ")
+            }
+            return "Rings \(dayStr) at \(timeStr)"
         }
 
         // ✅ Monthly with selected months
-        let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-        let selectedMonths = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
-        if repeatType == "monthly" && !selectedMonths.isEmpty {
-            let monthsStr = selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", ")
-            let yearsStr = selectedYears.sorted().map { "\($0)" }.joined(separator: ", ")
-            if !selectedYears.isEmpty {
-                return "Rings on day \(selectedDayOfMonth) of \(monthsStr) \(yearsStr) at \(timeStr)"
-            }
-            return "Rings on day \(selectedDayOfMonth) of \(monthsStr) at \(timeStr)"
-        }
-
-        // ✅ Monthly generic
         if repeatType == "monthly" {
-            return "Rings every month on day \(selectedDayOfMonth) at \(timeStr)"
+            let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? selectedDayOfMonth
+            let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+            let isForever = repeatDays.contains(100)
+            let stopYear = repeatDays.filter { $0 >= 201 }.first.map { $0 - 200 }
+            let monthNamesLocal = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+            let monthStr = months.isEmpty ? "every month" : months.map { monthNamesLocal[$0 - 101] }.joined(separator: ", ")
+            let repeatStr: String = {
+                if isForever { return "· Forever" }
+                if let stop = stopYear { return "· Until \(Calendar.current.component(.year, from: Date()) + stop)" }
+                return "· This year only"
+            }()
+            return "Rings on day \(day) of \(monthStr) \(repeatStr) at \(timeStr)"
         }
 
-        // ✅ Yearly with selected years
-        let selectedYears = repeatDays.filter { $0 >= 2025 }.sorted()
-        if repeatType == "yearly" && !selectedYears.isEmpty {
-            let yearsStr = selectedYears.map { "\($0)" }.joined(separator: ", ")
-            let f = DateFormatter(); f.dateFormat = "MMM d"
-            return "Rings on \(f.string(from: date)) in \(yearsStr)"
-        }
-
-        // ✅ Yearly generic
+        // ✅ Yearly
         if repeatType == "yearly" {
-            let f = DateFormatter(); f.dateFormat = "MMM d"
-            return "Rings every year on \(f.string(from: date)) at \(timeStr)"
+            let monthNamesLocal = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+            let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? 0
+            let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+            let monthStr = months.isEmpty ? "" : monthNamesLocal[months[0] - 101]
+            let years = repeatDays.filter { $0 >= 2025 }.sorted()
+            if years.count > 1 {
+                return "Rings on \(monthStr) \(day) · \(years.first!) → \(years.last!) at \(timeStr)"
+            } else if years.count == 1 {
+                return "Rings on \(monthStr) \(day) · \(years[0]) at \(timeStr)"
+            }
+            return "Rings on \(monthStr) \(day) every year at \(timeStr)"
         }
+
 
         // ✅ One time
         if calendar.isDateInToday(date) {
@@ -302,7 +334,8 @@ struct AddAlarmView: View {
                selectedDayOfMonth != originalDayOfMonth ||
                snoozeEnabled != originalSnoozeEnabled ||
                snoozeDuration != originalSnoozeDuration ||
-                   addToCalendar != originalAddToCalendar
+               addToCalendar != originalAddToCalendar ||
+               scheduledDate != originalScheduledDate
     }
 
     private var isSpecificDateInPast: Bool {
@@ -310,39 +343,10 @@ struct AddAlarmView: View {
         return fireDate <= Date() && repeatDays.isEmpty && repeatType == ""
     }
 
-    private var repeatLabel: String {
-        switch repeatType {
-        case "monthly":
-            let day = Calendar.current.component(.day, from: fireDate)
-            return "Every month on \(day)"
-        case "yearly":
-            let f = DateFormatter()
-            f.dateFormat = "MMM d"
-            return "Every year on \(f.string(from: fireDate))"
-        case "weekly":
-            if repeatDays.isEmpty { return "Weekly" }
-            if repeatDays.count == 7 { return "Every day" }
-            if repeatDays == Set([2, 3, 4, 5, 6]) { return "Weekdays" }
-            if repeatDays == Set([7, 1]) { return "Weekends" }
-            let ordered = weekDays.filter { repeatDays.contains($0.value) }.map { $0.label }
-            return ordered.joined(separator: ", ")
-        default:
-            return ""
-        }
-    }
-
     private var finalRepeatDays: Set<Int> {
         switch repeatType {
-        case "monthly":
-            var result: Set<Int> = []
-            // ✅ Save selected months (101-112)
-            let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }
-            result = months.isEmpty ? Set([100]) : months
-            // ✅ Save selected day (1-31)
-            result.insert(selectedDayOfMonth)
-            // ✅ Save selected years
-            result.formUnion(selectedYears)
-            return result
+        case "monthly": return repeatDays
+        case "yearly": return repeatDays
         case "weekly": return repeatDays
         default: return []
         }
@@ -376,58 +380,156 @@ struct AddAlarmView: View {
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundStyle(Color("PrimaryText"))
 
-                    Text(ringsAtText)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(.orange)
 
 
-
-                    // Picker card
+                    // Picker card — Calendar style
                     ZStack {
                         RoundedRectangle(cornerRadius: 20).fill(Color("CardBackground"))
-                        if use24HourFormat {
+                        VStack(spacing: 0) {
+                            // Orange rings header
+                            Text(ringsAtText)
+                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .foregroundStyle(.black)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                                .background(Color.orange)
+                                .clipShape(UnevenRoundedRectangle(topLeadingRadius: 20, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 20))
+
+
+                            // Big time display
                             HStack(spacing: 0) {
-                                Picker("Hour", selection: $selectedHour) {
-                                    ForEach(0...23, id: \.self) { h in
-                                        Text(String(format: "%02d", h)).tag(h)
-                                    }
+                                Spacer()
+                                VStack(spacing: 2) {
+                                    Text("HR")
+                                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                        .tracking(2)
+                                    Text(use24HourFormat ? String(format: "%02d", selectedHour) : String(format: "%d", selectedHour))
+                                        .font(.system(size: 72, weight: .heavy, design: .rounded))
+                                        .foregroundStyle(showHourPicker ? .orange : Color("PrimaryText"))
+                                        .contentTransition(.numericText())
+                                        .animation(.spring(response: 0.3), value: selectedHour)
+                                        .onTapGesture {
+                                            withAnimation(.spring(response: 0.3)) {
+                                                showHourPicker.toggle()
+                                                showMinutePicker = false
+                                            }
+                                        }
                                 }
-                                .pickerStyle(.wheel).frame(maxWidth: .infinity)
-                                Text(":").font(.system(size: 24, weight: .bold)).foregroundStyle(.orange)
-                                Picker("Minute", selection: $selectedMinute) {
-                                    ForEach(0...59, id: \.self) { m in
-                                        Text(String(format: "%02d", m)).tag(m)
-                                    }
+                                Text(":")
+                                    .font(.system(size: 52, weight: .heavy, design: .rounded))
+                                    .foregroundStyle(.orange)
+                                    .padding(.horizontal, 4)
+                                    .padding(.bottom, 20)
+                                VStack(spacing: 2) {
+                                    Text("MIN")
+                                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                        .tracking(2)
+                                    Text(String(format: "%02d", selectedMinute))
+                                        .font(.system(size: 72, weight: .heavy, design: .rounded))
+                                        .foregroundStyle(showMinutePicker ? .orange : Color("PrimaryText"))
+                                        .contentTransition(.numericText())
+                                        .animation(.spring(response: 0.3), value: selectedMinute)
+                                        .onTapGesture {
+                                            withAnimation(.spring(response: 0.3)) {
+                                                showMinutePicker.toggle()
+                                                showHourPicker = false
+                                            }
+                                        }
                                 }
-                                .pickerStyle(.wheel).frame(maxWidth: .infinity)
+                                if !use24HourFormat {
+                                    VStack(spacing: 6) {
+                                        Button {
+                                            withAnimation(.spring(response: 0.3)) { selectedAMPM = 0 }
+                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        } label: {
+                                            Text("AM")
+                                                .font(.system(size: 15, weight: .heavy, design: .rounded))
+                                                .foregroundStyle(selectedAMPM == 0 ? .black : Color("SecondaryText"))
+                                                .frame(width: 54, height: 38)
+                                                .background(selectedAMPM == 0 ? Color.orange : Color("AppBackground"))
+                                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        }
+                                        Button {
+                                            withAnimation(.spring(response: 0.3)) { selectedAMPM = 1 }
+                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        } label: {
+                                            Text("PM")
+                                                .font(.system(size: 15, weight: .heavy, design: .rounded))
+                                                .foregroundStyle(selectedAMPM == 1 ? .black : Color("SecondaryText"))
+                                                .frame(width: 54, height: 38)
+                                                .background(selectedAMPM == 1 ? Color.orange : Color("AppBackground"))
+                                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        }
+                                    }
+                                    .padding(.leading, 8)
+                                    .padding(.bottom, 4)
+                                }
+                                Spacer()
                             }
-                            .colorScheme(colorScheme).padding(8)
-                        } else {
-                            HStack(spacing: 0) {
-                                Picker("Hour", selection: $selectedHour) {
-                                    ForEach(1...12, id: \.self) { h in
-                                        Text(String(format: "%d", h)).tag(h)
+                            .padding(.vertical, 16)
+
+                            // Hour wheel picker
+                            if showHourPicker {
+                                VStack(spacing: 8) {
+                                    Text("SET HOUR")
+                                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                        .tracking(2)
+                                    Picker("Hour", selection: $selectedHour) {
+                                        if use24HourFormat {
+                                            ForEach(0...23, id: \.self) { h in
+                                                Text(String(format: "%02d", h))
+                                                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                                                    .tag(h)
+                                            }
+                                        } else {
+                                            ForEach(1...12, id: \.self) { h in
+                                                Text(String(format: "%d", h))
+                                                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                                                    .tag(h)
+                                            }
+                                        }
                                     }
+                                    .pickerStyle(.wheel)
+                                    .frame(height: 120)
+                                    .background(Color("AppBackground"))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
                                 }
-                                .pickerStyle(.wheel).frame(maxWidth: .infinity)
-                                Text(":").font(.system(size: 24, weight: .bold)).foregroundStyle(.orange)
-                                Picker("Minute", selection: $selectedMinute) {
-                                    ForEach(0...59, id: \.self) { m in
-                                        Text(String(format: "%02d", m)).tag(m)
-                                    }
-                                }
-                                .pickerStyle(.wheel).frame(maxWidth: .infinity)
-                                Picker("AM/PM", selection: $selectedAMPM) {
-                                    Text("AM").tag(0)
-                                    Text("PM").tag(1)
-                                }
-                                .pickerStyle(.wheel).frame(maxWidth: 70)
+                                .padding(.horizontal, 12)
+                                .padding(.top, 8)
+                                .transition(.move(edge: .top).combined(with: .opacity))
                             }
-                            .colorScheme(colorScheme).padding(8)
+
+                            // Minute wheel picker
+                            if showMinutePicker {
+                                VStack(spacing: 8) {
+                                    Text("SET MINUTE")
+                                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                        .tracking(2)
+                                    Picker("Minute", selection: $selectedMinute) {
+                                        ForEach(0...59, id: \.self) { m in
+                                            Text(String(format: "%02d", m))
+                                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                                .tag(m)
+                                        }
+                                    }
+                                    .pickerStyle(.wheel)
+                                    .frame(height: 120)
+                                    .background(Color("AppBackground"))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.top, 8)
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                            }
                         }
                     }
                     .padding(.horizontal, 20)
-                    
                     // Single Repeat card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
@@ -463,7 +565,11 @@ struct AddAlarmView: View {
                                             repeatDays.insert(day.value)
                                         }
                                         repeatType = repeatDays.isEmpty ? (repeatType == "monthly" ? "monthly" : "") : "weekly"
-                                    } label: {
+                                        // ✅ Clear scheduled date when weekly selected
+                                        if !repeatDays.isEmpty {
+                                            scheduledDate = nil
+                                        }
+                                    }label: {
                                         Text(day.label)
                                             .font(.system(size: 11, weight: .bold, design: .rounded))
                                             .foregroundStyle(isSelected ? .black : Color("SecondaryText"))
@@ -472,50 +578,101 @@ struct AddAlarmView: View {
                                             .background(isSelected ? Color.orange : Color("AppBackground"))
                                             .clipShape(RoundedRectangle(cornerRadius: 8))
                                     }
-                                    .opacity(repeatType == "monthly" ? 0.3 : 1.0)
-                                    .disabled(repeatType == "monthly")
+                                    .opacity(repeatType == "monthly" || scheduledDate != nil ? 0.3 : 1.0)
+                                    .disabled(repeatType == "monthly" || scheduledDate != nil)
                                 }
                             }
-                            Button {
-                                if repeatType == "monthly" {
-                                    showMonthlySheet = true
-                                } else {
-                                    repeatType = "monthly"
-                                    showMonthlySheet = true
-                                }
-                            } label: {
-                                HStack {
-                                    Text("Date / Monthly / Yearly")
-                                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                        .foregroundStyle(repeatType == "monthly" ? .black : Color("SecondaryText"))
-                                    Spacer()
-                                    if repeatType == "monthly" {
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 12))
-                                            .foregroundStyle(.black)
-                                    }
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 10)
-                                .padding(.horizontal, 14)
-                                .background(repeatType == "monthly" ? Color.orange : Color("AppBackground"))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                            }
-                            .opacity(repeatType == "weekly" ? 0.3 : 1.0)
-                            .disabled(repeatType == "weekly")
-                            if repeatType == "monthly" && !repeatDays.isEmpty {
-                                let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-                                let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted().map { monthNames[$0 - 101] }
-                                let years = selectedYears.sorted().map { String(format: "%d", $0) }
-                                if !months.isEmpty {
-                                    let yearText = years.isEmpty ? "" : " · \(years.joined(separator: ", "))"
-                                    Text("Day \(selectedDayOfMonth) of \(months.joined(separator: ", "))\(yearText)")
-                                        .font(.system(size: 13, design: .rounded))
-                                        .foregroundStyle(Color("SecondaryText"))
-                                }
-                            }
+
                         }
                         .padding(16)
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // ✅ Schedule for Future button
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color("CardBackground"))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke((scheduledDate != nil || (repeatType == "monthly" && !repeatDays.isEmpty) || (repeatType == "yearly" && !repeatDays.isEmpty)) ? Color.orange.opacity(0.6) : Color.orange.opacity(0.2), lineWidth: 1)
+
+                            )
+                        Button {
+                            showScheduleSheet = true
+                        } label: {
+                            HStack(spacing: 14) {
+                                ZStack {
+                                    let isScheduled = scheduledDate != nil || (repeatType == "monthly" && !repeatDays.isEmpty) || (repeatType == "yearly" && !repeatDays.isEmpty)
+                                    Circle()
+                                        .fill(isScheduled ? Color.orange : Color.orange.opacity(0.15))
+                                        .frame(width: 48, height: 48)
+                                    Image(systemName: "calendar.badge.clock")
+                                        .foregroundStyle(isScheduled ? .black : .orange)                                        .font(.system(size: 22))
+                                }
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Schedule for Future")
+                                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                    if let date = scheduledDate, repeatType != "yearly" {
+                                        Text(formatScheduledDate(date))
+                                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                                            .foregroundStyle(Color("PrimaryText"))
+                                    } else if repeatType == "monthly" && !repeatDays.isEmpty {
+                                        let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+                                        let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? 0
+                                        let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted().map { monthNames[$0 - 101] }.joined(separator: ", ")
+                                        let isForever = repeatDays.contains(100)
+                                        let stopYear = repeatDays.filter { $0 >= 201 }.first.map { $0 - 200 }
+                                        let repeatStr: String = {
+                                            if isForever { return "Forever" }
+                                            if let stop = stopYear { return "Until \(Calendar.current.component(.year, from: Date()) + stop)" }
+                                            return "This year only"
+                                        }()
+                                        let monthStr = months.isEmpty ? "Every month" : months
+                                        Text("Day \(day) · \(monthStr) · \(repeatStr)")
+                                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                                            .foregroundStyle(Color("PrimaryText"))
+                                            .multilineTextAlignment(.leading)
+                                    } else if repeatType == "yearly" && !repeatDays.isEmpty {
+                                        let monthNamesLocal = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+                                        let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? 0
+                                        let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                                        let monthStr = months.isEmpty ? "" : monthNamesLocal[months[0] - 101]
+                                        let years = repeatDays.filter { $0 >= 2025 }.sorted()
+                                        let yearStr = years.isEmpty ? "" : years.count == 1 ? "\(years[0])" : "\(years.first!) → \(years.last!)"
+                                        Text("\(monthStr) \(day) · \(yearStr)")
+                                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                                            .foregroundStyle(Color("PrimaryText"))                                    } else {
+                                        Text("One time · Monthly · Yearly")
+                                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                            .foregroundStyle(Color("PrimaryText"))
+                                    }
+                                }
+                                Spacer()
+                                if scheduledDate != nil || (repeatType == "monthly" && !repeatDays.isEmpty) || (repeatType == "yearly" && !repeatDays.isEmpty) {
+                                    Button {
+                                        withAnimation(.spring(response: 0.3)) {
+                                            scheduledDate = nil
+                                            repeatType = ""
+                                            repeatDays = []
+                                        }
+                                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.system(size: 22))
+                                            .foregroundStyle(Color("SecondaryText").opacity(0.6))
+                                    }
+                                } else {
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(.orange)
+                                }
+                            }
+                            .padding(16)
+                        }
+                        .opacity(repeatType == "weekly" ? 0.3 : 1.0)
+                        .disabled(repeatType == "weekly")
+                        // ✅ Clear weekly when schedule selected
                     }
                     .padding(.horizontal, 20)
 
@@ -862,10 +1019,17 @@ struct AddAlarmView: View {
                 }
             }
         }
-        .sheet(isPresented: $showMonthlySheet) {
-            MonthlyRepeatSheet(selectedDay: $selectedDayOfMonth, selectedMonths: $repeatDays, selectedYears: $selectedYears)
+        .sheet(isPresented: $showScheduleSheet) {
+            ScheduleForFutureSheet(
+                selectedDate: $scheduledDate,
+                repeatType: $repeatType,
+                repeatDays: $repeatDays,
+                selectedHour: $selectedHour,
+                selectedMinute: $selectedMinute,
+                selectedAMPM: $selectedAMPM,
+                isEditing: isEditing
+            )
         }
-
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
@@ -885,6 +1049,13 @@ struct AddAlarmView: View {
             if let id = editingAlarmID {
                 let url = voiceURL(for: id)
                 hasRecording = FileManager.default.fileExists(atPath: url.path)
+                // ✅ Load scheduledDate for one-time and yearly
+                if repeatType == "" || repeatType == "yearly" {
+                    if let item = AlarmService.shared.alarms.first(where: { $0.id.uuidString == id }),
+                       let fireDate = item.fireDate {
+                        scheduledDate = fireDate
+                    }
+                }
                 recordingName = UserDefaults.standard.string(forKey: voiceNameKey(for: id)) ?? ""
                 // ✅ Load sound — try alarm ID first, then group ID
                 if let savedSound = UserDefaults.standard.string(forKey: "alarmSound_\(id)") {
@@ -941,6 +1112,7 @@ struct AddAlarmView: View {
                     addToCalendar = map[key] != nil
                 }
                 originalAddToCalendar = addToCalendar
+                originalScheduledDate = scheduledDate
             } else {
                 try? FileManager.default.removeItem(at: tempRecordingURL)
                 UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
@@ -1201,246 +1373,9 @@ struct AddAlarmView: View {
         soundPlayer = nil
         playingSound = nil
     }
-    // MARK: - Monthly Repeat Sheet
-    struct MonthlyRepeatSheet: View {
-        @Environment(\.dismiss) private var dismiss
-        @Binding var selectedDay: Int
-        @Binding var selectedMonths: Set<Int>
-        @Binding var selectedYears: Set<Int>
-
-        private let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-        private let currentYear = Calendar.current.component(.year, from: Date())
-        @State private var showNoMonthAlert: Bool = false
-
-        private var maxDaysForSelectedMonth: Int {
-            let selectedMonthNumbers = selectedMonths.filter { $0 >= 101 && $0 <= 112 }.map { $0 - 100 }
-            if selectedMonthNumbers.isEmpty { return 31 }
-            let maxDays = selectedMonthNumbers.map { month -> Int in
-                switch month {
-                case 2: return 29
-                case 4, 6, 9, 11: return 30
-                default: return 31
-                }
-            }.max() ?? 31
-            return maxDays
-        }
-
-        var body: some View {
-            ZStack {
-                Color("AppBackground").ignoresSafeArea()
-                VStack(spacing: 0) {
-                    ZStack {
-                        HStack {
-                            Button { dismiss() } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 28))
-                                    .foregroundStyle(Color("SecondaryText").opacity(0.6))
-                            }
-                            .padding(.leading, 20)
-                            Spacer()
-                        }
-                        Text("Date / Monthly / Yearly")
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color("PrimaryText"))
-                    }
-                    .padding(.top, 12)
-
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color("SecondaryText").opacity(0.4))
-                        .frame(width: 40, height: 5)
-                        .padding(.bottom, 16)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color("PrimaryText"))
-                        .padding(.bottom, 4)
-
-                    // ✅ Summary text
-                    let monthNames2 = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-                    let selectedMonthNames = selectedMonths.filter { $0 >= 101 && $0 <= 112 }.sorted().map { monthNames2[$0 - 101] }
-                    let selectedYearNames = selectedYears.sorted().map { "\($0)" }
-
-                    Text("Day \(selectedDay) · \(selectedMonthNames.isEmpty ? "Every month" : selectedMonthNames.joined(separator: ", "))\(selectedYearNames.isEmpty ? "" : " · \(selectedYearNames.joined(separator: ", "))")")
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(.orange)
-                        .padding(.bottom, 16)
-
-                    ScrollView {
-                        VStack(spacing: 20) {
-                            // Day picker — dynamic based on selected months
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
-                                VStack(alignment: .leading, spacing: 12) {
-                                    Text("Day of Month")
-                                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                        .foregroundStyle(Color("PrimaryText"))
-                                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
-                                        ForEach(1...31, id: \.self) { day in
-                                            let currentDay = Calendar.current.component(.day, from: Date())
-                                            let currentMonthNow = Calendar.current.component(.month, from: Date())
-                                            let noYearSelected = selectedYears.isEmpty
-                                            let onlyCurrentMonthSelected = selectedMonths == Set([100 + currentMonthNow])
-                                            let isPastDay = noYearSelected && onlyCurrentMonthSelected && day < currentDay
-                                            let isAvailable = day <= maxDaysForSelectedMonth && !isPastDay
-                                            Button {
-                                                if isAvailable { selectedDay = day }
-                                            } label: {
-                                                ZStack {
-                                                    Circle()
-                                                        .fill(
-                                                            (!isAvailable || isPastDay) ? Color.gray.opacity(0.15) :
-                                                            selectedDay == day ? Color.orange : Color("AppBackground")
-                                                        )
-                                                        .frame(width: 36, height: 36)
-                                                    Text("\(day)")
-                                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                                        .foregroundStyle(
-                                                            (!isAvailable || isPastDay) ? Color.gray.opacity(0.4) :
-                                                            selectedDay == day ? .black : Color("PrimaryText")
-                                                        )
-                                                }
-                                            }
-                                            .disabled(!isAvailable)
-                                            .opacity(day <= maxDaysForSelectedMonth ? 1.0 : 0.0)
-                                            .scaleEffect(day <= maxDaysForSelectedMonth ? 1.0 : 0.1)
-                                            .animation(.spring(response: 0.4, dampingFraction: 0.55), value: maxDaysForSelectedMonth)
-                                        }
-                                    }
-                                    .id(selectedMonths)
-                                    .transition(.asymmetric(
-                                        insertion: .scale(scale: 0.9).combined(with: .opacity),
-                                        removal: .scale(scale: 0.9).combined(with: .opacity)
-                                    ))
-                                    .animation(.spring(response: 0.4, dampingFraction: 0.6), value: selectedMonths)
-                                }
-
-                                .padding(16)
-                            }
-                            .padding(.horizontal, 20)
-
-                            // Month selector
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
-                                VStack(alignment: .leading, spacing: 12) {
-                                    HStack {
-                                        Text("Select Months")
-                                            .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                            .foregroundStyle(Color("PrimaryText"))
-                                        Spacer()
-                                        Text("Required")
-                                            .font(.system(size: 12, design: .rounded))
-                                            .foregroundStyle(.orange)
-                                    }
-                                    Text("Select a month for the alarm to ring")
-                                        .font(.system(size: 12, design: .rounded))
-                                        .foregroundStyle(Color("SecondaryText"))
-                                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 8) {
-                                        ForEach(0..<12, id: \.self) { i in
-                                            let monthValue = 101 + i
-                                            let isSelected = selectedMonths.contains(monthValue)
-                                            // ✅ No year selected = current year = gray out past months
-                                            let currentMonth = Calendar.current.component(.month, from: Date())
-                                            let noYearSelected = selectedYears.isEmpty
-                                            let isPastMonth = noYearSelected && (i + 1) < currentMonth
-                                            Button {
-                                                if !isPastMonth {
-                                                    if isSelected {
-                                                        selectedMonths.remove(monthValue)
-                                                    } else {
-                                                        selectedMonths.insert(monthValue)
-                                                    }
-                                                    if selectedDay > maxDaysForSelectedMonth {
-                                                        selectedDay = maxDaysForSelectedMonth
-                                                    }
-                                                }
-                                            } label: {
-                                                Text(monthNames[i])
-                                                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                                                    .foregroundStyle(
-                                                        isPastMonth ? Color("SecondaryText").opacity(0.3) :
-                                                        isSelected ? .black : Color("SecondaryText")
-                                                    )
-                                                    .frame(maxWidth: .infinity)
-                                                    .padding(.vertical, 10)
-                                                    .background(
-                                                        isPastMonth ? Color.clear :
-                                                        isSelected ? Color.orange : Color("AppBackground")
-                                                    )
-                                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                                            }
-                                            .disabled(isPastMonth)
-                                        }
-                                    }
-                                }
-                                .padding(16)
-                            }
-                            .padding(.horizontal, 20)
-
-                            // Year selector (optional)
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
-                                VStack(alignment: .leading, spacing: 12) {
-                                    HStack {
-                                        Text("Select Years")
-                                            .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                            .foregroundStyle(Color("PrimaryText"))
-                                        Spacer()
-                                        Text("Optional")
-                                            .font(.system(size: 12, design: .rounded))
-                                            .foregroundStyle(Color("SecondaryText"))
-                                    }
-                                    Text("If no year is selected, rings every month")
-                                        .font(.system(size: 12, design: .rounded))
-                                        .foregroundStyle(Color("SecondaryText"))
-                                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
-                                        ForEach((currentYear + 1)...(currentYear + 10), id: \.self) { year in
-                                            let isSelected = selectedYears.contains(year)
-                                            Button {
-                                                if isSelected {
-                                                    selectedYears.remove(year)
-                                                } else {
-                                                    selectedYears.insert(year)
-                                                }
-                                            } label: {
-                                                Text(String(format: "%d", year))
-                                                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                                                    .foregroundStyle(isSelected ? .black : Color("SecondaryText"))
-                                                    .frame(maxWidth: .infinity)
-                                                    .padding(.vertical, 10)
-                                                    .background(isSelected ? Color.orange : Color("AppBackground"))
-                                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                                            }
-                                        }
-                                    }
-                                }
-                                .padding(16)
-                            }
-                            .padding(.horizontal, 20)
-                        }
-                    }
-
-                    Button {
-                        if selectedMonths.isEmpty {
-                            showNoMonthAlert = true
-                        } else {
-                            dismiss()
-                        }
-                    } label: {
-                        Text("Done")
-                            .font(.system(size: 17, weight: .bold, design: .rounded))
-                            .foregroundStyle(.black)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 18)
-                            .background(.orange)
-                            .clipShape(RoundedRectangle(cornerRadius: 18))
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
-                    .alert("Select a Month", isPresented: $showNoMonthAlert) {
-                        Button("OK", role: .cancel) {}
-                    } message: {
-                        Text("Please select at least one month to continue.")
-                    }
-                }
-            }
-        }
+    private func formatScheduledDate(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "EEE, MMM d yyyy"
+        return f.string(from: date)
     }
 }

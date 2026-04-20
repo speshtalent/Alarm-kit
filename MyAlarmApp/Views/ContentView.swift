@@ -1123,22 +1123,44 @@ struct SettingsView: View {
             let tf = DateFormatter()
             tf.dateFormat = use24Hour ? "HH:mm" : "h:mm a"
             let timeOnly = group.fireDate.flatMap { tf.string(from: $0) } ?? ""
-            
-            if group.repeatDays == Set([100]) { return "Monthly • \(timeOnly)" }
-            if group.repeatDays == Set([200]) { return "Yearly • \(timeOnly)" }
-            // ✅ Monthly with selected months
             let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-            let selectedMonths = group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
             let dayOfMonth = group.repeatDays.filter { $0 >= 1 && $0 <= 31 }.first
-            if !selectedMonths.isEmpty {
-                let dayStr = dayOfMonth.map { " \($0)" } ?? ""
-                let selectedYears = group.repeatDays.filter { $0 >= 2025 }.sorted()
-                let yearStr = selectedYears.isEmpty ? "" : " \(selectedYears.map { "\($0)" }.joined(separator: ", "))"
-                return "\(selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", "))\(yearStr) •\(dayStr) • \(timeOnly)"
-            }
-            // ✅ Yearly with selected years
+            let selectedMonths = group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+
+            // ✅ Yearly — check FIRST before monthly
             let selectedYears = group.repeatDays.filter { $0 >= 2025 }.sorted()
-            if !selectedYears.isEmpty { return "\(selectedYears.map { "\($0)" }.joined(separator: ", ")) • \(timeOnly)" }
+            if !selectedYears.isEmpty {
+                let dayStr = dayOfMonth.map { "\($0)" } ?? ""
+                let monthStr = selectedMonths.isEmpty ? "" : monthNames[selectedMonths.sorted().first! - 101]
+                let yearStr = selectedYears.count == 1 ? "\(selectedYears[0])" : "\(selectedYears.first!) → \(selectedYears.last!)"
+                return "\(monthStr) \(dayStr) • \(yearStr) • \(timeOnly)"
+            }
+
+            // ✅ Monthly generic
+            if group.repeatDays.contains(100) && selectedMonths.isEmpty {
+                return "Monthly • \(timeOnly)"
+            }
+
+            // ✅ Monthly with selected months
+            let isForever = group.repeatDays.contains(100)
+            let stopYear = group.repeatDays.filter { $0 >= 201 }.first.map { $0 - 200 }
+            let currentYear = Calendar.current.component(.year, from: Date())
+            let repeatModeStr: String = {
+                if isForever { return "Forever" }
+                if let stop = stopYear { return "Until \(currentYear + stop)" }
+                return "This year only"
+            }()
+            if !selectedMonths.isEmpty {
+                let dayStr = dayOfMonth.map { "\($0)" } ?? ""
+                let monthStr = selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", ")
+                return "\(monthStr) • Day \(dayStr) • \(repeatModeStr) • \(timeOnly)"
+            }
+            if isForever {
+                let dayStr = dayOfMonth.map { "\($0)" } ?? ""
+                return "Every month • Day \(dayStr) • Forever • \(timeOnly)"
+            }
+
+            // ✅ Weekly
             if group.repeatLabel.isEmpty {
                 return group.fireDate.flatMap { f.string(from: $0) } ?? ""
             } else {
