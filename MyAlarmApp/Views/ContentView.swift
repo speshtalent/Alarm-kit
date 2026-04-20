@@ -1169,43 +1169,67 @@ struct SettingsView: View {
         }
         
         var body: some View {
-            HStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(group.isFired ? Color.green.opacity(0.15) : (group.isEnabled ? .orange.opacity(0.15) : .gray.opacity(0.1)))
-                        .frame(width: 48, height: 48)
-                    Image(systemName: group.isFired ? "checkmark.circle.fill" : (group.repeatDays.isEmpty ? "alarm" : "repeat"))
-                        .foregroundStyle(group.isFired ? .green : (group.isEnabled ? .orange : .gray))
-                        .font(.system(size: 20))
+            VStack(spacing: 0) {
+                // ✅ Orange header with alarm name
+                HStack {
+                    Text(group.label.isEmpty ? "Alarm" : group.label)
+                        .font(.system(size: 17, weight: .heavy, design: .rounded))
+                        .foregroundStyle(group.isEnabled ? .black : Color("SecondaryText"))
+                    Spacer()
+                    Text(subtitleText)
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(group.isEnabled ? Color.black.opacity(0.6) : Color("SecondaryText"))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(group.label)
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
-                        .foregroundStyle(group.isFired ? Color("SecondaryText") : (group.isEnabled ? Color("PrimaryText") : Color("SecondaryText")))
-                    if group.isFired {
-                        Text("Fired • Tap to reschedule")
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundStyle(.green.opacity(0.8))
-                    } else {
-                        Text(subtitleText)
-                            .font(.system(size: 12, weight: .medium, design: .monospaced))
-                            .foregroundStyle(Color("SecondaryText"))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(group.isFired ? Color.green : (group.isEnabled ? Color.orange : Color("AppBackground")))
+
+
+                // ✅ Time + toggle row
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Big time
+                        HStack(alignment: .lastTextBaseline, spacing: 4) {
+                            Text(timeText)
+                                .font(.system(size: 42, weight: .heavy, design: .rounded))
+                                .foregroundStyle(Color("PrimaryText"))
+                                .lineLimit(1)
+                            Text(ampmText)
+                                .font(.system(size: 20, weight: .heavy, design: .rounded))
+                                .foregroundStyle(group.isEnabled ? .orange : Color("SecondaryText"))
+                        }
+
+                        // ✅ Orange date pill
+                        if group.isFired {
+                            Text("Fired · Tap to reschedule")
+                                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                                .foregroundStyle(.black)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Color.green)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                    }
+
+                    Spacer()
+
+                    // Toggle
+                    if !group.isFired {
+                        Toggle("", isOn: Binding(
+                            get: { group.isEnabled },
+                            set: { _ in onToggle() }
+                        ))
+                        .tint(.orange)
+                        .labelsHidden()
                     }
                 }
-                Spacer()
-                if !group.isFired {
-                    Toggle("", isOn: Binding(
-                        get: { group.isEnabled },
-                        set: { _ in onToggle() }
-                    ))
-                    .tint(.orange)
-                    .labelsHidden()
-                }
+                .padding(12)
+                .background(Color("CardBackground"))
             }
-            .padding(16)
-            .background(Color("CardBackground"))
             .clipShape(RoundedRectangle(cornerRadius: 18))
-            .opacity(group.isFired ? 0.7 : (group.isEnabled ? 1.0 : 0.6))
+            .opacity(group.isEnabled || group.isFired ? 1.0 : 0.5)
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: group.isEnabled)
             .overlay(
                 RoundedRectangle(cornerRadius: 18)
@@ -1213,6 +1237,21 @@ struct SettingsView: View {
                     .scaleEffect(group.isFired ? 1.02 : 1.0)
                     .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: group.isFired)
             )
+        }
+
+        private var timeText: String {
+            let f = DateFormatter()
+            f.dateFormat = use24Hour ? "HH:mm" : "h:mm"
+            return group.fireDate.flatMap { f.string(from: $0) } ?? "--:--"
+        }
+
+        private var ampmText: String {
+            guard !use24Hour else { return "" }
+            let f = DateFormatter()
+            f.dateFormat = "a"
+            f.amSymbol = "AM"
+            f.pmSymbol = "PM"
+            return group.fireDate.flatMap { f.string(from: $0) } ?? ""
         }
     }
     // MARK: - Timer Row

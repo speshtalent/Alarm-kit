@@ -154,7 +154,6 @@ struct AddAlarmView: View {
         } else if let date = preselectedDate, !Calendar.current.isDateInToday(date) {
             _title = State(initialValue: "")
             _selectedDate = State(initialValue: date)
-            // ✅ Use current time not preselected date's time
             let now = Date()
             let hour24 = Calendar.current.component(.hour, from: now)
             let is24Hr = UserDefaults.standard.bool(forKey: "use24HourFormat")
@@ -164,12 +163,24 @@ struct AddAlarmView: View {
             _selectedMinute = State(initialValue: Calendar.current.component(.minute, from: now))
             _useSpecificDate = State(initialValue: true)
             self.editingAlarmID = nil
-            // ✅ Auto set monthly repeat with selected date's day and month
             let day = Calendar.current.component(.day, from: date)
             let month = Calendar.current.component(.month, from: date)
+            let year = Calendar.current.component(.year, from: date)
+            let currentYear = Calendar.current.component(.year, from: Date())
             _selectedDayOfMonth = State(initialValue: day)
-            _repeatDays = State(initialValue: Set([100 + month]))
-            _repeatType = State(initialValue: "monthly")
+            if year > currentYear {
+                // ✅ Future year → use yearly with that specific year
+                var yearlyDays: Set<Int> = []
+                yearlyDays.insert(day)
+                yearlyDays.insert(100 + month)
+                yearlyDays.insert(year)
+                _repeatDays = State(initialValue: yearlyDays)
+                _repeatType = State(initialValue: "yearly")
+            } else {
+                // ✅ Same year → one time with scheduledDate
+                _repeatDays = State(initialValue: [])
+                _repeatType = State(initialValue: "")
+            }
         } else {
             _title = State(initialValue: "")  // ✅ must be first
             _selectedDate = State(initialValue: Date())
@@ -1118,6 +1129,10 @@ struct AddAlarmView: View {
                 UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
                 hasRecording = false
                 recordingName = ""
+                // ✅ Set scheduledDate for one-time calendar date
+                if repeatType == "" && !Calendar.current.isDateInToday(selectedDate) {
+                    scheduledDate = selectedDate
+                }
             }
             loadCustomRecordings()
             if autoStartRecording, !didAutoStartRecording, !hasRecording {
