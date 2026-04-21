@@ -25,9 +25,9 @@ struct ScheduleForFutureSheet: View {
     private var hasSheetChanges: Bool {
         // ✅ Common time check
         let timeChanged = selectedHour != originalHour ||
-                          selectedMinute != originalMinute ||
-                          selectedAMPM != originalAMPM
-
+        selectedMinute != originalMinute ||
+        selectedAMPM != originalAMPM
+        
         if selectedTab == 1 {
             // ✅ Monthly — build full result and compare
             var result: Set<Int> = monthlyMonths
@@ -39,32 +39,33 @@ struct ScheduleForFutureSheet: View {
             default: result.insert(200)
             }
             return result != originalRepeatDays ||
-                   repeatType != originalRepeatType ||
-                   timeChanged
+            repeatType != originalRepeatType ||
+            timeChanged
         }
-
+        
         if selectedTab == 2 {
             // ✅ Yearly — check date, repeatOn, repeatCount
             let originalYearCount = originalRepeatDays.filter { $0 >= 2025 }.count
             let originalRepeatOn = originalYearCount > 0
             return yearlyDate != originalDate ||
-                   yearlyRepeatOn != originalRepeatOn ||
-                   (yearlyRepeatOn && yearlyRepeatCount != max(originalYearCount, 1)) ||
-                   repeatType != originalRepeatType ||
-                   timeChanged ||
-                   selectedTab != (originalRepeatType == "yearly" ? 2 : selectedTab)
+            yearlyRepeatOn != originalRepeatOn ||
+            (yearlyRepeatOn && yearlyRepeatCount != max(originalYearCount, 1)) ||
+            repeatType != originalRepeatType ||
+            timeChanged ||
+            selectedTab != (originalRepeatType == "yearly" ? 2 : selectedTab)
         }
-
+        
         // ✅ One time
         return selectedDate != originalDate ||
-               repeatType != originalRepeatType ||
-               timeChanged
+        repeatType != originalRepeatType ||
+        timeChanged
     }
     @State private var monthlyDay: Int = 0
     @State private var monthlyMonths: Set<Int> = []
     @State private var monthlyRepeatMode: String = "once"
     @State private var monthlyStopAfterYears: Int = 2
     @State private var yearlyDate: Date? = nil
+    @State private var showNoDayAlert: Bool = false
     @State private var yearlyRepeatOn: Bool = false
     @State private var yearlyRepeatCount: Int = 5
     
@@ -268,6 +269,10 @@ struct ScheduleForFutureSheet: View {
                             repeatType = ""
                             repeatDays = []
                         } else if selectedTab == 1 {
+                            if monthlyDay == 0 {
+                                showNoDayAlert = true
+                                return
+                            }
                             repeatType = "monthly"
                             selectedDate = nil  // ✅ Clear one time date when switching to monthly
                             var result: Set<Int> = monthlyMonths
@@ -280,6 +285,10 @@ struct ScheduleForFutureSheet: View {
                             }
                             repeatDays = result
                         } else if selectedTab == 2 {
+                            if yearlyDate == nil {
+                                showNoDayAlert = true
+                                return
+                            }
                             repeatType = "yearly"
                             selectedDate = nil
                             if let date = yearlyDate {
@@ -328,6 +337,11 @@ struct ScheduleForFutureSheet: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 16)
+                }
+                .alert("Please Select a Day", isPresented: $showNoDayAlert) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text("Please select a day of the month before continuing.")
                 }
                 .onAppear {
                     monthlyDay = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? 0
@@ -576,18 +590,24 @@ struct ScheduleForFutureSheet: View {
                 }
                 .padding(.horizontal, 20)
             }
-            .padding(.bottom, 20)
-            .onAppear {
-                if let existing = selectedDate {
-                    currentMonth = existing
+            .padding(.bottom, 4)
+            Text("⏰ Rings once on the selected date at the set time.")
+                .font(.system(size: 12, design: .rounded))
+                .foregroundStyle(Color("SecondaryText"))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+                .onAppear {
+                    if let existing = selectedDate {
+                        currentMonth = existing
+                    }
+                    pickerYear = calendar.component(.year, from: currentMonth)
+                    pickerMonth = calendar.component(.month, from: currentMonth)
                 }
-                pickerYear = calendar.component(.year, from: currentMonth)
-                pickerMonth = calendar.component(.month, from: currentMonth)
-            }
-            .onChange(of: currentMonth) { _, newValue in
-                pickerYear = calendar.component(.year, from: newValue)
-                pickerMonth = calendar.component(.month, from: newValue)
-            }
+                .onChange(of: currentMonth) { _, newValue in
+                    pickerYear = calendar.component(.year, from: newValue)
+                    pickerMonth = calendar.component(.month, from: newValue)
+                }
         }
     }
     
@@ -622,8 +642,9 @@ struct ScheduleForFutureSheet: View {
                 // Summary
                 VStack(spacing: 4) {
                     if selectedDay > 0 {
-                        let monthStr = selectedMonths.isEmpty ? "Every month" :
+                        let monthStr = (selectedMonths.isEmpty || selectedMonths.count == 12) ? "Every month" :
                         selectedMonths.sorted().map { monthNames[$0 - 101] }.joined(separator: ", ")
+                        
                         let currentYear = Calendar.current.component(.year, from: Date())
                         let repeatStr: String = {
                             switch repeatMode {
@@ -767,9 +788,11 @@ struct ScheduleForFutureSheet: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Repeat until?")
-                            .font(.system(size: 15, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color("PrimaryText"))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Repeat until?")
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color("PrimaryText"))
+                        }
                         HStack(spacing: 8) {
                             Button {
                                 withAnimation(.spring(response: 0.3)) { repeatMode = "once" }
@@ -825,7 +848,15 @@ struct ScheduleForFutureSheet: View {
                     }
                     .padding(16)
                 }
-                
+                .padding(.horizontal, 20)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("🔁 Rings on the selected day every month or specific months.")
+                        .font(.system(size: 12, design: .rounded))
+                        .foregroundStyle(Color("SecondaryText"))
+                    Text("Once = this year only · Forever = never stops · Stop after = stops after X years")
+                        .font(.system(size: 12, design: .rounded))
+                        .foregroundStyle(Color("SecondaryText"))
+                }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
             }
@@ -942,7 +973,12 @@ struct ScheduleForFutureSheet: View {
                     .padding(16)
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 20)
+                Text("📅 Rings once or every year on the selected date.")
+                    .font(.system(size: 12, design: .rounded))
+                    .foregroundStyle(Color("SecondaryText"))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
             }
         }
     }

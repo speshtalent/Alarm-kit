@@ -121,7 +121,9 @@ struct AddAlarmView: View {
 
 
         let hasMonths = repeatDaysToLoad.contains { $0 >= 101 && $0 <= 112 }
-        let hasWeekDays = repeatDaysToLoad.contains { $0 >= 1 && $0 <= 7 }
+        let hasWeekDays = repeatDaysToLoad.contains { $0 >= 1 && $0 <= 7 } &&
+                          !repeatDaysToLoad.contains { $0 >= 8 && $0 <= 31 } &&
+                          !repeatDaysToLoad.contains { $0 >= 100 }
         let hasYears = repeatDaysToLoad.contains { $0 >= 2025 }
         let isMonthlyGeneric = repeatDaysToLoad == Set([100])
         let isDayInMonth = repeatDaysToLoad.contains { $0 >= 1 && $0 <= 31 } && !hasWeekDays
@@ -232,20 +234,70 @@ struct AddAlarmView: View {
             components.hour = hour24
             components.minute = selectedMinute
             components.second = 0
-            return Calendar.current.date(from: components) ?? Date()
+            var date = Calendar.current.date(from: components) ?? Date()
+            // ✅ If yearly and date is in past, find next future year
+            if repeatType == "yearly" && date < Date() {
+                components.year = (components.year ?? Calendar.current.component(.year, from: Date())) + 1
+                date = Calendar.current.date(from: components) ?? date
+            }
+            return date
         }
         let baseDate: Date
         if repeatType == "monthly" {
-            let month = repeatDays.filter { $0 >= 101 && $0 <= 112 }.min().map { $0 - 100 } ?? Calendar.current.component(.month, from: Date())
-            let year = selectedYears.min() ?? Calendar.current.component(.year, from: Date())
             let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? selectedDayOfMonth
-            var comps = DateComponents()
-            comps.year = year
-            comps.month = month
-            comps.day = day
-            baseDate = Calendar.current.date(from: comps) ?? selectedDate
+            let selectedMonths = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+            let cal = Calendar.current
+            if selectedMonths.isEmpty {
+                // ✅ Every month — find next future occurrence and return early
+                let now = Date()
+                let currentDay = cal.component(.day, from: now)
+                let currentMonth = cal.component(.month, from: now)
+                let currentYear = cal.component(.year, from: now)
+                var comps = DateComponents()
+                comps.day = day
+                comps.hour = hour24
+                comps.minute = selectedMinute
+                comps.second = 0
+                if day > currentDay {
+                    comps.month = currentMonth
+                    comps.year = currentYear
+                } else {
+                    if currentMonth == 12 {
+                        comps.month = 1
+                        comps.year = currentYear + 1
+                    } else {
+                        comps.month = currentMonth + 1
+                        comps.year = currentYear
+                    }
+                }
+                return cal.date(from: comps) ?? Date()
+            } else {
+                // ✅ Specific months selected
+                let month = selectedMonths.min().map { $0 - 100 } ?? cal.component(.month, from: Date())
+                let year = selectedYears.min() ?? cal.component(.year, from: Date())
+                var comps = DateComponents()
+                comps.year = year
+                comps.month = month
+                comps.day = day
+                baseDate = cal.date(from: comps) ?? selectedDate
+            }
         } else {
-            if editingAlarmID != nil && Calendar.current.isDateInToday(selectedDate) {
+            if repeatType == "yearly" {
+                // ✅ Yearly — return early to avoid past date override
+                let years = repeatDays.filter { $0 >= 2025 }.sorted()
+                let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? Calendar.current.component(.day, from: Date())
+                let month = months.first.map { $0 - 100 } ?? Calendar.current.component(.month, from: Date())
+                let year = years.first ?? Calendar.current.component(.year, from: Date())
+                var comps = DateComponents()
+                comps.year = year
+                comps.month = month
+                comps.day = day
+                comps.hour = hour24
+                comps.minute = selectedMinute
+                comps.second = 0
+                return Calendar.current.date(from: comps) ?? Date()
+            } else if editingAlarmID != nil && Calendar.current.isDateInToday(selectedDate) {
                 baseDate = Date()
             } else {
                 baseDate = !Calendar.current.isDateInToday(selectedDate) ? selectedDate : Date()
@@ -295,7 +347,7 @@ struct AddAlarmView: View {
             let isForever = repeatDays.contains(100)
             let stopYear = repeatDays.filter { $0 >= 201 }.first.map { $0 - 200 }
             let monthNamesLocal = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-            let monthStr = months.isEmpty ? "every month" : months.map { monthNamesLocal[$0 - 101] }.joined(separator: ", ")
+            let monthStr = (months.isEmpty || months.count == 12) ? "every month" : months.map { monthNamesLocal[$0 - 101] }.joined(separator: ", ")
             let repeatStr: String = {
                 if isForever { return "· Forever" }
                 if let stop = stopYear { return "· Until \(Calendar.current.component(.year, from: Date()) + stop)" }
@@ -568,7 +620,7 @@ struct AddAlarmView: View {
                             Divider()
                             HStack(spacing: 6) {
                                 ForEach(weekDays, id: \.value) { day in
-                                    let isSelected = repeatDays.contains(day.value)
+                                    let isSelected = repeatType == "weekly" && repeatDays.contains(day.value)
                                     Button {
                                         if isSelected {
                                             repeatDays.remove(day.value)
@@ -631,7 +683,8 @@ struct AddAlarmView: View {
                                     } else if repeatType == "monthly" && !repeatDays.isEmpty {
                                         let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
                                         let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? 0
-                                        let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted().map { monthNames[$0 - 101] }.joined(separator: ", ")
+                                        let monthsArray = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                                        let months = monthsArray.map { monthNames[$0 - 101] }.joined(separator: ", ")
                                         let isForever = repeatDays.contains(100)
                                         let stopYear = repeatDays.filter { $0 >= 201 }.first.map { $0 - 200 }
                                         let repeatStr: String = {
@@ -639,7 +692,7 @@ struct AddAlarmView: View {
                                             if let stop = stopYear { return "Until \(Calendar.current.component(.year, from: Date()) + stop)" }
                                             return "This year only"
                                         }()
-                                        let monthStr = months.isEmpty ? "Every month" : months
+                                        let monthStr = (monthsArray.isEmpty || monthsArray.count == 12) ? "Every month" : months
                                         Text("Day \(day) · \(monthStr) · \(repeatStr)")
                                             .font(.system(size: 14, weight: .bold, design: .rounded))
                                             .foregroundStyle(Color("PrimaryText"))
@@ -1257,17 +1310,41 @@ struct AddAlarmView: View {
                         alarmID: savedDate.timeIntervalSince1970.description
                     )
                 } else {
-                    // ✅ Multiple alarms (monthly/weekly) — add each one with recurrence
-                    for alarmID in alarmIDs {
-                        if let fireDate = AlarmService.shared.alarms.first(where: { $0.id == alarmID })?.fireDate {
-                            // ✅ Get weekday for this alarm (1=Sun, 2=Mon...7=Sat)
-                            let weekday = Calendar.current.component(.weekday, from: fireDate)
-                            let isWeekly = finalRepeatDays.contains { $0 >= 1 && $0 <= 7 }
-                            _ = await CalendarService.shared.addAlarmToCalendar(
-                                title: savedTitle, date: fireDate,
-                                alarmID: fireDate.timeIntervalSince1970.description,
-                                weekday: isWeekly ? weekday : nil
-                            )
+                    let isWeekly = finalRepeatDays.contains { $0 >= 1 && $0 <= 7 }
+                    let selectedMonths = finalRepeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                    let isMonthly = !isWeekly && (finalRepeatDays.contains { $0 >= 101 && $0 <= 112 } || finalRepeatDays.contains(100) || (finalRepeatDays.contains { $0 >= 1 && $0 <= 31 } && !finalRepeatDays.contains { $0 >= 2025 }))
+                    let isEveryMonth = isMonthly && selectedMonths.isEmpty
+                    let day = finalRepeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? Calendar.current.component(.day, from: savedDate)
+                    let currentYear = Calendar.current.component(.year, from: Date())
+
+                    if isEveryMonth {
+                        // ✅ Every month — add event for each remaining month this year
+                        let currentMonth = Calendar.current.component(.month, from: Date())
+                        for month in currentMonth...12 {
+                            var comps = DateComponents()
+                            comps.year = currentYear
+                            comps.month = month
+                            comps.day = day
+                            comps.hour = Calendar.current.component(.hour, from: savedDate)
+                            comps.minute = Calendar.current.component(.minute, from: savedDate)
+                            if let eventDate = Calendar.current.date(from: comps) {
+                                let alarmID = eventDate.timeIntervalSince1970.description
+                                _ = await CalendarService.shared.addAlarmToCalendar(
+                                    title: savedTitle, date: eventDate, alarmID: alarmID
+                                )
+                            }
+                        }
+                    } else {
+                        // ✅ Weekly/specific months — add each alarm
+                        for alarmID in alarmIDs {
+                            if let fireDate = AlarmService.shared.alarms.first(where: { $0.id == alarmID })?.fireDate {
+                                let weekday = Calendar.current.component(.weekday, from: fireDate)
+                                _ = await CalendarService.shared.addAlarmToCalendar(
+                                    title: savedTitle, date: fireDate,
+                                    alarmID: fireDate.timeIntervalSince1970.description,
+                                    weekday: isWeekly ? weekday : nil
+                                )
+                            }
                         }
                     }
                 }

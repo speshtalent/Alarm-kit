@@ -425,6 +425,7 @@ struct SettingsView: View {
     @State private var showFeatureRequest = false
     @State private var showShareSheet = false
     @State private var showNotificationPermissionAlert = false
+    @State private var calendarEventCount: Int = UserDefaults.standard.dictionary(forKey: "calendarEventMap")?.count ?? 0
     @Environment(\.colorScheme) private var systemColorScheme
     @Environment(\.dismiss) private var dismiss
     
@@ -622,7 +623,10 @@ struct SettingsView: View {
                         }
                     }
                     .padding(.horizontal, 20)
-                    .onAppear { pendingIcon = selectedAppIcon }
+                    .onAppear {
+                        pendingIcon = selectedAppIcon
+                        calendarEventCount = UserDefaults.standard.dictionary(forKey: "calendarEventMap")?.count ?? 0
+                    }
                     
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(cardColor)
@@ -775,7 +779,7 @@ struct SettingsView: View {
                             if hasCloudData { showClearCloudAlert = true }
                         }
                         
-                    let hasCalendarEvents = !(UserDefaults.standard.dictionary(forKey: "calendarEventMap") as? [String: String] ?? [:]).isEmpty
+                    let hasCalendarEvents = calendarEventCount > 0
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(cardColor)
                         HStack(spacing: 8) {
@@ -792,7 +796,7 @@ struct SettingsView: View {
                         .padding(16)
                     }
                     .padding(.horizontal, 20)
-                    .opacity(hasCalendarEvents ? 1.0 : 0.4)
+                    .opacity(hasCalendarEvents ? 1.0 : 0.5)
                     .onTapGesture {
                         if hasCalendarEvents { showRemoveCalendarAlert = true }
                     }
@@ -881,24 +885,21 @@ struct SettingsView: View {
             .preferredColorScheme(currentColorScheme)
             .alert("Remove All Calendar Events?", isPresented: $showRemoveCalendarAlert) {
                 Button("Remove", role: .destructive) {
-                    let map = UserDefaults.standard.dictionary(forKey: "calendarEventMap") as? [String: String] ?? [:]
                     CalendarService.shared.removeAllCalendarEvents()
                     let alarmService = AlarmService.shared
                     for group in alarmService.alarmGroups {
-                        for alarmID in group.alarmIDs {
-                            if let fireDate = alarmService.alarms.first(where: { $0.id == alarmID })?.fireDate {
-                                let key = fireDate.timeIntervalSince1970.description
-                                if map[key] != nil && group.isEnabled {
-                                    alarmService.toggleAlarm(id: alarmID)
-                                }
+                        if group.isEnabled {
+                            for alarmID in group.alarmIDs {
+                                alarmService.toggleAlarm(id: alarmID)
                             }
                         }
                     }
                     alarmService.loadAlarms()
+                    calendarEventCount = 0
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This will remove all calendar events added by Date Alarm.")
+                Text("This will remove all calendar events and disable all alarms.")
             }
             .alert("Clear All Data?", isPresented: $showClearCloudAlert) {
                 Button("Yes, Delete Everything", role: .destructive) {
@@ -1152,12 +1153,29 @@ struct SettingsView: View {
             }()
             if !selectedMonths.isEmpty {
                 let dayStr = dayOfMonth.map { "\($0)" } ?? ""
-                let monthStr = selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", ")
+                let monthStr = selectedMonths.count == 12 ? "Every month" : selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", ")
                 return "\(monthStr) • Day \(dayStr) • \(repeatModeStr) • \(timeOnly)"
             }
             if isForever {
                 let dayStr = dayOfMonth.map { "\($0)" } ?? ""
                 return "Every month • Day \(dayStr) • Forever • \(timeOnly)"
+            }
+
+            // ✅ Monthly with only day selected (no months, no forever flag)
+            let hasOnlyDay = !group.repeatDays.filter { $0 >= 1 && $0 <= 31 }.isEmpty &&
+                              group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.isEmpty &&
+                              !group.repeatDays.contains(100) &&
+                              group.repeatDays.filter { $0 >= 2025 }.isEmpty
+            if hasOnlyDay {
+                let day = group.repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? 0
+                let stopYear = group.repeatDays.filter { $0 >= 201 }.first.map { $0 - 200 }
+                let currentYear = Calendar.current.component(.year, from: Date())
+                let repeatModeStr: String = {
+                    if group.repeatDays.contains(100) { return "Forever" }
+                    if let stop = stopYear { return "Until \(currentYear + stop)" }
+                    return "This year only"
+                }()
+                return "Every month • Day \(day) • \(repeatModeStr) • \(timeOnly)"
             }
 
             // ✅ Weekly

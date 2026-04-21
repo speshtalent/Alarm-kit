@@ -29,10 +29,10 @@ struct CalendarView: View {
             guard let fireDate = item.fireDate else { continue }
             let groupID = alarmService.getGroupID(for: item.id) ?? item.id
             let repeatDays = alarmService.getRepeatDays(forGroup: groupID)
-            let hasWeekDays = repeatDays.contains { $0 >= 1 && $0 <= 7 }
+            let hasWeekDays = repeatDays.contains { $0 >= 1 && $0 <= 7 } && !repeatDays.contains { $0 >= 8 && $0 <= 31 } && !repeatDays.contains { $0 >= 101 }
             let hasMonths = repeatDays.contains { $0 >= 101 && $0 <= 112 }
             let dayValues = repeatDays.filter { $0 >= 1 && $0 <= 31 }
-            
+
             if hasWeekDays {
                 // ✅ Add dot for every day in current month that matches weekday
                 guard let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: currentMonth)) else { continue }
@@ -56,6 +56,46 @@ struct CalendarView: View {
                         dates.insert(formatter.string(from: matchDate))
                     }
                 }
+            } else if !dayValues.isEmpty && !hasWeekDays && !repeatDays.contains(where: { $0 >= 2025 }) {
+                // ✅ Every month — only day selected, no months, no years
+                if let dayOfMonth = dayValues.first {
+                    var comps = calendar.dateComponents([.year, .month], from: currentMonth)
+                    comps.day = dayOfMonth
+                    if let matchDate = calendar.date(from: comps) {
+                        dates.insert(formatter.string(from: matchDate))
+                    }
+                }
+            } else if repeatDays.contains(where: { $0 >= 2025 }) {
+                // ✅ Yearly — add dot for matching year + month + day
+                let currentYear = calendar.component(.year, from: currentMonth)
+                let currentMonthNum = calendar.component(.month, from: currentMonth)
+                let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                let years = repeatDays.filter { $0 >= 2025 }.sorted()
+                if years.contains(currentYear) {
+                    if let dayOfMonth = dayValues.first {
+                        if months.isEmpty {
+                            // ✅ No month specified — use fireDate's month
+                            let fireMonth = calendar.component(.month, from: fireDate)
+                            if fireMonth == currentMonthNum {
+                                var comps = DateComponents()
+                                comps.year = currentYear
+                                comps.month = currentMonthNum
+                                comps.day = dayOfMonth
+                                if let matchDate = calendar.date(from: comps) {
+                                    dates.insert(formatter.string(from: matchDate))
+                                }
+                            }
+                        } else if months.contains(100 + currentMonthNum) {
+                            var comps = DateComponents()
+                            comps.year = currentYear
+                            comps.month = currentMonthNum
+                            comps.day = dayOfMonth
+                            if let matchDate = calendar.date(from: comps) {
+                                dates.insert(formatter.string(from: matchDate))
+                            }
+                        }
+                    }
+                }
             } else {
                 // ✅ One-time or exact date
                 dates.insert(formatter.string(from: fireDate))
@@ -71,7 +111,7 @@ struct CalendarView: View {
             
             let groupID = alarmService.getGroupID(for: item.id) ?? item.id
             let repeatDays = alarmService.getRepeatDays(forGroup: groupID)
-            let hasWeekDays = repeatDays.contains { $0 >= 1 && $0 <= 7 }
+            let hasWeekDays = repeatDays.contains { $0 >= 1 && $0 <= 7 } && !repeatDays.contains { $0 >= 8 && $0 <= 31 } && !repeatDays.contains { $0 >= 101 }
             let hasMonths = repeatDays.contains { $0 >= 101 && $0 <= 112 }
             let dayValues = repeatDays.filter { $0 >= 1 && $0 <= 31 }
             let selectedDay = calendar.component(.day, from: selectedDate)
@@ -390,12 +430,17 @@ struct CalendarView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.top, 20)
                 } else {
-                    VStack(spacing: 8) {
+                    List {
                         ForEach(alarmsForSelectedDate) { item in
                             calendarAlarmRow(item: item)
-                                .padding(.horizontal, 16)
+                                .listRowBackground(Color("AppBackground"))
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                         }
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .frame(height: CGFloat(alarmsForSelectedDate.count) * 110)
                     .padding(.bottom, 20)
                 }
             }
@@ -520,12 +565,17 @@ struct CalendarView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.top, 30)
                 } else {
-                    VStack(spacing: 8) {
+                    List {
                         ForEach(alarmsForSelectedDate) { item in
                             calendarAlarmRow(item: item)
-                                .padding(.horizontal, 16)
+                                .listRowBackground(Color("AppBackground"))
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                         }
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .frame(height: CGFloat(alarmsForSelectedDate.count) * 100)
                     .padding(.bottom, 20)
                 }
             }

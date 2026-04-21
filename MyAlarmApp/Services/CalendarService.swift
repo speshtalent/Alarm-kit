@@ -37,7 +37,7 @@ final class CalendarService: ObservableObject {
         event.title = "⏰ \(title)"
         event.startDate = date
         event.endDate = date.addingTimeInterval(3600)
-        event.calendar = eventStore.defaultCalendarForNewEvents
+        event.calendar = getOrCreateDateAlarmCalendar() ?? eventStore.defaultCalendarForNewEvents
         event.notes = "Alarm set from Date Alarm app"
 
         // ✅ Add weekly recurrence if weekday is provided
@@ -71,9 +71,11 @@ final class CalendarService: ObservableObject {
     // delete event from iPhone Calendar when alarm is deleted
     func removeAlarmFromCalendar(alarmID: String) {
         guard let eventID = getEventID(for: alarmID) else { return }
-        guard let event = eventStore.event(withIdentifier: eventID) else { return }
+        guard let event = eventStore.event(withIdentifier: eventID) else {
+            removeEventID(for: alarmID)
+            return
+        }
         do {
-            // ✅ Use .futureEvents to remove all recurring occurrences
             try eventStore.remove(event, span: .futureEvents)
             removeEventID(for: alarmID)
             print("✅ Removed from calendar: \(alarmID)")
@@ -103,30 +105,47 @@ final class CalendarService: ObservableObject {
     private func getEventMap() -> [String: String] {
         return UserDefaults.standard.dictionary(forKey: "calendarEventMap") as? [String: String] ?? [:]
     }
+    private func getOrCreateDateAlarmCalendar() -> EKCalendar? {
+        let calendars = eventStore.calendars(for: .event)
+        if let existing = calendars.first(where: { $0.title == "Date Alarm" }) {
+            return existing
+        }
+        let newCalendar = EKCalendar(for: .event, eventStore: eventStore)
+        newCalendar.title = "Date Alarm"
+        newCalendar.cgColor = UIColor.orange.cgColor
+        if let source = eventStore.sources.first(where: { $0.sourceType == .local }) {
+            newCalendar.source = source
+        } else if let source = eventStore.sources.first {
+            newCalendar.source = source
+        }
+        do {
+            try eventStore.saveCalendar(newCalendar, commit: true)
+            return newCalendar
+        } catch {
+            print("Failed to create Date Alarm calendar:", error)
+            return nil
+        }
+    }
     func removeAllCalendarEvents() {
         Task {
-            // ✅ Always request permission
             _ = await requestAccess()
             guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return }
-            
-            // ✅ Remove using saved map
             let map = getEventMap()
             for (alarmID, _) in map {
                 removeAlarmFromCalendar(alarmID: alarmID)
             }
             UserDefaults.standard.removeObject(forKey: "calendarEventMap")
-            
-            // ✅ Also search and remove any remaining events by note
-            let start = Calendar.current.date(byAdding: .year, value: -1, to: Date()) ?? Date()
-            let end = Calendar.current.date(byAdding: .year, value: 5, to: Date()) ?? Date()
-            let predicate = eventStore.predicateForEvents(withStart: start, end: end, calendars: nil)
+            let start = Calendar.current.date(byAdding: .year, value: -2, to: Date()) ?? Date()
+            let end = Calendar.current.date(byAdding: .year, value: 10, to: Date()) ?? Date()
+            let calendars = eventStore.calendars(for: .event)
+            let dateAlarmCal = calendars.first(where: { $0.title == "Date Alarm" })
+            let searchCals = dateAlarmCal.map { [$0] }
+            let predicate = eventStore.predicateForEvents(withStart: start, end: end, calendars: searchCals)
             let events = eventStore.events(matching: predicate)
             for event in events {
-                if event.notes == "Alarm set from Date Alarm app" {
-                    try? eventStore.remove(event, span: .futureEvents)
-                }
+                try? eventStore.remove(event, span: .futureEvents)
             }
-            print("✅ All calendar events removed")
+            print("✅ All Date Alarm events removed, calendar kept")
         }
     }
     func requestPermissionIfNeeded() async {

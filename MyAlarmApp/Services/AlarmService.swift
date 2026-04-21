@@ -75,10 +75,13 @@ final class AlarmService: ObservableObject {
                 ("Mon", 2), ("Tue", 3), ("Wed", 4),
                 ("Thu", 5), ("Fri", 6), ("Sat", 7), ("Sun", 1)
             ]
+            let isActuallyWeekly = !repeatDays.contains { $0 >= 8 } && !repeatDays.contains { $0 >= 100 }
+            guard isActuallyWeekly else { return "" }
             if repeatDays.count == 7 { return "Every day" }
             if repeatDays == Set([2, 3, 4, 5, 6]) { return "Weekdays" }
             if repeatDays == Set([7, 1]) { return "Weekends" }
             return weekDays.filter { repeatDays.contains($0.value) }.map { $0.label }.joined(separator: ", ")
+
         }
     }
 
@@ -431,6 +434,36 @@ final class AlarmService: ObservableObject {
             if repeatDays == Set([100]) {
                 let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
                 saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: Set([100]))
+                UserDefaults.standard.set(sound, forKey: "alarmSound_\(id.uuidString)")
+                rebuildGroups()
+                saveNextAlarmForWidget()
+                backupToiCloudDebounced()
+                return id
+            }
+
+            // ✅ Monthly with only day selected (no months, no years, no forever/once flags)
+            let onlyDaySelected = !repeatDays.filter { $0 >= 1 && $0 <= 31 }.isEmpty &&
+                                   repeatDays.filter { $0 >= 101 && $0 <= 112 }.isEmpty &&
+                                   repeatDays.filter { $0 >= 2025 }.isEmpty &&
+                                   !repeatDays.contains(100) &&
+                                   !repeatDays.contains(200) &&
+                                   repeatDays.filter { $0 >= 201 }.isEmpty
+            if onlyDaySelected {
+                let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
+                saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: repeatDays)
+                UserDefaults.standard.set(sound, forKey: "alarmSound_\(id.uuidString)")
+                rebuildGroups()
+                saveNextAlarmForWidget()
+                backupToiCloudDebounced()
+                return id
+            }
+
+            // ✅ Yearly with only date+year selected (no month values 101-112)
+            let hasYearNoMonth = !repeatDays.filter { $0 >= 2025 }.isEmpty &&
+                                  repeatDays.filter { $0 >= 101 && $0 <= 112 }.isEmpty
+            if hasYearNoMonth {
+                let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
+                saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: repeatDays)
                 UserDefaults.standard.set(sound, forKey: "alarmSound_\(id.uuidString)")
                 rebuildGroups()
                 saveNextAlarmForWidget()
