@@ -1161,8 +1161,10 @@ struct SettingsView: View {
                 return "Every month • Day \(dayStr) • Forever • \(timeOnly)"
             }
 
-            // ✅ Monthly with only day selected (no months, no forever flag)
-            let hasOnlyDay = !group.repeatDays.filter { $0 >= 1 && $0 <= 31 }.isEmpty &&
+            // ✅ Monthly with only day selected (no months, no forever flag, not weekly)
+            let isActualWeekly = group.repeatDays.allSatisfy { $0 >= 1 && $0 <= 7 } && !group.repeatDays.isEmpty
+            let hasOnlyDay = !isActualWeekly &&
+                              !group.repeatDays.filter { $0 >= 8 && $0 <= 31 }.isEmpty &&
                               group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.isEmpty &&
                               !group.repeatDays.contains(100) &&
                               group.repeatDays.filter { $0 >= 2025 }.isEmpty
@@ -1182,7 +1184,11 @@ struct SettingsView: View {
             if group.repeatLabel.isEmpty {
                 return group.fireDate.flatMap { f.string(from: $0) } ?? ""
             } else {
-                return "\(group.repeatLabel) • \(timeOnly)"
+                let df = DateFormatter()
+                df.dateFormat = "MMM d"
+                let dateStr = group.fireDate.flatMap { df.string(from: $0) } ?? ""
+                let weeklyPrefix = group.repeatDays.count == 7 ? "" : "Every "
+                return "\(weeklyPrefix)\(group.repeatLabel) • \(dateStr) • \(timeOnly)"
             }
         }
         

@@ -351,6 +351,7 @@ final class AlarmService: ObservableObject {
         }
         rebuildGroups()
         saveNextAlarmForWidget()
+        rescheduleIfFired()
     }
 
     func rebuildGroups() {
@@ -1212,6 +1213,111 @@ final class AlarmService: ObservableObject {
     }
 
     func clearHistory() {
-        UserDefaults.standard.removeObject(forKey: historyKey)
+            UserDefaults.standard.removeObject(forKey: historyKey)
+        }
+
+        func rescheduleIfFired() {
+            let groupIDsDict = loadGroupIDs()
+            let repeatDaysDict = loadGroupRepeatDays()
+            let labels = loadLabels()
+            let activeAlarmIDs = Set((try? AlarmManager.shared.alarms)?.map { $0.id.uuidString } ?? [])
+            let disabledIDs = loadDisabledIDs()
+
+            for (groupIDStr, alarmIDStrs) in groupIDsDict {
+                let repeatDays = Set(repeatDaysDict[groupIDStr] ?? [])
+                guard !repeatDays.isEmpty else { continue }
+
+                let allGone = alarmIDStrs.allSatisfy { !activeAlarmIDs.contains($0) }
+                let allDisabled = alarmIDStrs.allSatisfy { disabledIDs.contains($0) }
+                guard allGone && !allDisabled else { continue }
+
+                // ✅ Prevent rescheduling same group more than once per 60 seconds
+                let lastRescheduleKey = "lastReschedule_\(groupIDStr)"
+                let lastReschedule = UserDefaults.standard.double(forKey: lastRescheduleKey)
+                let secondsSinceReschedule = Date().timeIntervalSince1970 - lastReschedule
+                guard secondsSinceReschedule > 60 else { continue }
+                UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: lastRescheduleKey)
+
+                guard let groupUUID = UUID(uuidString: groupIDStr) else { continue }
+                let label = labels[groupIDStr] ?? "Alarm"
+                let savedSound = UserDefaults.standard.string(forKey: "alarmSound_\(groupIDStr)") ?? "nokia.caf"
+                let savedInterval = alarmIDStrs.compactMap {
+                    UserDefaults.standard.object(forKey: "disabledAlarmDate_\($0)") as? TimeInterval
+                }.first ?? 0
+                let originalDate = savedInterval > 0 ? Date(timeIntervalSince1970: savedInterval) : Date()
+                let hour = Calendar.current.component(.hour, from: originalDate)
+                let minute = Calendar.current.component(.minute, from: originalDate)
+
+                let isWeekly = repeatDays.allSatisfy { $0 >= 1 && $0 <= 7 }
+                let isYearly = repeatDays.contains { $0 >= 2025 }
+                let isMonthly = !isWeekly && !isYearly
+
+                cancelAlarm(id: groupUUID)
+
+                Task {
+                    var nextDate: Date?
+                    let cal = Calendar.current
+                    let now = Date()
+
+                    if isWeekly {
+                        let timeComponents = cal.dateComponents([.hour, .minute], from: originalDate)
+                        let nextWeekday = repeatDays.sorted().compactMap { weekday -> Date? in
+                            var comps = DateComponents()
+                            comps.weekday = weekday
+                            comps.hour = timeComponents.hour
+                            comps.minute = timeComponents.minute
+                            return cal.nextDate(after: now, matching: comps, matchingPolicy: .nextTime)
+                        }.min() ?? now.addingTimeInterval(7 * 24 * 3600)
+                        _ = await scheduleFutureAlarm(date: nextWeekday, title: label, sound: savedSound, repeatDays: repeatDays)
+                        print("✅ Auto-rescheduled weekly: \(label) for \(nextWeekday)")
+                        return
+                    } else if isMonthly {
+                        let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? 1
+                        let selectedMonths = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                        if selectedMonths.isEmpty {
+                            let currentMonth = cal.component(.month, from: now)
+                            let currentYear = cal.component(.year, from: now)
+                            var comps = DateComponents()
+                            comps.day = day
+                            comps.hour = hour
+                            comps.minute = minute
+                            comps.month = currentMonth == 12 ? 1 : currentMonth + 1
+                            comps.year = currentMonth == 12 ? currentYear + 1 : currentYear
+                            nextDate = cal.date(from: comps)
+                        } else {
+                            let currentMonth = cal.component(.month, from: now)
+                            let currentYear = cal.component(.year, from: now)
+                            let futureMonths = selectedMonths.filter { $0 - 100 > currentMonth }
+                            let targetMonth = futureMonths.first.map { $0 - 100 } ?? selectedMonths.first.map { $0 - 100 } ?? currentMonth
+                            let targetYear = futureMonths.isEmpty ? currentYear + 1 : currentYear
+                            var comps = DateComponents()
+                            comps.day = day
+                            comps.month = targetMonth
+                            comps.year = targetYear
+                            comps.hour = hour
+                            comps.minute = minute
+                            nextDate = cal.date(from: comps)
+                        }
+                    } else if isYearly {
+                        let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? cal.component(.day, from: originalDate)
+                        let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                        let month = months.first.map { $0 - 100 } ?? cal.component(.month, from: originalDate)
+                        let years = repeatDays.filter { $0 >= 2025 }.sorted()
+                        let currentYear = cal.component(.year, from: now)
+                        guard let nextYear = years.first(where: { $0 > currentYear }) else { return }
+                        var comps = DateComponents()
+                        comps.year = nextYear
+                        comps.month = month
+                        comps.day = day
+                        comps.hour = hour
+                        comps.minute = minute
+                        nextDate = cal.date(from: comps)
+                    }
+
+                    guard let nextDate = nextDate else { return }
+                    _ = await scheduleFutureAlarm(date: nextDate, title: label, sound: savedSound, repeatDays: repeatDays)
+                    print("✅ Auto-rescheduled \(label) for \(nextDate)")
+                }
+            }
+        }
     }
-}

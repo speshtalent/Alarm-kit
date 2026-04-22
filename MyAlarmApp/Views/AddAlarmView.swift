@@ -337,7 +337,7 @@ struct AddAlarmView: View {
                 let ordered = weekDays.filter { repeatDays.contains($0.value) }.map { $0.label }
                 dayStr = ordered.joined(separator: ", ")
             }
-            return "Rings \(dayStr) at \(timeStr)"
+            return "Rings every \(dayStr) at \(timeStr)"
         }
 
         // ✅ Monthly with selected months
