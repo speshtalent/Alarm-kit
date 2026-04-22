@@ -1593,85 +1593,158 @@ struct SettingsView: View {
             return f.string(from: date)
         }
     }
-    // MARK: - Alarm Detail Inline View
-    struct AlarmDetailInlineView: View {
-        let group: AlarmService.AlarmGroup
-        let use24Hour: Bool
-        
-        private let weekDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-        private let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-        
-        private var firedAlarmIDs: Set<String> {
-            let history = AlarmService.shared.loadHistory()
-            var fired = Set(history.compactMap { $0["alarmID"] as? String })
-            
-            // ✅ If alarm ID is not in active alarms → it fired
-            let activeAlarmIDs = Set(AlarmService.shared.alarms.map { $0.id.uuidString })
-            for alarmID in group.alarmIDs {
-                if !activeAlarmIDs.contains(alarmID.uuidString) {
-                    fired.insert(alarmID.uuidString)
-                }
-            }
-            return fired
+// MARK: - Alarm Detail Inline View
+struct AlarmDetailInlineView: View {
+    let group: AlarmService.AlarmGroup
+    let use24Hour: Bool
+
+    private let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+
+    private func futureOccurrences() -> [Date] {
+        guard let baseDate = group.fireDate else { return [] }
+        let cal = Calendar.current
+        let now = Date()
+        let repeatDays = group.repeatDays
+        let hour = cal.component(.hour, from: baseDate)
+        let minute = cal.component(.minute, from: baseDate)
+        var results: [Date] = []
+
+        // ONE-TIME
+        if repeatDays.isEmpty {
+            if baseDate > now { results.append(baseDate) }
+            return results
         }
-        
-        var body: some View {
-            VStack(spacing: 8) {
-                ForEach(Array(group.alarmIDs.enumerated()), id: \.offset) { index, alarmID in
-                    let fired = firedAlarmIDs.contains(alarmID.uuidString)
-                    let alarm = AlarmService.shared.alarms.first(where: { $0.id == alarmID })
-                    
-                    HStack(spacing: 12) {
-                        Image(systemName: fired ? "checkmark.circle.fill" : "clock.fill")
-                            .foregroundStyle(fired ? .green : .orange)
-                            .font(.system(size: 16))
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(itemLabel(index: index))
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Color("PrimaryText"))
-                            if let fireDate = alarm?.fireDate {
-                                Text(formatDate(fireDate))
-                                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                                    .foregroundStyle(Color("SecondaryText"))
-                            }
-                        }
-                        
-                        Spacer()
-                        
-                        Text(fired ? "Fired ✅" : "Pending ⏳")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(fired ? .green : .orange)
+
+        // WEEKLY
+        let isWeekly = repeatDays.allSatisfy { $0 >= 1 && $0 <= 7 } && !repeatDays.isEmpty
+        if isWeekly {
+            for weekOffset in 0..<6 {
+                for weekday in repeatDays.sorted() {
+                    var comps = DateComponents()
+                    comps.weekday = weekday
+                    comps.hour = hour
+                    comps.minute = minute
+                    comps.second = 0
+                    let searchFrom = now.addingTimeInterval(TimeInterval(weekOffset * 7 * 86400) - 1)
+                    if let next = cal.nextDate(after: searchFrom, matching: comps, matchingPolicy: .nextTime),
+                       next > now, !results.contains(next) {
+                        results.append(next)
                     }
-                    .padding(12)
-                    .background(Color("AppBackground"))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
             }
-            .padding(.horizontal, 4)
-            .padding(.bottom, 8)
+            results.sort()
+            return Array(results.prefix(5))
         }
-        
-        private func itemLabel(index: Int) -> String {
-            let weekdays = group.repeatDays.filter { $0 >= 1 && $0 <= 7 }.sorted()
-            if !weekdays.isEmpty && index < weekdays.count {
-                return weekDayNames[weekdays[index] - 1]
+
+        // YEARLY specific years
+        let selectedYears = repeatDays.filter { $0 >= 2025 }.sorted()
+        if !selectedYears.isEmpty {
+            let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+            let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? cal.component(.day, from: baseDate)
+            for year in selectedYears {
+                let month = months.first.map { $0 - 100 } ?? cal.component(.month, from: baseDate)
+                var comps = DateComponents()
+                comps.year = year; comps.month = month; comps.day = day
+                comps.hour = hour; comps.minute = minute; comps.second = 0
+                if let date = cal.date(from: comps), date > now {
+                    results.append(date)
+                }
             }
-            let months = group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
-            if !months.isEmpty && index < months.count {
-                return monthNames[months[index] - 101]
-            }
-            let years = group.repeatDays.filter { $0 >= 2025 }.sorted()
-            if !years.isEmpty && index < years.count {
-                return "\(years[index])"
-            }
-            return "Alarm \(index + 1)"
+            return Array(results.prefix(5))
         }
-        
-        private func formatDate(_ date: Date) -> String {
-            let f = DateFormatter()
-            f.dateFormat = use24Hour ? "EEE, MMM d • HH:mm" : "EEE, MMM d • h:mm a"
-            return f.string(from: date)
+
+        // MONTHLY
+        let selectedMonths = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+        let dayOfMonth = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? cal.component(.day, from: baseDate)
+        let isForever = repeatDays.contains(100)
+        let stopAfterFlag = repeatDays.filter { $0 >= 201 && $0 < 2025 }.first
+        let stopAfterYears = stopAfterFlag.map { $0 - 200 }
+        let currentYear = cal.component(.year, from: now)
+        let stopYear = stopAfterYears.map { currentYear + $0 } ?? (isForever ? currentYear + 10 : currentYear)
+        let monthsToUse = selectedMonths.isEmpty ? Array(101...112) : selectedMonths
+
+        for year in currentYear...stopYear {
+            for monthCode in monthsToUse {
+                let month = monthCode - 100
+                var comps = DateComponents()
+                comps.year = year; comps.month = month; comps.day = dayOfMonth
+                comps.hour = hour; comps.minute = minute; comps.second = 0
+                if let date = cal.date(from: comps), date > now {
+                    results.append(date)
+                }
+                if results.count >= 5 { break }
+            }
+            if results.count >= 5 { break }
         }
+        return results
     }
+
+    private func formatDate(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = use24Hour ? "EEE, MMM d yyyy • HH:mm" : "EEE, MMM d yyyy • h:mm a"
+        f.amSymbol = "AM"; f.pmSymbol = "PM"
+        return f.string(from: date)
+    }
+
+    private func daysUntil(_ date: Date) -> Int {
+        Calendar.current.dateComponents([.day], from: Date(), to: date).day ?? 0
+    }
+
+    var body: some View {
+        let occurrences = futureOccurrences()
+        VStack(spacing: 8) {
+            ForEach(Array(occurrences.enumerated()), id: \.offset) { index, date in
+                let days = daysUntil(date)
+                HStack(spacing: 12) {
+                    Image(systemName: "clock.fill")
+                        .foregroundStyle(.orange)
+                        .font(.system(size: 16))
+
+                    Text(formatDate(date))
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color("PrimaryText"))
+
+                    Spacer()
+
+                    if days == 0 {
+                        Text("Today")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(.orange)
+                    } else if days == 1 {
+                        Text("Tomorrow")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(.orange)
+                    } else {
+                        Text("in \(days)d")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color("SecondaryText"))
+                    }
+                }
+                .padding(12)
+                .background(Color("AppBackground"))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            let isForever = group.repeatDays.contains(100) ||
+                            (group.repeatDays.allSatisfy { $0 >= 1 && $0 <= 7 } && !group.repeatDays.isEmpty)
+            let hasFixedEnd = !group.repeatDays.filter { $0 >= 201 && $0 < 2025 }.isEmpty ||
+                              !group.repeatDays.filter { $0 >= 2025 }.isEmpty
+
+            if !occurrences.isEmpty && isForever && !hasFixedEnd {
+                HStack(spacing: 6) {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.orange.opacity(0.5))
+                    Text("more coming...")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color("SecondaryText").opacity(0.6))
+                }
+                .padding(.top, 2)
+            }
+        }
+        .padding(.horizontal, 4)
+        .padding(.bottom, 8)
+    }
+}
+
 
