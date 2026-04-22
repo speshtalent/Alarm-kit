@@ -279,9 +279,8 @@ struct ScheduleForFutureSheet: View {
                             result.insert(monthlyDay)
                             switch monthlyRepeatMode {
                             case "forever": result.insert(100)
-                            case "once": result.insert(200)
                             case "stopafter": result.insert(200 + monthlyStopAfterYears)
-                            default: result.insert(200)
+                            default: break // ✅ "once" = this year only — no extra flag needed
                             }
                             repeatDays = result
                         } else if selectedTab == 2 {
