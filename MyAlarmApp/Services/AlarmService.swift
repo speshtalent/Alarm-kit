@@ -488,7 +488,21 @@ final class AlarmService: ObservableObject {
                     components.hour = timeComponents.hour
                     components.minute = timeComponents.minute
                     components.second = 0
-                    let nextDate = calendar.nextDate(after: Date(), matching: components, matchingPolicy: .nextTimePreservingSmallerComponents) ?? date
+                    var fullComponents = DateComponents()
+                    fullComponents.year = calendar.component(.year, from: date)
+                    fullComponents.month = monthNumber
+                    fullComponents.day = dayOfMonth
+                    fullComponents.hour = timeComponents.hour
+                    fullComponents.minute = timeComponents.minute
+                    fullComponents.second = 0
+                    let candidateDate = calendar.date(from: fullComponents)
+                    let nextDate: Date
+                    if let cd = candidateDate, cd > Date() {
+                        nextDate = cd
+                    } else {
+                        fullComponents.year = calendar.component(.year, from: date) + 1
+                        nextDate = calendar.date(from: fullComponents) ?? date
+                    }
                     let recurringID = UUID()
                     var recurringSound = sound
                     if sourceExists {
@@ -1251,6 +1265,13 @@ final class AlarmService: ObservableObject {
                 let isWeekly = repeatDays.allSatisfy { $0 >= 1 && $0 <= 7 }
                 let isYearly = repeatDays.contains { $0 >= 2025 }
                 let isMonthly = !isWeekly && !isYearly
+
+                // ✅ Save fired occurrence to history before cancelling
+                let firedInterval = alarmIDStrs.compactMap {
+                    UserDefaults.standard.object(forKey: "disabledAlarmDate_\($0)") as? TimeInterval
+                }.first ?? Date().timeIntervalSince1970
+                let firedDate = Date(timeIntervalSince1970: firedInterval)
+                AlarmService.shared.saveToHistory(alarmID: groupIDStr, label: label, firedAt: firedDate)
 
                 cancelAlarm(id: groupUUID)
 

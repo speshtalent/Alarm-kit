@@ -1415,6 +1415,15 @@ struct SettingsView: View {
             if !selectedMonths.isEmpty { return "Monthly • \(selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", "))" }
             let selectedYears = group.repeatDays.filter { $0 >= 2025 }.sorted()
             if !selectedYears.isEmpty { return "Yearly • \(selectedYears.map { "\($0)" }.joined(separator: ", "))" }
+            // ✅ Monthly with only day selected (no months, no forever flag)
+            let hasOnlyDay = !group.repeatDays.filter { $0 >= 8 && $0 <= 31 }.isEmpty &&
+                              group.repeatDays.filter { $0 >= 101 && $0 <= 112 }.isEmpty &&
+                              !group.repeatDays.contains(100) &&
+                              group.repeatDays.filter { $0 >= 2025 }.isEmpty
+            if hasOnlyDay {
+                let day = group.repeatDays.filter { $0 >= 8 && $0 <= 31 }.first ?? 0
+                return "Monthly • Day \(day)"
+            }
             if !group.repeatDays.isEmpty { return "Weekly • \(group.repeatLabel)" }
             return ""
         }
@@ -1600,6 +1609,16 @@ struct AlarmDetailInlineView: View {
 
     private let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 
+    private func firedOccurrences() -> [Date] {
+        let history = AlarmService.shared.loadHistory()
+        return history.compactMap { entry -> Date? in
+            guard let entryLabel = entry["label"] as? String,
+                  entryLabel == group.label,
+                  let firedAt = entry["firedAt"] as? TimeInterval else { return nil }
+            return Date(timeIntervalSince1970: firedAt)
+        }.sorted()
+    }
+
     private func futureOccurrences() -> [Date] {
         guard let baseDate = group.fireDate else { return [] }
         let cal = Calendar.current
@@ -1650,7 +1669,7 @@ struct AlarmDetailInlineView: View {
                     results.append(date)
                 }
             }
-            return Array(results.prefix(5))
+            return results
         }
 
         // MONTHLY
@@ -1672,9 +1691,7 @@ struct AlarmDetailInlineView: View {
                 if let date = cal.date(from: comps), date > now {
                     results.append(date)
                 }
-                if results.count >= 5 { break }
             }
-            if results.count >= 5 { break }
         }
         return results
     }
@@ -1691,21 +1708,42 @@ struct AlarmDetailInlineView: View {
     }
 
     var body: some View {
-        let occurrences = futureOccurrences()
+        let fired = firedOccurrences()
+        let upcoming = futureOccurrences()
+        let showMore = upcoming.count > 5
+        let displayUpcoming = showMore ? Array(upcoming.prefix(5)) : upcoming
+
         VStack(spacing: 8) {
-            ForEach(Array(occurrences.enumerated()), id: \.offset) { index, date in
+            // ✅ Fired dates with tick
+            ForEach(Array(fired.enumerated()), id: \.offset) { _, date in
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .font(.system(size: 16))
+                    Text(formatDate(date))
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color("SecondaryText"))
+                    Spacer()
+                    Text("Fired ✅")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.green)
+                }
+                .padding(12)
+                .background(Color("AppBackground"))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            // ✅ Upcoming dates
+            ForEach(Array(displayUpcoming.enumerated()), id: \.offset) { _, date in
                 let days = daysUntil(date)
                 HStack(spacing: 12) {
                     Image(systemName: "clock.fill")
                         .foregroundStyle(.orange)
                         .font(.system(size: 16))
-
                     Text(formatDate(date))
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                         .foregroundStyle(Color("PrimaryText"))
-
                     Spacer()
-
                     if days == 0 {
                         Text("Today")
                             .font(.system(size: 11, weight: .bold, design: .rounded))
@@ -1725,12 +1763,8 @@ struct AlarmDetailInlineView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
 
-            let isForever = group.repeatDays.contains(100) ||
-                            (group.repeatDays.allSatisfy { $0 >= 1 && $0 <= 7 } && !group.repeatDays.isEmpty)
-            let hasFixedEnd = !group.repeatDays.filter { $0 >= 201 && $0 < 2025 }.isEmpty ||
-                              !group.repeatDays.filter { $0 >= 2025 }.isEmpty
-
-            if !occurrences.isEmpty && isForever && !hasFixedEnd {
+            // ✅ More coming only if more than 5
+            if showMore {
                 HStack(spacing: 6) {
                     Image(systemName: "ellipsis.circle")
                         .font(.system(size: 12))

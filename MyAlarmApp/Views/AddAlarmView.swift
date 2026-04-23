@@ -261,6 +261,22 @@ struct AddAlarmView: View {
                 if day > currentDay {
                     comps.month = currentMonth
                     comps.year = currentYear
+                } else if day == currentDay {
+                    // ✅ Today — use today if time is still in future
+                    comps.month = currentMonth
+                    comps.year = currentYear
+                    let todayDate = cal.date(from: comps)
+                    if let td = todayDate, td > Date() {
+                        return td
+                    }
+                    // ✅ Time already passed today — go next month
+                    if currentMonth == 12 {
+                        comps.month = 1
+                        comps.year = currentYear + 1
+                    } else {
+                        comps.month = currentMonth + 1
+                        comps.year = currentYear
+                    }
                 } else {
                     if currentMonth == 12 {
                         comps.month = 1
