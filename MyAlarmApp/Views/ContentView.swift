@@ -147,22 +147,15 @@ struct ContentView: View {
                                 .listRowSeparator(.hidden)
                         } else {
                             ForEach(alarmService.alarmGroups) { group in
-                                AlarmGroupRow(group: group, use24Hour: use24HourFormat) {
+                                AlarmGroupRow(group: group) {
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                     for alarmID in group.alarmIDs {
                                         alarmService.toggleAlarm(id: alarmID)
                                     }
                                     Task {
-                                        try? await Task.sleep(nanoseconds: 800_000_000)
+                                        try? await Task.sleep(nanoseconds: 300_000_000)
                                         await MainActor.run {
                                             alarmService.loadAlarms()
-                                        }
-                                    }
-                                    alarmService.rebuildGroups()
-                                    Task {
-                                        try? await Task.sleep(nanoseconds: 800_000_000)
-                                        await MainActor.run {
-                                            alarmService.rebuildGroups()
                                         }
                                     }
                                 }
@@ -1123,8 +1116,9 @@ struct SettingsView: View {
     // MARK: - Alarm Group Row
     struct AlarmGroupRow: View {
         let group: AlarmService.AlarmGroup
-        let use24Hour: Bool
         let onToggle: () -> Void
+        @State private var isHighlighted: Bool = false
+        @AppStorage("use24HourFormat") private var use24Hour: Bool = false
         
         // ✅ Only this changed — added Monthly/Yearly support
         private var subtitleText: String {
@@ -1218,6 +1212,7 @@ struct SettingsView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
                 .background(group.isFired ? Color.green : (group.isEnabled ? Color.orange : Color("AppBackground")))
+                    .animation(.easeInOut(duration: 0.3), value: group.isEnabled)
 
 
                 // ✅ Time + toggle row
@@ -1229,6 +1224,8 @@ struct SettingsView: View {
                                 .font(.system(size: 42, weight: .heavy, design: .rounded))
                                 .foregroundStyle(Color("PrimaryText"))
                                 .lineLimit(1)
+                                .scaleEffect(isHighlighted ? 1.08 : 1.0)
+                                .animation(.spring(response: 0.25, dampingFraction: 0.4), value: isHighlighted)
                             Text(ampmText)
                                 .font(.system(size: 20, weight: .heavy, design: .rounded))
                                 .foregroundStyle(group.isEnabled ? .orange : Color("SecondaryText"))
@@ -1252,7 +1249,18 @@ struct SettingsView: View {
                     if !group.isFired {
                         Toggle("", isOn: Binding(
                             get: { group.isEnabled },
-                            set: { _ in onToggle() }
+                            set: { _ in
+                                onToggle()
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                withAnimation {
+                                    isHighlighted = true
+                                }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.4)) {
+                                        isHighlighted = false
+                                    }
+                                }
+                            }
                         ))
                         .tint(.orange)
                         .labelsHidden()
