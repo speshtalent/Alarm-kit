@@ -259,16 +259,19 @@ final class AlarmService: ObservableObject {
                     try await scheduleAlarmWithID(id: id, date: fireDate, label: item.label, sound: sound)
                     saveDisabledState(id: id, disabled: false)
                     // ✅ Add back to iPhone calendar when re-enabled — add all alarms in group
-                    let groupID = getGroupID(for: id) ?? id
-                    let groupAlarmIDs = getAlarmIDs(forGroup: groupID)
-                    let idsToAdd = groupAlarmIDs.isEmpty ? [id] : groupAlarmIDs
+                    _ = getGroupID(for: id) ?? id
                     let isWeekly = repeatDays.contains { $0 >= 1 && $0 <= 7 }
+                    // ✅ Only add calendar for THIS alarm ID — not all group alarms
+                    // toggleAlarm is called once per alarm ID already
+                    let idsToAdd = [id]
                     for alarmID in idsToAdd {
                         if let alarmFireDate = alarms.first(where: { $0.id == alarmID })?.fireDate {
                             let key = alarmFireDate.timeIntervalSince1970.description
                             // ✅ Remove existing event first to avoid duplicates
                             CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
+                            try? await Task.sleep(nanoseconds: 200_000_000)
                             let weekday = isWeekly ? Calendar.current.component(.weekday, from: alarmFireDate) : nil
+
                             // ✅ For monthly — add all remaining months
                             if !isWeekly && repeatDays.contains(where: { $0 >= 1 && $0 <= 31 }) && !repeatDays.contains(where: { $0 >= 2025 }) {
                                 let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? Calendar.current.component(.day, from: alarmFireDate)
