@@ -269,9 +269,34 @@ final class AlarmService: ObservableObject {
                             // ✅ Remove existing event first to avoid duplicates
                             CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
                             let weekday = isWeekly ? Calendar.current.component(.weekday, from: alarmFireDate) : nil
-                            _ = await CalendarService.shared.addAlarmToCalendar(
-                                title: item.label, date: alarmFireDate, alarmID: key, weekday: weekday
-                            )
+                            // ✅ For monthly — add all remaining months
+                            if !isWeekly && repeatDays.contains(where: { $0 >= 1 && $0 <= 31 }) && !repeatDays.contains(where: { $0 >= 2025 }) {
+                                let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? Calendar.current.component(.day, from: alarmFireDate)
+                                let cal = Calendar.current
+                                let currentMonth = cal.component(.month, from: Date())
+                                let currentYear = cal.component(.year, from: Date())
+                                let selectedMonths = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                                let monthsToUse: [Int] = selectedMonths.isEmpty ? Array(currentMonth...12) : selectedMonths.map { $0 - 100 }.filter { $0 >= currentMonth }
+                                for month in monthsToUse {
+                                    var comps = DateComponents()
+                                    comps.year = currentYear
+                                    comps.month = month
+                                    comps.day = day
+                                    comps.hour = cal.component(.hour, from: alarmFireDate)
+                                    comps.minute = cal.component(.minute, from: alarmFireDate)
+                                    if let eventDate = cal.date(from: comps), eventDate > Date() {
+                                        let monthAlarmID = eventDate.timeIntervalSince1970.description
+                                        CalendarService.shared.removeAlarmFromCalendar(alarmID: monthAlarmID)
+                                        _ = await CalendarService.shared.addAlarmToCalendar(
+                                            title: item.label, date: eventDate, alarmID: monthAlarmID
+                                        )
+                                    }
+                                }
+                            } else {
+                                _ = await CalendarService.shared.addAlarmToCalendar(
+                                    title: item.label, date: alarmFireDate, alarmID: key, weekday: weekday
+                                )
+                            }
                         }
                     }
                     print("▶️ Alarm re-enabled with sound: \(sound)")
