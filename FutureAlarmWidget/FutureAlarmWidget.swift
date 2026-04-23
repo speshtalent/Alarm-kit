@@ -252,10 +252,12 @@ struct MediumView: View {
                     .padding(.vertical, 12)
 
                 VStack(alignment: .leading, spacing: 0) {
+                    Spacer().frame(height: 0)
                     Text("UPCOMING")
                         .font(.system(size: 8, weight: .heavy, design: .rounded))
                         .foregroundStyle(textSec)
                         .tracking(1.2)
+                        .padding(.top, 25)
                         .padding(.bottom, 8)
 
                     let upcoming = entry.upcomingAlarms.filter { !isAlarmPast($0.date) }.prefix(3)
@@ -264,6 +266,7 @@ struct MediumView: View {
                         Text("No more\nalarms")
                             .font(.system(size: 11, design: .rounded))
                             .foregroundStyle(textSec.opacity(0.5))
+                        Spacer()
                     } else {
                         ForEach(Array(upcoming.enumerated()), id: \.offset) { _, alarm in
                             VStack(alignment: .leading, spacing: 1) {
@@ -287,13 +290,14 @@ struct MediumView: View {
                             }
                             .padding(.bottom, 7)
                         }
+                        Spacer()
                     }
-                    Spacer()
                 }
                 .padding(.leading, 12)
                 .padding(.trailing, 12)
-                .padding(.vertical, 14)
-                .frame(width: 120, alignment: .leading)
+                .padding(.top, 14)
+                .padding(.bottom, 20)
+                .frame(width: 130, alignment: .topLeading)
             }
             .containerBackground(bg, for: .widget)
         } else {
@@ -469,7 +473,7 @@ struct LockScreenView: View {
             VStack(alignment: .leading, spacing: 1) {
                 ForEach(0..<min(entry.upcomingAlarms.count, 3), id: \.self) { i in
                     let alarm = entry.upcomingAlarms[i]
-                    let endDate = alarm.date.addingTimeInterval(600) // ✅ 10 min duration
+                    let endDate = alarm.date.addingTimeInterval(60) // ✅ 1 min duration
                     let opacity = i == 0 ? 1.0 : (i == 1 ? 0.65 : 0.4)
 
                     HStack(spacing: 6) {

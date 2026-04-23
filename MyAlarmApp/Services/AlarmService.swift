@@ -15,6 +15,7 @@ final class AlarmService: ObservableObject {
         let fireDate: TimeInterval
         let repeatDays: [Int]
         let isEnabled: Bool
+        let sound: String?
     }
 
     struct AlarmListItem: Identifiable {
@@ -24,12 +25,12 @@ final class AlarmService: ObservableObject {
         var isEnabled: Bool
         let storedFireDate: Date?
 
-        init(alarm: Alarm, label: String, isEnabled: Bool) {
+        init(alarm: Alarm, label: String, isEnabled: Bool, storedFireDate: Date? = nil) {
             self.alarm = alarm
             self.storedID = alarm.id
             self.label = label
             self.isEnabled = isEnabled
-            self.storedFireDate = nil
+            self.storedFireDate = storedFireDate
         }
 
         init(id: UUID, label: String, isEnabled: Bool, fireDate: Date?) {
@@ -74,10 +75,13 @@ final class AlarmService: ObservableObject {
                 ("Mon", 2), ("Tue", 3), ("Wed", 4),
                 ("Thu", 5), ("Fri", 6), ("Sat", 7), ("Sun", 1)
             ]
+            let isActuallyWeekly = !repeatDays.contains { $0 >= 8 } && !repeatDays.contains { $0 >= 100 }
+            guard isActuallyWeekly else { return "" }
             if repeatDays.count == 7 { return "Every day" }
             if repeatDays == Set([2, 3, 4, 5, 6]) { return "Weekdays" }
             if repeatDays == Set([7, 1]) { return "Weekends" }
             return weekDays.filter { repeatDays.contains($0.value) }.map { $0.label }.joined(separator: ", ")
+
         }
     }
 
@@ -173,6 +177,9 @@ final class AlarmService: ObservableObject {
             if let item = alarms.first(where: { $0.id == alarmID }), let fireDate = item.fireDate {
                 let key = fireDate.timeIntervalSince1970.description
                 CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
+            } else if let savedInterval = UserDefaults.standard.object(forKey: "disabledAlarmDate_\(alarmID.uuidString)") as? TimeInterval {
+                let key = savedInterval.description
+                CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
             }
             deleteVoiceFile(for: alarmID.uuidString)
             do {
@@ -204,12 +211,24 @@ final class AlarmService: ObservableObject {
                 if let fireDate = item.fireDate {
                     UserDefaults.standard.set(fireDate.timeIntervalSince1970, forKey: "disabledAlarmDate_\(id.uuidString)")
                 }
-                try AlarmManager.shared.cancel(id: id)
+                do {
+                    try AlarmManager.shared.cancel(id: id)
+                } catch {
+                    print("Cancel alarm error:", error)
+                }
                 alarms[index] = AlarmListItem(id: item.id, label: item.label, isEnabled: false, fireDate: item.fireDate)
                 saveDisabledState(id: id, disabled: true)
+                // ✅ Remove ALL alarms in group from iPhone calendar when disabled
+                let groupID = getGroupID(for: id) ?? id
+                let groupAlarmIDs = getAlarmIDs(forGroup: groupID)
+                let idsToRemove = groupAlarmIDs.isEmpty ? [id] : groupAlarmIDs
+                for alarmID in idsToRemove {
+                    if let alarmFireDate = alarms.first(where: { $0.id == alarmID })?.fireDate {
+                        let key = alarmFireDate.timeIntervalSince1970.description
+                        CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
+                    }
+                }
                 print("⏸ Alarm disabled: \(id)")
-            } catch {
-                print("Disable alarm error:", error)
             }
             saveNextAlarmForWidget()
             backupToiCloudDebounced()
@@ -239,6 +258,47 @@ final class AlarmService: ObservableObject {
                     let sound = FileManager.default.fileExists(atPath: voicePath) ? voiceFileName : "nokia.caf"
                     try await scheduleAlarmWithID(id: id, date: fireDate, label: item.label, sound: sound)
                     saveDisabledState(id: id, disabled: false)
+                    // ✅ Add back to iPhone calendar when re-enabled — add all alarms in group
+                    let groupID = getGroupID(for: id) ?? id
+                    let groupAlarmIDs = getAlarmIDs(forGroup: groupID)
+                    let idsToAdd = groupAlarmIDs.isEmpty ? [id] : groupAlarmIDs
+                    let isWeekly = repeatDays.contains { $0 >= 1 && $0 <= 7 }
+                    for alarmID in idsToAdd {
+                        if let alarmFireDate = alarms.first(where: { $0.id == alarmID })?.fireDate {
+                            let key = alarmFireDate.timeIntervalSince1970.description
+                            // ✅ Remove existing event first to avoid duplicates
+                            CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
+                            let weekday = isWeekly ? Calendar.current.component(.weekday, from: alarmFireDate) : nil
+                            // ✅ For monthly — add all remaining months
+                            if !isWeekly && repeatDays.contains(where: { $0 >= 1 && $0 <= 31 }) && !repeatDays.contains(where: { $0 >= 2025 }) {
+                                let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? Calendar.current.component(.day, from: alarmFireDate)
+                                let cal = Calendar.current
+                                let currentMonth = cal.component(.month, from: Date())
+                                let currentYear = cal.component(.year, from: Date())
+                                let selectedMonths = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                                let monthsToUse: [Int] = selectedMonths.isEmpty ? Array(currentMonth...12) : selectedMonths.map { $0 - 100 }.filter { $0 >= currentMonth }
+                                for month in monthsToUse {
+                                    var comps = DateComponents()
+                                    comps.year = currentYear
+                                    comps.month = month
+                                    comps.day = day
+                                    comps.hour = cal.component(.hour, from: alarmFireDate)
+                                    comps.minute = cal.component(.minute, from: alarmFireDate)
+                                    if let eventDate = cal.date(from: comps), eventDate > Date() {
+                                        let monthAlarmID = eventDate.timeIntervalSince1970.description
+                                        CalendarService.shared.removeAlarmFromCalendar(alarmID: monthAlarmID)
+                                        _ = await CalendarService.shared.addAlarmToCalendar(
+                                            title: item.label, date: eventDate, alarmID: monthAlarmID
+                                        )
+                                    }
+                                }
+                            } else {
+                                _ = await CalendarService.shared.addAlarmToCalendar(
+                                    title: item.label, date: alarmFireDate, alarmID: key, weekday: weekday
+                                )
+                            }
+                        }
+                    }
                     print("▶️ Alarm re-enabled with sound: \(sound)")
                 } catch {
                     print("Re-enable alarm error:", error)
@@ -267,12 +327,18 @@ final class AlarmService: ObservableObject {
 
             // ✅ Active alarms from AlarmKit
             var loadedAlarms = all
-                .filter { $0.schedule != nil }
+                .filter { $0.schedule != nil || UserDefaults.standard.bool(forKey: "isSnoozed_\($0.id.uuidString)") }
                 .map { alarm in
-                    AlarmListItem(
+                    let isSnoozed = UserDefaults.standard.bool(forKey: "isSnoozed_\(alarm.id.uuidString)")
+                    let snoozeDate: Date? = isSnoozed ? {
+                        guard let interval = UserDefaults.standard.object(forKey: "disabledAlarmDate_\(alarm.id.uuidString)") as? TimeInterval else { return nil }
+                        return Date(timeIntervalSince1970: interval)
+                    }() : nil
+                    return AlarmListItem(
                         alarm: alarm,
                         label: labels[alarm.id.uuidString] ?? "Alarm",
-                        isEnabled: !disabled.contains(alarm.id.uuidString)
+                        isEnabled: !disabled.contains(alarm.id.uuidString) || isSnoozed,
+                        storedFireDate: snoozeDate
                     )
                 }
 
@@ -310,6 +376,7 @@ final class AlarmService: ObservableObject {
         }
         rebuildGroups()
         saveNextAlarmForWidget()
+        rescheduleIfFired()
     }
 
     func rebuildGroups() {
@@ -369,17 +436,21 @@ final class AlarmService: ObservableObject {
             let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
             let tempURL = libraryURL.appendingPathComponent("Sounds/alarm_voice_temp.caf")
             let tempExists = FileManager.default.fileExists(atPath: tempURL.path)
+            let customSoundURL = sound.hasPrefix("custom_voice_") ? libraryURL.appendingPathComponent("Sounds/\(sound)") : nil
+            let customSoundExists = customSoundURL.map { FileManager.default.fileExists(atPath: $0.path) } ?? false
+            let sourceURL = customSoundExists ? customSoundURL! : tempURL
+            let sourceExists = customSoundExists || tempExists
 
             let alarmID = UUID()
             var finalSound = sound
 
             let isMonthly = repeatDays == Set([100]) || repeatDays.allSatisfy { $0 >= 101 && $0 <= 112 }
             let isYearly = repeatDays == Set([200]) || repeatDays.allSatisfy { $0 >= 2025 }
-            if tempExists && (repeatDays.isEmpty || isMonthly || isYearly) {
+            if sourceExists && (repeatDays.isEmpty || isMonthly || isYearly) {
                 let voiceFileName = "alarm_voice_\(alarmID.uuidString).caf"
                 let destURL = libraryURL.appendingPathComponent("Sounds/\(voiceFileName)")
                 try? FileManager.default.removeItem(at: destURL)
-                try? FileManager.default.copyItem(at: tempURL, to: destURL)
+                try? FileManager.default.copyItem(at: sourceURL, to: destURL)
                 finalSound = voiceFileName
                 print("✅ Voice file saved as: \(voiceFileName)")
             }
@@ -389,6 +460,37 @@ final class AlarmService: ObservableObject {
             if repeatDays == Set([100]) {
                 let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
                 saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: Set([100]))
+                UserDefaults.standard.set(sound, forKey: "alarmSound_\(id.uuidString)")
+                rebuildGroups()
+                saveNextAlarmForWidget()
+                backupToiCloudDebounced()
+                return id
+            }
+
+            // ✅ Monthly with only day selected (no months, no years, no forever/once flags)
+            let onlyDaySelected = !repeatDays.filter { $0 >= 8 && $0 <= 31 }.isEmpty &&
+                                   repeatDays.filter { $0 >= 101 && $0 <= 112 }.isEmpty &&
+                                   repeatDays.filter { $0 >= 2025 }.isEmpty &&
+                                   !repeatDays.contains(100) &&
+                                   !repeatDays.contains(200) &&
+                                   repeatDays.filter { $0 >= 201 }.isEmpty
+            if onlyDaySelected {
+                let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
+                saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: repeatDays)
+                UserDefaults.standard.set(sound, forKey: "alarmSound_\(id.uuidString)")
+                rebuildGroups()
+                saveNextAlarmForWidget()
+                backupToiCloudDebounced()
+                return id
+            }
+
+            // ✅ Yearly with only date+year selected (no month values 101-112)
+            let hasYearNoMonth = !repeatDays.filter { $0 >= 2025 }.isEmpty &&
+                                  repeatDays.filter { $0 >= 101 && $0 <= 112 }.isEmpty
+            if hasYearNoMonth {
+                let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
+                saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: repeatDays)
+                UserDefaults.standard.set(sound, forKey: "alarmSound_\(id.uuidString)")
                 rebuildGroups()
                 saveNextAlarmForWidget()
                 backupToiCloudDebounced()
@@ -400,7 +502,7 @@ final class AlarmService: ObservableObject {
             if !selectedMonths.isEmpty {
                 let calendar = Calendar.current
                 let timeComponents = calendar.dateComponents([.hour, .minute], from: date)
-                let dayOfMonth = calendar.component(.day, from: date)
+                let dayOfMonth = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? calendar.component(.day, from: date)
                 let groupID = UUID()
                 var scheduledIDs: [UUID] = []
                 for month in selectedMonths.sorted() {
@@ -411,14 +513,28 @@ final class AlarmService: ObservableObject {
                     components.hour = timeComponents.hour
                     components.minute = timeComponents.minute
                     components.second = 0
-                    let nextDate = calendar.nextDate(after: Date(), matching: components, matchingPolicy: .nextTimePreservingSmallerComponents) ?? date
+                    var fullComponents = DateComponents()
+                    fullComponents.year = calendar.component(.year, from: date)
+                    fullComponents.month = monthNumber
+                    fullComponents.day = dayOfMonth
+                    fullComponents.hour = timeComponents.hour
+                    fullComponents.minute = timeComponents.minute
+                    fullComponents.second = 0
+                    let candidateDate = calendar.date(from: fullComponents)
+                    let nextDate: Date
+                    if let cd = candidateDate, cd > Date() {
+                        nextDate = cd
+                    } else {
+                        fullComponents.year = calendar.component(.year, from: date) + 1
+                        nextDate = calendar.date(from: fullComponents) ?? date
+                    }
                     let recurringID = UUID()
                     var recurringSound = sound
-                    if tempExists {
+                    if sourceExists {
                         let voiceFileName = "alarm_voice_\(recurringID.uuidString).caf"
                         let destURL = libraryURL.appendingPathComponent("Sounds/\(voiceFileName)")
                         try? FileManager.default.removeItem(at: destURL)
-                        try? FileManager.default.copyItem(at: tempURL, to: destURL)
+                        try? FileManager.default.copyItem(at: sourceURL, to: destURL)
                         recurringSound = voiceFileName
                     }
                     _ = try await scheduleAlarmWithID(id: recurringID, date: nextDate, label: title, sound: recurringSound)
@@ -426,6 +542,7 @@ final class AlarmService: ObservableObject {
                     print("✅ Monthly alarm set for month \(monthNumber) at \(nextDate)")
                 }
                 saveGroup(groupID: groupID, alarmIDs: scheduledIDs, label: title, repeatDays: repeatDays)
+                UserDefaults.standard.set(sound, forKey: "alarmSound_\(groupID.uuidString)")
                 rebuildGroups()
                 saveNextAlarmForWidget()
                 backupToiCloudDebounced()
@@ -436,6 +553,7 @@ final class AlarmService: ObservableObject {
             if repeatDays == Set([200]) {
                 let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
                 saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: Set([200]))
+                UserDefaults.standard.set(sound, forKey: "alarmSound_\(id.uuidString)")
                 rebuildGroups()
                 saveNextAlarmForWidget()
                 backupToiCloudDebounced()
@@ -463,11 +581,11 @@ final class AlarmService: ObservableObject {
                     guard let yearDate = calendar.date(from: components), yearDate > Date() else { continue }
                     let recurringID = UUID()
                     var recurringSound = sound
-                    if tempExists {
+                    if sourceExists {
                         let voiceFileName = "alarm_voice_\(recurringID.uuidString).caf"
                         let destURL = libraryURL.appendingPathComponent("Sounds/\(voiceFileName)")
                         try? FileManager.default.removeItem(at: destURL)
-                        try? FileManager.default.copyItem(at: tempURL, to: destURL)
+                        try? FileManager.default.copyItem(at: sourceURL, to: destURL)
                         recurringSound = voiceFileName
                     }
                     _ = try await scheduleAlarmWithID(id: recurringID, date: yearDate, label: title, sound: recurringSound)
@@ -475,6 +593,7 @@ final class AlarmService: ObservableObject {
                     print("✅ Yearly alarm set for \(year) at \(yearDate)")
                 }
                 saveGroup(groupID: groupID, alarmIDs: scheduledIDs, label: title, repeatDays: repeatDays)
+                UserDefaults.standard.set(sound, forKey: "alarmSound_\(groupID.uuidString)")
                 rebuildGroups()
                 saveNextAlarmForWidget()
                 backupToiCloudDebounced()
@@ -484,6 +603,8 @@ final class AlarmService: ObservableObject {
             if repeatDays.isEmpty {
                 let id = try await scheduleAlarmWithID(id: alarmID, date: date, label: title, sound: finalSound)
                 saveGroup(groupID: id, alarmIDs: [id], label: title, repeatDays: [])
+                // ✅ Save sound so edit screen can load it
+                UserDefaults.standard.set(sound, forKey: "alarmSound_\(id.uuidString)")
                 rebuildGroups()
                 saveNextAlarmForWidget()
                 backupToiCloudDebounced()
@@ -499,11 +620,11 @@ final class AlarmService: ObservableObject {
                     let recurringID = UUID()
 
                     var recurringSound = sound
-                    if tempExists {
+                    if sourceExists {
                         let voiceFileName = "alarm_voice_\(recurringID.uuidString).caf"
                         let destURL = libraryURL.appendingPathComponent("Sounds/\(voiceFileName)")
                         try? FileManager.default.removeItem(at: destURL)
-                        try? FileManager.default.copyItem(at: tempURL, to: destURL)
+                        try? FileManager.default.copyItem(at: sourceURL, to: destURL)
                         recurringSound = voiceFileName
                         print("✅ Voice file copied for recurring alarm: \(voiceFileName)")
                     }
@@ -514,6 +635,7 @@ final class AlarmService: ObservableObject {
                 }
 
                 saveGroup(groupID: groupID, alarmIDs: scheduledIDs, label: title, repeatDays: repeatDays)
+                UserDefaults.standard.set(sound, forKey: "alarmSound_\(groupID.uuidString)")
                 rebuildGroups()
                 saveNextAlarmForWidget()
                 backupToiCloudDebounced()
@@ -623,6 +745,69 @@ final class AlarmService: ObservableObject {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
+    // MARK: - iCloud Recordings Backup
+    private func iCloudRecordingsURL() -> URL? {
+        guard let containerURL = FileManager.default.url(
+            forUbiquityContainerIdentifier: "iCloud.com.speshtalent.FutureAlarm26"
+        ) else { return nil }
+        let recordingsURL = containerURL.appendingPathComponent("Documents/Recordings")
+        try? FileManager.default.createDirectory(at: recordingsURL, withIntermediateDirectories: true)
+        return recordingsURL
+    }
+
+    func uploadRecordingToiCloud(fileName: String, name: String) {
+        let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+        let localURL = libraryURL.appendingPathComponent("Sounds/\(fileName)")
+        guard FileManager.default.fileExists(atPath: localURL.path),
+              let cloudDir = iCloudRecordingsURL() else { return }
+        let cloudURL = cloudDir.appendingPathComponent(fileName)
+        try? FileManager.default.removeItem(at: cloudURL)
+        try? FileManager.default.copyItem(at: localURL, to: cloudURL)
+        // ✅ Save metadata to iCloud key-value store
+        let store = NSUbiquitousKeyValueStore.default
+        var recordings = store.array(forKey: "customRecordingsList") as? [[String: String]] ?? []
+        if !recordings.contains(where: { $0["file"] == fileName }) {
+            recordings.append(["name": name, "file": fileName])
+            store.set(recordings, forKey: "customRecordingsList")
+            store.synchronize()
+        }
+        print("✅ Recording uploaded to iCloud: \(fileName)")
+    }
+
+    func downloadRecordingsFromiCloud() {
+        guard let cloudDir = iCloudRecordingsURL() else { return }
+        let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+        let soundsURL = libraryURL.appendingPathComponent("Sounds")
+        try? FileManager.default.createDirectory(at: soundsURL, withIntermediateDirectories: true)
+
+        // ✅ Get recording list from iCloud key-value store
+        let store = NSUbiquitousKeyValueStore.default
+        store.synchronize()
+        let cloudRecordings = store.array(forKey: "customRecordingsList") as? [[String: String]] ?? []
+
+        // ✅ Merge with local list
+        var localRecordings = UserDefaults.standard.array(forKey: "customRecordingsList") as? [[String: String]] ?? []
+        let localFiles = Set(localRecordings.compactMap { $0["file"] })
+
+        for recording in cloudRecordings {
+            guard let fileName = recording["file"], let name = recording["name"] else { continue }
+            // ✅ Download file if not already local
+            if !localFiles.contains(fileName) {
+                let cloudURL = cloudDir.appendingPathComponent(fileName)
+                let localURL = soundsURL.appendingPathComponent(fileName)
+                if FileManager.default.fileExists(atPath: cloudURL.path) {
+                    try? FileManager.default.copyItem(at: cloudURL, to: localURL)
+                    localRecordings.append(["name": name, "file": fileName])
+                    print("✅ Recording downloaded from iCloud: \(fileName)")
+                } else {
+                    // ✅ Trigger iCloud download
+                    try? FileManager.default.startDownloadingUbiquitousItem(at: cloudURL)
+                }
+            }
+        }
+        UserDefaults.standard.set(localRecordings, forKey: "customRecordingsList")
+        print("✅ iCloud recordings sync complete")
+    }
     // MARK: - iCloud Backup
     func backupToiCloudDebounced() {
         backupWorkItem?.cancel()
@@ -639,18 +824,23 @@ final class AlarmService: ObservableObject {
         let store = NSUbiquitousKeyValueStore.default
         let cloudAlarms = alarmGroups.compactMap { group -> CloudAlarm? in
             guard let fireDate = group.fireDate else { return nil }
+            let savedSound = UserDefaults.standard.string(forKey: "alarmSound_\(group.id.uuidString)") ?? "nokia.caf"
             return CloudAlarm(
                 id: group.id.uuidString,
                 label: group.label,
                 fireDate: fireDate.timeIntervalSince1970,
                 repeatDays: Array(group.repeatDays).sorted(),
-                isEnabled: group.isEnabled
+                isEnabled: group.isEnabled,
+                sound: savedSound
             )
         }
 
         do {
             let data = try JSONEncoder().encode(cloudAlarms)
             store.set(data, forKey: iCloudAlarmsKey)
+            // ✅ Also backup custom recordings list
+            let recordings = UserDefaults.standard.array(forKey: "customRecordingsList") ?? []
+            store.set(recordings, forKey: "customRecordingsList")
             store.synchronize()
             print("✅ iCloud backup success: \(cloudAlarms.count) alarms saved")
         } catch {
@@ -697,7 +887,8 @@ final class AlarmService: ObservableObject {
             UserDefaults.standard.set(true, forKey: hasLaunchedBeforeKey)
             print("☁️ Cached \(cloudAlarms.count) alarms from iCloud backup for local restore")
         }
-
+        // ✅ Download recordings from iCloud
+        downloadRecordingsFromiCloud()
         return await restorePendingCloudBackupIfPossible()
     }
 
@@ -726,14 +917,39 @@ final class AlarmService: ObservableObject {
                 continue
             }
 
+            // ✅ Skip if alarm with same label and date already exists
+            let alreadyExists = alarmGroups.contains { group in
+                group.label == cloudAlarm.label &&
+                abs((group.fireDate?.timeIntervalSince1970 ?? 0) - cloudAlarm.fireDate) < 60
+            }
+            // ✅ Also check AlarmKit directly for duplicates
+            let alarmKitDuplicate = (try? AlarmManager.shared.alarms)?.contains { alarm in
+                guard let schedule = alarm.schedule,
+                      case let .fixed(date) = schedule else { return false }
+                let label = loadLabels()[alarm.id.uuidString] ?? ""
+                return label == cloudAlarm.label &&
+                       abs(date.timeIntervalSince1970 - cloudAlarm.fireDate) < 60
+            } ?? false
+
+            if alreadyExists || alarmKitDuplicate {
+                print("⏭ Skipping duplicate alarm: \(cloudAlarm.label)")
+                continue
+            }
+
+            let restoreSound = cloudAlarm.sound ?? "nokia.caf"
             guard let restoredAlarmID = await scheduleFutureAlarm(
                 date: fireDate,
                 title: cloudAlarm.label,
-                sound: "nokia.caf",
+                sound: restoreSound,
                 repeatDays: repeatDays
             ) else {
                 continue
             }
+
+            // ✅ Save sound key for restored alarm so edit screen can load it
+            let restoredGroupID = getGroupID(for: restoredAlarmID) ?? restoredAlarmID
+            UserDefaults.standard.set(restoreSound, forKey: "alarmSound_\(restoredGroupID.uuidString)")
+            UserDefaults.standard.set(restoreSound, forKey: "alarmSound_\(restoredAlarmID.uuidString)")
 
             if !cloudAlarm.isEnabled {
                 let groupID = getGroupID(for: restoredAlarmID) ?? restoredAlarmID
@@ -1036,6 +1252,118 @@ final class AlarmService: ObservableObject {
     }
 
     func clearHistory() {
-        UserDefaults.standard.removeObject(forKey: historyKey)
+            UserDefaults.standard.removeObject(forKey: historyKey)
+        }
+
+        func rescheduleIfFired() {
+            let groupIDsDict = loadGroupIDs()
+            let repeatDaysDict = loadGroupRepeatDays()
+            let labels = loadLabels()
+            let activeAlarmIDs = Set((try? AlarmManager.shared.alarms)?.map { $0.id.uuidString } ?? [])
+            let disabledIDs = loadDisabledIDs()
+
+            for (groupIDStr, alarmIDStrs) in groupIDsDict {
+                let repeatDays = Set(repeatDaysDict[groupIDStr] ?? [])
+                guard !repeatDays.isEmpty else { continue }
+
+                let allGone = alarmIDStrs.allSatisfy { !activeAlarmIDs.contains($0) }
+                let allDisabled = alarmIDStrs.allSatisfy { disabledIDs.contains($0) }
+                guard allGone && !allDisabled else { continue }
+
+                // ✅ Prevent rescheduling same group more than once per 60 seconds
+                let lastRescheduleKey = "lastReschedule_\(groupIDStr)"
+                let lastReschedule = UserDefaults.standard.double(forKey: lastRescheduleKey)
+                let secondsSinceReschedule = Date().timeIntervalSince1970 - lastReschedule
+                guard secondsSinceReschedule > 60 else { continue }
+                UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: lastRescheduleKey)
+
+                guard let groupUUID = UUID(uuidString: groupIDStr) else { continue }
+                let label = labels[groupIDStr] ?? "Alarm"
+                let savedSound = UserDefaults.standard.string(forKey: "alarmSound_\(groupIDStr)") ?? "nokia.caf"
+                let savedInterval = alarmIDStrs.compactMap {
+                    UserDefaults.standard.object(forKey: "disabledAlarmDate_\($0)") as? TimeInterval
+                }.first ?? 0
+                let originalDate = savedInterval > 0 ? Date(timeIntervalSince1970: savedInterval) : Date()
+                let hour = Calendar.current.component(.hour, from: originalDate)
+                let minute = Calendar.current.component(.minute, from: originalDate)
+
+                let isWeekly = repeatDays.allSatisfy { $0 >= 1 && $0 <= 7 }
+                let isYearly = repeatDays.contains { $0 >= 2025 }
+                let isMonthly = !isWeekly && !isYearly
+
+                // ✅ Save fired occurrence to history before cancelling
+                let firedInterval = alarmIDStrs.compactMap {
+                    UserDefaults.standard.object(forKey: "disabledAlarmDate_\($0)") as? TimeInterval
+                }.first ?? Date().timeIntervalSince1970
+                let firedDate = Date(timeIntervalSince1970: firedInterval)
+                AlarmService.shared.saveToHistory(alarmID: groupIDStr, label: label, firedAt: firedDate)
+
+                cancelAlarm(id: groupUUID)
+
+                Task {
+                    var nextDate: Date?
+                    let cal = Calendar.current
+                    let now = Date()
+
+                    if isWeekly {
+                        let timeComponents = cal.dateComponents([.hour, .minute], from: originalDate)
+                        let nextWeekday = repeatDays.sorted().compactMap { weekday -> Date? in
+                            var comps = DateComponents()
+                            comps.weekday = weekday
+                            comps.hour = timeComponents.hour
+                            comps.minute = timeComponents.minute
+                            return cal.nextDate(after: now, matching: comps, matchingPolicy: .nextTime)
+                        }.min() ?? now.addingTimeInterval(7 * 24 * 3600)
+                        _ = await scheduleFutureAlarm(date: nextWeekday, title: label, sound: savedSound, repeatDays: repeatDays)
+                        print("✅ Auto-rescheduled weekly: \(label) for \(nextWeekday)")
+                        return
+                    } else if isMonthly {
+                        let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? 1
+                        let selectedMonths = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                        if selectedMonths.isEmpty {
+                            let currentMonth = cal.component(.month, from: now)
+                            let currentYear = cal.component(.year, from: now)
+                            var comps = DateComponents()
+                            comps.day = day
+                            comps.hour = hour
+                            comps.minute = minute
+                            comps.month = currentMonth == 12 ? 1 : currentMonth + 1
+                            comps.year = currentMonth == 12 ? currentYear + 1 : currentYear
+                            nextDate = cal.date(from: comps)
+                        } else {
+                            let currentMonth = cal.component(.month, from: now)
+                            let currentYear = cal.component(.year, from: now)
+                            let futureMonths = selectedMonths.filter { $0 - 100 > currentMonth }
+                            let targetMonth = futureMonths.first.map { $0 - 100 } ?? selectedMonths.first.map { $0 - 100 } ?? currentMonth
+                            let targetYear = futureMonths.isEmpty ? currentYear + 1 : currentYear
+                            var comps = DateComponents()
+                            comps.day = day
+                            comps.month = targetMonth
+                            comps.year = targetYear
+                            comps.hour = hour
+                            comps.minute = minute
+                            nextDate = cal.date(from: comps)
+                        }
+                    } else if isYearly {
+                        let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? cal.component(.day, from: originalDate)
+                        let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                        let month = months.first.map { $0 - 100 } ?? cal.component(.month, from: originalDate)
+                        let years = repeatDays.filter { $0 >= 2025 }.sorted()
+                        let currentYear = cal.component(.year, from: now)
+                        guard let nextYear = years.first(where: { $0 > currentYear }) else { return }
+                        var comps = DateComponents()
+                        comps.year = nextYear
+                        comps.month = month
+                        comps.day = day
+                        comps.hour = hour
+                        comps.minute = minute
+                        nextDate = cal.date(from: comps)
+                    }
+
+                    guard let nextDate = nextDate else { return }
+                    _ = await scheduleFutureAlarm(date: nextDate, title: label, sound: savedSound, repeatDays: repeatDays)
+                    print("✅ Auto-rescheduled \(label) for \(nextDate)")
+                }
+            }
+        }
     }
-}

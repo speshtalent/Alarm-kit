@@ -14,9 +14,6 @@ struct MyAlarmAppApp: App {
     @State private var showAlarmRestorePermissionAlert = false
 
     init() {
-        Task {
-            Self.requestSiriAuthorizationIfNeeded()
-        }
         AlarmAppShortcutsProvider.updateAppShortcutParameters()
         setupAlarmStopListener()
     }
@@ -126,21 +123,14 @@ struct MyAlarmAppApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(quickActionMode: $quickActionMode)
-                .onAppear {
-                    setupQuickActions()
-                    if hasSeenOnboarding {
-                        restoreFromiCloudIfNeeded()
-                    }
-                    print("✅ App launched")
-                }
-                .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OnboardingCompleted"))) { _ in
-                    Task { @MainActor in
-                        await AlarmService.shared.requestAuthorizationIfNeeded()
-                        restoreFromiCloudIfNeeded()
-                    }
-                }
-
+                    ContentView(quickActionMode: $quickActionMode)
+                        .onAppear {
+                            setupQuickActions()
+                            print("✅ App launched")
+                        }
+                        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OnboardingCompleted"))) { _ in
+                            // ✅ No automatic restore — user controls it from Settings
+                        }
                 .alert("Alarms Restored 🔔", isPresented: $showVoiceRestoredAlert) {
                     Button("OK", role: .cancel) { }
                 } message: {
@@ -174,13 +164,7 @@ struct MyAlarmAppApp: App {
                             try? await Task.sleep(nanoseconds: 300_000_000)
                             quickActionMode = action
                         }
-                        let restored = await AlarmService.shared.restorePendingCloudBackupIfPossible()
-                        if restored {
-                            AlarmService.shared.loadAlarms()
-                            showVoiceRestoredAlert = true
-                        } else if AlarmService.shared.pendingCloudRestoreRequiresAuthorization() {
-                            showAlarmRestorePermissionAlert = true
-                        }
+                        // ✅ Restore handled manually from Settings
                         try? await Task.sleep(nanoseconds: 200_000_000)
                         requestReviewIfNeeded()
                     }

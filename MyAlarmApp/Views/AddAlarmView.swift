@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import EventKit
 
 struct AddAlarmView: View {
     @Environment(\.dismiss) private var dismiss
@@ -31,6 +32,30 @@ struct AddAlarmView: View {
     @State private var repeatDays: Set<Int> = []
     @State private var showPastDateAlert = false
     @State private var didAutoStartRecording = false
+    @State private var showScheduleSheet = false
+    @State private var scheduledDate: Date? = nil
+    @State private var showHourPicker = false
+    @State private var showMinutePicker = false
+    
+    @State private var customRecordings: [(name: String, file: String)] = []
+    @State private var saveToList: Bool = false
+    @State private var showMyRecordings: Bool = false
+    @State private var editingRecordingFile: String? = nil
+    @State private var editingRecordingName: String = ""
+    @State private var selectedDayOfMonth: Int = 1
+    @State private var selectedYears: Set<Int> = []
+    @State private var originalHour: Int = 0
+    @State private var originalMinute: Int = 0
+    @State private var originalAMPM: Int = 0
+    @State private var originalTitle: String = ""
+    @State private var originalSound: String = "nokia.caf"
+    @State private var originalRepeatDays: Set<Int> = []
+    @State private var originalRepeatType: String = ""
+    @State private var originalDayOfMonth: Int = 1
+    @State private var originalSnoozeEnabled: Bool = true
+    @State private var originalSnoozeDuration: Int = 5
+    @State private var originalAddToCalendar: Bool = false
+    @State private var originalScheduledDate: Date? = nil
 
     // ✅ "" = no repeat, "weekly", "monthly", "yearly"
     @State private var repeatType: String = ""
@@ -66,23 +91,48 @@ struct AddAlarmView: View {
         hideDateToggle: Bool = false,
         autoStartRecording: Bool = false,
         repeatDaysToLoad: Set<Int> = [],
+        soundToLoad: String = "nokia.caf",
         onSave: @escaping (Date, String, Bool, TimeInterval, String, Set<Int>) -> Void
     ) {
         self.hideDateToggle = hideDateToggle
         self.autoStartRecording = autoStartRecording
         self.onSave = onSave
         _repeatDays = State(initialValue: repeatDaysToLoad)
+        // ✅ Load selectedDayOfMonth from repeatDaysToLoad
+        // ✅ Load selectedDayOfMonth (1-31)
+        let dayValue = repeatDaysToLoad.filter { $0 >= 1 && $0 <= 31 }.first ?? 1
+        _selectedDayOfMonth = State(initialValue: dayValue)
 
-        // ✅ Detect repeatType from repeatDaysToLoad
-        if repeatDaysToLoad == Set([100]) {
-            _repeatType = State(initialValue: "monthly")
-        } else if repeatDaysToLoad == Set([200]) {
+        // ✅ Load selectedYears (2025+)
+        let yearsFromLoad = repeatDaysToLoad.filter { $0 >= 2025 }
+        _selectedYears = State(initialValue: yearsFromLoad)
+
+        // ✅ Fix repeatDays to only contain months (101-112) not day/year values
+        let monthsOnly = repeatDaysToLoad.filter { $0 >= 101 && $0 <= 112 }
+        let hasYearsInLoad = repeatDaysToLoad.contains { $0 >= 2025 }
+        let hasMonthsOrGeneric = !monthsOnly.isEmpty || repeatDaysToLoad.contains(100)
+        if hasYearsInLoad {
+            // ✅ Yearly — keep everything
+            _repeatDays = State(initialValue: repeatDaysToLoad)
+        } else {
+            _repeatDays = State(initialValue: hasMonthsOrGeneric ? repeatDaysToLoad : (monthsOnly.isEmpty && !repeatDaysToLoad.isEmpty ? repeatDaysToLoad : monthsOnly))
+        }
+
+
+
+        let hasMonths = repeatDaysToLoad.contains { $0 >= 101 && $0 <= 112 }
+        let hasWeekDays = repeatDaysToLoad.contains { $0 >= 1 && $0 <= 7 } &&
+                          !repeatDaysToLoad.contains { $0 >= 8 && $0 <= 31 } &&
+                          !repeatDaysToLoad.contains { $0 >= 100 }
+        let hasYears = repeatDaysToLoad.contains { $0 >= 2025 }
+        let isMonthlyGeneric = repeatDaysToLoad == Set([100])
+        let isDayInMonth = repeatDaysToLoad.contains { $0 >= 1 && $0 <= 31 } && !hasWeekDays
+
+        if hasYears {
             _repeatType = State(initialValue: "yearly")
-        } else if repeatDaysToLoad.allSatisfy({ $0 >= 101 && $0 <= 112 }) && !repeatDaysToLoad.isEmpty {
+        } else if isMonthlyGeneric || hasMonths || isDayInMonth {
             _repeatType = State(initialValue: "monthly")
-        } else if repeatDaysToLoad.allSatisfy({ $0 >= 2025 }) && !repeatDaysToLoad.isEmpty {
-            _repeatType = State(initialValue: "yearly")
-        } else if !repeatDaysToLoad.isEmpty {
+        } else if hasWeekDays {
             _repeatType = State(initialValue: "weekly")
         } else {
             _repeatType = State(initialValue: "")
@@ -90,7 +140,8 @@ struct AddAlarmView: View {
 
         if let item = editingItem, let fireDate = item.fireDate {
             _title = State(initialValue: item.label)
-            _selectedDate = State(initialValue: fireDate)
+            let adjustedDate = fireDate <= Date() ? (Calendar.current.date(byAdding: .day, value: 1, to: fireDate) ?? fireDate) : fireDate
+            _selectedDate = State(initialValue: adjustedDate)
             let hour24 = Calendar.current.component(.hour, from: fireDate)
             let is24Hr = UserDefaults.standard.bool(forKey: "use24HourFormat")
             let hour12 = hour24 == 0 ? 12 : (hour24 > 12 ? hour24 - 12 : hour24)
@@ -99,17 +150,39 @@ struct AddAlarmView: View {
             _selectedMinute = State(initialValue: Calendar.current.component(.minute, from: fireDate))
             _useSpecificDate = State(initialValue: true)
             self.editingAlarmID = item.id.uuidString
+            if soundToLoad != "nokia.caf" {
+                _selectedSound = State(initialValue: soundToLoad)
+            }
         } else if let date = preselectedDate, !Calendar.current.isDateInToday(date) {
             _title = State(initialValue: "")
             _selectedDate = State(initialValue: date)
-
-            _selectedDate = State(initialValue: date)
-            let hour24 = Calendar.current.component(.hour, from: date)
-            _selectedHour = State(initialValue: hour24)
+            let now = Date()
+            let hour24 = Calendar.current.component(.hour, from: now)
+            let is24Hr = UserDefaults.standard.bool(forKey: "use24HourFormat")
+            let hour12 = hour24 == 0 ? 12 : (hour24 > 12 ? hour24 - 12 : hour24)
+            _selectedHour = State(initialValue: is24Hr ? hour24 : hour12)
             _selectedAMPM = State(initialValue: hour24 < 12 ? 0 : 1)
-            _selectedMinute = State(initialValue: Calendar.current.component(.minute, from: date))
+            _selectedMinute = State(initialValue: Calendar.current.component(.minute, from: now))
             _useSpecificDate = State(initialValue: true)
             self.editingAlarmID = nil
+            let day = Calendar.current.component(.day, from: date)
+            let month = Calendar.current.component(.month, from: date)
+            let year = Calendar.current.component(.year, from: date)
+            let currentYear = Calendar.current.component(.year, from: Date())
+            _selectedDayOfMonth = State(initialValue: day)
+            if year > currentYear {
+                // ✅ Future year → use yearly with that specific year
+                var yearlyDays: Set<Int> = []
+                yearlyDays.insert(day)
+                yearlyDays.insert(100 + month)
+                yearlyDays.insert(year)
+                _repeatDays = State(initialValue: yearlyDays)
+                _repeatType = State(initialValue: "yearly")
+            } else {
+                // ✅ Same year → one time with scheduledDate
+                _repeatDays = State(initialValue: [])
+                _repeatType = State(initialValue: "")
+            }
         } else {
             _title = State(initialValue: "")  // ✅ must be first
             _selectedDate = State(initialValue: Date())
@@ -147,31 +220,117 @@ struct AddAlarmView: View {
     }
 
     private var fireDate: Date {
-        if useSpecificDate {
-            var components = Calendar.current.dateComponents(in: TimeZone.current, from: selectedDate)
-            components.second = 0
-            return Calendar.current.date(from: components) ?? selectedDate
+        let hour24: Int
+        if use24HourFormat {
+            hour24 = selectedHour
         } else {
-            let hour24: Int
-            if use24HourFormat {
-                hour24 = selectedHour
-            } else {
-                var h = selectedHour % 12
-                if selectedAMPM == 1 { h += 12 }
-                hour24 = h
-            }
-            var components = Calendar.current.dateComponents(in: TimeZone.current, from: Date())
+            var h = selectedHour % 12
+            if selectedAMPM == 1 { h += 12 }
+            hour24 = h
+        }
+        // ✅ If scheduledDate is set, use it as base (one-time or yearly)
+        if let scheduled = scheduledDate, (repeatType == "" || repeatType == "yearly") {
+            var components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: scheduled)
             components.hour = hour24
             components.minute = selectedMinute
             components.second = 0
             var date = Calendar.current.date(from: components) ?? Date()
-            if date < Date().addingTimeInterval(-60) && repeatDays.isEmpty {
-                date = Calendar.current.date(byAdding: .day, value: 1, to: date) ?? date
+            // ✅ If yearly and date is in past, find next future year
+            if repeatType == "yearly" && date < Date() {
+                components.year = (components.year ?? Calendar.current.component(.year, from: Date())) + 1
+                date = Calendar.current.date(from: components) ?? date
             }
             return date
         }
+        let baseDate: Date
+        if repeatType == "monthly" {
+            let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? selectedDayOfMonth
+            let selectedMonths = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+            let cal = Calendar.current
+            if selectedMonths.isEmpty {
+                // ✅ Every month — find next future occurrence and return early
+                let now = Date()
+                let currentDay = cal.component(.day, from: now)
+                let currentMonth = cal.component(.month, from: now)
+                let currentYear = cal.component(.year, from: now)
+                var comps = DateComponents()
+                comps.day = day
+                comps.hour = hour24
+                comps.minute = selectedMinute
+                comps.second = 0
+                if day > currentDay {
+                    comps.month = currentMonth
+                    comps.year = currentYear
+                } else if day == currentDay {
+                    // ✅ Today — use today if time is still in future
+                    comps.month = currentMonth
+                    comps.year = currentYear
+                    let todayDate = cal.date(from: comps)
+                    if let td = todayDate, td > Date() {
+                        return td
+                    }
+                    // ✅ Time already passed today — go next month
+                    if currentMonth == 12 {
+                        comps.month = 1
+                        comps.year = currentYear + 1
+                    } else {
+                        comps.month = currentMonth + 1
+                        comps.year = currentYear
+                    }
+                } else {
+                    if currentMonth == 12 {
+                        comps.month = 1
+                        comps.year = currentYear + 1
+                    } else {
+                        comps.month = currentMonth + 1
+                        comps.year = currentYear
+                    }
+                }
+                return cal.date(from: comps) ?? Date()
+            } else {
+                // ✅ Specific months selected
+                let month = selectedMonths.min().map { $0 - 100 } ?? cal.component(.month, from: Date())
+                let year = selectedYears.min() ?? cal.component(.year, from: Date())
+                var comps = DateComponents()
+                comps.year = year
+                comps.month = month
+                comps.day = day
+                baseDate = cal.date(from: comps) ?? selectedDate
+            }
+        } else {
+            if repeatType == "yearly" {
+                // ✅ Yearly — return early to avoid past date override
+                let years = repeatDays.filter { $0 >= 2025 }.sorted()
+                let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? Calendar.current.component(.day, from: Date())
+                let month = months.first.map { $0 - 100 } ?? Calendar.current.component(.month, from: Date())
+                let year = years.first ?? Calendar.current.component(.year, from: Date())
+                var comps = DateComponents()
+                comps.year = year
+                comps.month = month
+                comps.day = day
+                comps.hour = hour24
+                comps.minute = selectedMinute
+                comps.second = 0
+                return Calendar.current.date(from: comps) ?? Date()
+            } else if editingAlarmID != nil && Calendar.current.isDateInToday(selectedDate) {
+                baseDate = Date()
+            } else {
+                baseDate = !Calendar.current.isDateInToday(selectedDate) ? selectedDate : Date()
+            }
+        }
+        var components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: baseDate)
+        components.hour = hour24
+        components.minute = selectedMinute
+        components.second = 0
+        var date = Calendar.current.date(from: components) ?? Date()
+        if date < Date().addingTimeInterval(-60) {
+            date = Calendar.current.date(byAdding: .day, value: 1, to: date) ?? date
+        } else if editingAlarmID != nil && date < Date().addingTimeInterval(30) {
+            date = Calendar.current.date(byAdding: .day, value: 1, to: date) ?? date
+        }
+        return date
     }
-
     private var ringsAtText: String {
         let date = fireDate
         let formatter = DateFormatter()
@@ -183,39 +342,51 @@ struct AddAlarmView: View {
 
         // ✅ Weekly
         if repeatType == "weekly" && !repeatDays.isEmpty {
-            let ordered = weekDays.filter { repeatDays.contains($0.value) }.map { $0.label }
-            let daysStr = ordered.joined(separator: ", ")
-            return "Rings every \(daysStr) at \(timeStr)"
+            let dayStr: String
+            if repeatDays.count == 7 {
+                dayStr = "every day"
+            } else if repeatDays == Set([2,3,4,5,6]) {
+                dayStr = "weekdays"
+            } else if repeatDays == Set([7,1]) {
+                dayStr = "weekends"
+            } else {
+                let ordered = weekDays.filter { repeatDays.contains($0.value) }.map { $0.label }
+                dayStr = ordered.joined(separator: ", ")
+            }
+            return "Rings every \(dayStr) at \(timeStr)"
         }
 
         // ✅ Monthly with selected months
-        let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-        let selectedMonths = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
-        if repeatType == "monthly" && !selectedMonths.isEmpty {
-            let monthsStr = selectedMonths.map { monthNames[$0 - 101] }.joined(separator: ", ")
-            let day = calendar.component(.day, from: date)
-            return "Rings on day \(day) of \(monthsStr) at \(timeStr)"
-        }
-
-        // ✅ Monthly generic
         if repeatType == "monthly" {
-            let day = calendar.component(.day, from: date)
-            return "Rings every month on day \(day) at \(timeStr)"
+            let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? selectedDayOfMonth
+            let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+            let isForever = repeatDays.contains(100)
+            let stopYear = repeatDays.filter { $0 >= 201 }.first.map { $0 - 200 }
+            let monthNamesLocal = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+            let monthStr = (months.isEmpty || months.count == 12) ? "every month" : months.map { monthNamesLocal[$0 - 101] }.joined(separator: ", ")
+            let repeatStr: String = {
+                if isForever { return "· Forever" }
+                if let stop = stopYear { return "· Until \(Calendar.current.component(.year, from: Date()) + stop)" }
+                return "· This year only"
+            }()
+            return "Rings on day \(day) of \(monthStr) \(repeatStr) at \(timeStr)"
         }
 
-        // ✅ Yearly with selected years
-        let selectedYears = repeatDays.filter { $0 >= 2025 }.sorted()
-        if repeatType == "yearly" && !selectedYears.isEmpty {
-            let yearsStr = selectedYears.map { "\($0)" }.joined(separator: ", ")
-            let f = DateFormatter(); f.dateFormat = "MMM d"
-            return "Rings on \(f.string(from: date)) in \(yearsStr)"
-        }
-
-        // ✅ Yearly generic
+        // ✅ Yearly
         if repeatType == "yearly" {
-            let f = DateFormatter(); f.dateFormat = "MMM d"
-            return "Rings every year on \(f.string(from: date)) at \(timeStr)"
+            let monthNamesLocal = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+            let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? 0
+            let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+            let monthStr = months.isEmpty ? "" : monthNamesLocal[months[0] - 101]
+            let years = repeatDays.filter { $0 >= 2025 }.sorted()
+            if years.count > 1 {
+                return "Rings on \(monthStr) \(day) · \(years.first!) → \(years.last!) at \(timeStr)"
+            } else if years.count == 1 {
+                return "Rings on \(monthStr) \(day) · \(years[0]) at \(timeStr)"
+            }
+            return "Rings on \(monthStr) \(day) every year at \(timeStr)"
         }
+
 
         // ✅ One time
         if calendar.isDateInToday(date) {
@@ -230,37 +401,31 @@ struct AddAlarmView: View {
     }
 
     private var isEditing: Bool { editingAlarmID != nil }
+    private var hasChanges: Bool {
+        guard isEditing else { return true }
+        return selectedHour != originalHour ||
+               selectedMinute != originalMinute ||
+               selectedAMPM != originalAMPM ||
+               title != originalTitle ||
+               selectedSound != originalSound ||
+               finalRepeatDays != originalRepeatDays ||
+               repeatType != originalRepeatType ||
+               selectedDayOfMonth != originalDayOfMonth ||
+               snoozeEnabled != originalSnoozeEnabled ||
+               snoozeDuration != originalSnoozeDuration ||
+               addToCalendar != originalAddToCalendar ||
+               scheduledDate != originalScheduledDate
+    }
 
     private var isSpecificDateInPast: Bool {
         guard useSpecificDate else { return false }
         return fireDate <= Date() && repeatDays.isEmpty && repeatType == ""
     }
 
-    private var repeatLabel: String {
-        switch repeatType {
-        case "monthly":
-            let day = Calendar.current.component(.day, from: fireDate)
-            return "Every month on \(day)"
-        case "yearly":
-            let f = DateFormatter()
-            f.dateFormat = "MMM d"
-            return "Every year on \(f.string(from: fireDate))"
-        case "weekly":
-            if repeatDays.isEmpty { return "Weekly" }
-            if repeatDays.count == 7 { return "Every day" }
-            if repeatDays == Set([2, 3, 4, 5, 6]) { return "Weekdays" }
-            if repeatDays == Set([7, 1]) { return "Weekends" }
-            let ordered = weekDays.filter { repeatDays.contains($0.value) }.map { $0.label }
-            return ordered.joined(separator: ", ")
-        default:
-            return ""
-        }
-    }
-
     private var finalRepeatDays: Set<Int> {
         switch repeatType {
-        case "monthly": return repeatDays.isEmpty ? Set([100]) : repeatDays
-        case "yearly": return repeatDays.isEmpty ? Set([200]) : repeatDays
+        case "monthly": return repeatDays
+        case "yearly": return repeatDays
         case "weekly": return repeatDays
         default: return []
         }
@@ -277,100 +442,174 @@ struct AddAlarmView: View {
                         .frame(width: 40, height: 5)
                         .padding(.top, 12)
 
+                    HStack {
+                        if isEditing {
+                            Button { dismiss() } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 28))
+                                    .foregroundStyle(Color("SecondaryText").opacity(0.6))
+                            }
+                            .padding(.leading, 20)
+                        }
+                        Spacer()
+                    }
+
+
                     Text(isEditing ? "Edit Alarm" : "New Alarm")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundStyle(Color("PrimaryText"))
 
-                    Text(ringsAtText)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(.orange)
 
-                    // Set specific date card
-                    if !hideDateToggle {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
-                            HStack {
-                                Image(systemName: "calendar").foregroundStyle(.orange)
-                                Text("Set specific date")
-                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(Color("PrimaryText"))
+
+                    // Picker card — Calendar style
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 20).fill(Color("CardBackground"))
+                        VStack(spacing: 0) {
+                            // Orange rings header
+                            Text(ringsAtText)
+                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .foregroundStyle(.black)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                                .background(Color.orange)
+                                .clipShape(UnevenRoundedRectangle(topLeadingRadius: 20, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 20))
+
+
+                            // Big time display
+                            HStack(spacing: 0) {
                                 Spacer()
-                                Toggle("", isOn: $useSpecificDate)
-                                    .tint(.orange)
-                                    .onChange(of: useSpecificDate) { _, newValue in
-                                        if !newValue && isEditing {
-                                            // ✅ When turning off specific date in edit mode
-                                            // keep the original alarm time as selected
-                                            if let fireDate = AlarmService.shared.alarms.first(where: { $0.id.uuidString == editingAlarmID })?.fireDate {
-                                                let hour24 = Calendar.current.component(.hour, from: fireDate)
-                                                let is24Hr = UserDefaults.standard.bool(forKey: "use24HourFormat")
-                                                let hour12 = hour24 == 0 ? 12 : (hour24 > 12 ? hour24 - 12 : hour24)
-                                                selectedHour = is24Hr ? hour24 : hour12
-                                                selectedMinute = Calendar.current.component(.minute, from: fireDate)
-                                                selectedAMPM = hour24 < 12 ? 0 : 1
+                                VStack(spacing: 2) {
+                                    Text("HR")
+                                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                        .tracking(2)
+                                    Text(use24HourFormat ? String(format: "%02d", selectedHour) : String(format: "%d", selectedHour))
+                                        .font(.system(size: 72, weight: .heavy, design: .rounded))
+                                        .foregroundStyle(showHourPicker ? .orange : Color("PrimaryText"))
+                                        .contentTransition(.numericText())
+                                        .animation(.spring(response: 0.3), value: selectedHour)
+                                        .onTapGesture {
+                                            withAnimation(.spring(response: 0.3)) {
+                                                showHourPicker.toggle()
+                                                showMinutePicker = false
+                                            }
+                                        }
+                                }
+                                Text(":")
+                                    .font(.system(size: 52, weight: .heavy, design: .rounded))
+                                    .foregroundStyle(.orange)
+                                    .padding(.horizontal, 4)
+                                    .padding(.bottom, 20)
+                                VStack(spacing: 2) {
+                                    Text("MIN")
+                                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                        .tracking(2)
+                                    Text(String(format: "%02d", selectedMinute))
+                                        .font(.system(size: 72, weight: .heavy, design: .rounded))
+                                        .foregroundStyle(showMinutePicker ? .orange : Color("PrimaryText"))
+                                        .contentTransition(.numericText())
+                                        .animation(.spring(response: 0.3), value: selectedMinute)
+                                        .onTapGesture {
+                                            withAnimation(.spring(response: 0.3)) {
+                                                showMinutePicker.toggle()
+                                                showHourPicker = false
+                                            }
+                                        }
+                                }
+                                if !use24HourFormat {
+                                    VStack(spacing: 6) {
+                                        Button {
+                                            withAnimation(.spring(response: 0.3)) { selectedAMPM = 0 }
+                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        } label: {
+                                            Text("AM")
+                                                .font(.system(size: 15, weight: .heavy, design: .rounded))
+                                                .foregroundStyle(selectedAMPM == 0 ? .black : Color("SecondaryText"))
+                                                .frame(width: 54, height: 38)
+                                                .background(selectedAMPM == 0 ? Color.orange : Color("AppBackground"))
+                                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        }
+                                        Button {
+                                            withAnimation(.spring(response: 0.3)) { selectedAMPM = 1 }
+                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        } label: {
+                                            Text("PM")
+                                                .font(.system(size: 15, weight: .heavy, design: .rounded))
+                                                .foregroundStyle(selectedAMPM == 1 ? .black : Color("SecondaryText"))
+                                                .frame(width: 54, height: 38)
+                                                .background(selectedAMPM == 1 ? Color.orange : Color("AppBackground"))
+                                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        }
+                                    }
+                                    .padding(.leading, 8)
+                                    .padding(.bottom, 4)
+                                }
+                                Spacer()
+                            }
+                            .padding(.vertical, 16)
+
+                            // Hour wheel picker
+                            if showHourPicker {
+                                VStack(spacing: 8) {
+                                    Text("SET HOUR")
+                                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                        .tracking(2)
+                                    Picker("Hour", selection: $selectedHour) {
+                                        if use24HourFormat {
+                                            ForEach(0...23, id: \.self) { h in
+                                                Text(String(format: "%02d", h))
+                                                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                                                    .tag(h)
+                                            }
+                                        } else {
+                                            ForEach(1...12, id: \.self) { h in
+                                                Text(String(format: "%d", h))
+                                                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                                                    .tag(h)
                                             }
                                         }
                                     }
+                                    .pickerStyle(.wheel)
+                                    .frame(height: 120)
+                                    .background(Color("AppBackground"))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.top, 8)
+                                .transition(.move(edge: .top).combined(with: .opacity))
                             }
-                            .padding(16)
-                        }
-                        .padding(.horizontal, 20)
-                    }
 
-                    // Picker card
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 20).fill(Color("CardBackground"))
-                        if useSpecificDate {
-                            DatePicker("", selection: $selectedDate,
-                                displayedComponents: [.date, .hourAndMinute])
-                            .datePickerStyle(.wheel)
-                            .labelsHidden()
-                            .colorScheme(colorScheme)
-                            .padding(8)
-                        } else if use24HourFormat {
-                            HStack(spacing: 0) {
-                                Picker("Hour", selection: $selectedHour) {
-                                    ForEach(0...23, id: \.self) { h in
-                                        Text(String(format: "%02d", h)).tag(h)
+                            // Minute wheel picker
+                            if showMinutePicker {
+                                VStack(spacing: 8) {
+                                    Text("SET MINUTE")
+                                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                        .tracking(2)
+                                    Picker("Minute", selection: $selectedMinute) {
+                                        ForEach(0...59, id: \.self) { m in
+                                            Text(String(format: "%02d", m))
+                                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                                .tag(m)
+                                        }
                                     }
+                                    .pickerStyle(.wheel)
+                                    .frame(height: 120)
+                                    .background(Color("AppBackground"))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
                                 }
-                                .pickerStyle(.wheel).frame(maxWidth: .infinity)
-                                Text(":").font(.system(size: 24, weight: .bold)).foregroundStyle(.orange)
-                                Picker("Minute", selection: $selectedMinute) {
-                                    ForEach(0...59, id: \.self) { m in
-                                        Text(String(format: "%02d", m)).tag(m)
-                                    }
-                                }
-                                .pickerStyle(.wheel).frame(maxWidth: .infinity)
+                                .padding(.horizontal, 12)
+                                .padding(.top, 8)
+                                .transition(.move(edge: .top).combined(with: .opacity))
                             }
-                            .colorScheme(colorScheme).padding(8)
-                        } else {
-                            HStack(spacing: 0) {
-                                Picker("Hour", selection: $selectedHour) {
-                                    ForEach(1...12, id: \.self) { h in
-                                        Text(String(format: "%d", h)).tag(h)
-                                    }
-                                }
-                                .pickerStyle(.wheel).frame(maxWidth: .infinity)
-                                Text(":").font(.system(size: 24, weight: .bold)).foregroundStyle(.orange)
-                                Picker("Minute", selection: $selectedMinute) {
-                                    ForEach(0...59, id: \.self) { m in
-                                        Text(String(format: "%02d", m)).tag(m)
-                                    }
-                                }
-                                .pickerStyle(.wheel).frame(maxWidth: .infinity)
-                                Picker("AM/PM", selection: $selectedAMPM) {
-                                    Text("AM").tag(0)
-                                    Text("PM").tag(1)
-                                }
-                                .pickerStyle(.wheel).frame(maxWidth: 70)
-                            }
-                            .colorScheme(colorScheme).padding(8)
                         }
                     }
                     .padding(.horizontal, 20)
-
-                    // Repeat card
+                    // Single Repeat card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
                         VStack(alignment: .leading, spacing: 12) {
@@ -380,34 +619,37 @@ struct AddAlarmView: View {
                                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                                     .foregroundStyle(Color("PrimaryText"))
                                 Spacer()
-                                if !repeatLabel.isEmpty {
-                                    Text(repeatLabel)
+                                if repeatType == "weekly" && !repeatDays.isEmpty {
+                                    let label = repeatDays.count == 7 ? "Every day" :
+                                        repeatDays == Set([2,3,4,5,6]) ? "Weekdays" :
+                                        repeatDays == Set([7,1]) ? "Weekends" :
+                                        weekDays.filter { repeatDays.contains($0.value) }.map { $0.label }.joined(separator: ", ")
+                                    Text(label)
+                                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                                        .foregroundStyle(.orange)
+                                } else if repeatType == "monthly" {
+                                    Text("Monthly")
                                         .font(.system(size: 13, weight: .medium, design: .rounded))
                                         .foregroundStyle(.orange)
                                 }
                             }
                             Divider()
-
-                            // Weekly / Monthly / Yearly
                             HStack(spacing: 6) {
-                                ForEach(["Weekly", "Monthly", "Yearly"], id: \.self) { type in
-                                    let key = type.lowercased()
-                                    let isSelected = repeatType == key
+                                ForEach(weekDays, id: \.value) { day in
+                                    let isSelected = repeatType == "weekly" && repeatDays.contains(day.value)
                                     Button {
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            if repeatType == key {
-                                                repeatType = ""
-                                                repeatDays = []
-                                            } else {
-                                                repeatType = key
-                                                if key != "weekly" { repeatDays = [] }
-                                                if key == "monthly" || key == "yearly" {
-                                                    useSpecificDate = true
-                                                }
-                                            }
+                                        if isSelected {
+                                            repeatDays.remove(day.value)
+                                        } else {
+                                            repeatDays.insert(day.value)
                                         }
-                                    } label: {
-                                        Text(type)
+                                        repeatType = repeatDays.isEmpty ? (repeatType == "monthly" ? "monthly" : "") : "weekly"
+                                        // ✅ Clear scheduled date when weekly selected
+                                        if !repeatDays.isEmpty {
+                                            scheduledDate = nil
+                                        }
+                                    }label: {
+                                        Text(day.label)
                                             .font(.system(size: 11, weight: .bold, design: .rounded))
                                             .foregroundStyle(isSelected ? .black : Color("SecondaryText"))
                                             .frame(maxWidth: .infinity)
@@ -415,84 +657,105 @@ struct AddAlarmView: View {
                                             .background(isSelected ? Color.orange : Color("AppBackground"))
                                             .clipShape(RoundedRectangle(cornerRadius: 8))
                                     }
+                                    .opacity(repeatType == "monthly" || scheduledDate != nil ? 0.3 : 1.0)
+                                    .disabled(repeatType == "monthly" || scheduledDate != nil)
                                 }
                             }
 
-                            // Weekly days
-                            if repeatType == "weekly" {
-                                HStack(spacing: 6) {
-                                    ForEach(weekDays, id: \.value) { day in
-                                        let isSelected = repeatDays.contains(day.value)
-                                        Button {
-                                            if isSelected {
-                                                repeatDays.remove(day.value)
-                                            } else {
-                                                repeatDays.insert(day.value)
-                                            }
-                                        } label: {
-                                            Text(day.label)
-                                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                                .foregroundStyle(isSelected ? .black : Color("SecondaryText"))
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 8)
-                                                .background(isSelected ? Color.orange : Color("AppBackground"))
-                                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Monthly info
-                            // Monthly — show month buttons
-                            if repeatType == "monthly" {
-                                let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-                                let currentMonth = Calendar.current.component(.month, from: Date()) - 1 // 0-based
-                                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 8) {
-                                    ForEach(currentMonth..<12, id: \.self) { i in
-                                        let monthValue = 101 + i
-                                        let isSelected = repeatDays.contains(monthValue)
-                                        Button {
-                                            if isSelected { repeatDays.remove(monthValue) } else { repeatDays.insert(monthValue) }
-                                        } label: {
-                                            Text(months[i])
-                                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                                .foregroundStyle(isSelected ? .black : Color("SecondaryText"))
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 8)
-                                                .background(isSelected ? Color.orange : Color("AppBackground"))
-                                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                        }
-                                    }
-                                }
-                                .padding(.top, 4)
-                            }
-
-                            // Yearly — show year buttons
-                            if repeatType == "yearly" {
-                                let currentYear = Calendar.current.component(.year, from: Date())
-                                let years = Array(currentYear...(currentYear + 9))
-                                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
-                                    ForEach(years, id: \.self) { year in
-                                        let isSelected = repeatDays.contains(year)
-                                        Button {
-                                            if isSelected { repeatDays.remove(year) } else { repeatDays.insert(year) }
-                                        } label: {
-                                            Text("\(year)")
-                                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                                .foregroundStyle(isSelected ? .black : Color("SecondaryText"))
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 8)
-                                                .background(isSelected ? Color.orange : Color("AppBackground"))
-                                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                        }
-                                    }
-                                }
-                                .padding(.top, 4)
-                            }
                         }
                         .padding(16)
                     }
                     .padding(.horizontal, 20)
+                    
+                    // ✅ Schedule for Future button
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color("CardBackground"))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke((scheduledDate != nil || (repeatType == "monthly" && !repeatDays.isEmpty) || (repeatType == "yearly" && !repeatDays.isEmpty)) ? Color.orange.opacity(0.6) : Color.orange.opacity(0.2), lineWidth: 1)
+
+                            )
+                        Button {
+                            showScheduleSheet = true
+                        } label: {
+                            HStack(spacing: 14) {
+                                ZStack {
+                                    let isScheduled = scheduledDate != nil || (repeatType == "monthly" && !repeatDays.isEmpty) || (repeatType == "yearly" && !repeatDays.isEmpty)
+                                    Circle()
+                                        .fill(isScheduled ? Color.orange : Color.orange.opacity(0.15))
+                                        .frame(width: 48, height: 48)
+                                    Image(systemName: "calendar.badge.clock")
+                                        .foregroundStyle(isScheduled ? .black : .orange)                                        .font(.system(size: 22))
+                                }
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Schedule for Future")
+                                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                    if let date = scheduledDate, repeatType != "yearly" {
+                                        Text(formatScheduledDate(date))
+                                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                                            .foregroundStyle(Color("PrimaryText"))
+                                    } else if repeatType == "monthly" && !repeatDays.isEmpty {
+                                        let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+                                        let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? 0
+                                        let monthsArray = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                                        let months = monthsArray.map { monthNames[$0 - 101] }.joined(separator: ", ")
+                                        let isForever = repeatDays.contains(100)
+                                        let stopYear = repeatDays.filter { $0 >= 201 }.first.map { $0 - 200 }
+                                        let repeatStr: String = {
+                                            if isForever { return "Forever" }
+                                            if let stop = stopYear { return "Until \(Calendar.current.component(.year, from: Date()) + stop)" }
+                                            return "This year only"
+                                        }()
+                                        let monthStr = (monthsArray.isEmpty || monthsArray.count == 12) ? "Every month" : months
+                                        Text("Day \(day) · \(monthStr) · \(repeatStr)")
+                                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                                            .foregroundStyle(Color("PrimaryText"))
+                                            .multilineTextAlignment(.leading)
+                                    } else if repeatType == "yearly" && !repeatDays.isEmpty {
+                                        let monthNamesLocal = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+                                        let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? 0
+                                        let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                                        let monthStr = months.isEmpty ? "" : monthNamesLocal[months[0] - 101]
+                                        let years = repeatDays.filter { $0 >= 2025 }.sorted()
+                                        let yearStr = years.isEmpty ? "" : years.count == 1 ? "\(years[0])" : "\(years.first!) → \(years.last!)"
+                                        Text("\(monthStr) \(day) · \(yearStr)")
+                                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                                            .foregroundStyle(Color("PrimaryText"))                                    } else {
+                                        Text("One time · Monthly · Yearly")
+                                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                            .foregroundStyle(Color("PrimaryText"))
+                                    }
+                                }
+                                Spacer()
+                                if scheduledDate != nil || (repeatType == "monthly" && !repeatDays.isEmpty) || (repeatType == "yearly" && !repeatDays.isEmpty) {
+                                    Button {
+                                        withAnimation(.spring(response: 0.3)) {
+                                            scheduledDate = nil
+                                            repeatType = ""
+                                            repeatDays = []
+                                        }
+                                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.system(size: 22))
+                                            .foregroundStyle(Color("SecondaryText").opacity(0.6))
+                                    }
+                                } else {
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(.orange)
+                                }
+                            }
+                            .padding(16)
+                        }
+                        .opacity(repeatType == "weekly" ? 0.3 : 1.0)
+                        .disabled(repeatType == "weekly")
+                        // ✅ Clear weekly when schedule selected
+                    }
+                    .padding(.horizontal, 20)
+
 
                     // Title card
                     VStack(alignment: .leading, spacing: 8) {
@@ -534,16 +797,23 @@ struct AddAlarmView: View {
                             Text("Record your voice — it will play when alarm fires")
                                 .font(.system(size: 12, design: .rounded))
                                 .foregroundStyle(Color("SecondaryText"))
-                            Button { isRecording ? stopRecording() : startRecording() } label: {
-                                HStack {
-                                    Image(systemName: isRecording ? "stop.circle.fill" : "mic.circle.fill")
-                                    Text(isRecording ? "Stop" : "Record")
-                                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            HStack(spacing: 12) {
+                                Button { isRecording ? stopRecording() : startRecording() } label: {
+                                    HStack {
+                                        Image(systemName: isRecording ? "stop.circle.fill" : "mic.circle.fill")
+                                        Text(isRecording ? "Stop" : "Record")
+                                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                    }
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 16).padding(.vertical, 10)
+                                    .background(isRecording ? Color.red : Color.orange)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
                                 }
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 16).padding(.vertical, 10)
-                                .background(isRecording ? Color.red : Color.orange)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                if isRecording {
+                                    Text("Recording...")
+                                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                }
                             }
                             if isJustRecorded {
                                 VStack(alignment: .leading, spacing: 10) {
@@ -556,6 +826,19 @@ struct AddAlarmView: View {
                                     .padding(10)
                                     .background(Color("AppBackground"))
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    // ✅ Save to list toggle
+                                    HStack {
+                                        Image(systemName: "list.bullet").foregroundStyle(.orange)
+                                        Text("Save to My Recordings")
+                                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                                            .foregroundStyle(Color("PrimaryText"))
+                                        Spacer()
+                                        Toggle("", isOn: $saveToList).tint(.orange)
+                                    }
+                                    .padding(10)
+                                    .background(Color("AppBackground"))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+
                                     HStack(spacing: 12) {
                                         Button { playRecording() } label: {
                                             HStack {
@@ -612,13 +895,95 @@ struct AddAlarmView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                                 .transition(.move(edge: .top).combined(with: .opacity))
                             }
+                            // ✅ My Recordings list — always show
+                            Divider()
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    showMyRecordings.toggle()
+                                }
+                            } label: {
+                                    HStack {
+                                        Text("MY RECORDINGS")
+                                            .font(.system(size: 11, weight: .heavy, design: .rounded))
+                                            .foregroundStyle(Color("SecondaryText"))
+                                            .tracking(1.2)
+                                        Spacer()
+                                        Image(systemName: showMyRecordings ? "chevron.up" : "chevron.down")
+                                            .font(.system(size: 11, weight: .semibold))
+                                            .foregroundStyle(Color("SecondaryText"))
+                                    }
+                                }
+                                if showMyRecordings {
+                                    if customRecordings.isEmpty {
+                                        Text("No recordings yet")
+                                            .font(.system(size: 14, design: .rounded))
+                                            .foregroundStyle(Color("SecondaryText"))
+                                            .padding(.vertical, 8)
+                                    } else {
+                                    ForEach(customRecordings, id: \.file) { recording in
+                                    HStack(spacing: 12) {
+                                        Button {
+                                            let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+                                            let url = libraryURL.appendingPathComponent("Sounds/\(recording.file)")
+                                            try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+                                            try? AVAudioSession.sharedInstance().setActive(true)
+                                            audioPlayer = try? AVAudioPlayer(contentsOf: url)
+                                            audioPlayer?.play()
+                                        } label: {
+                                            Image(systemName: "play.circle.fill")
+                                                .foregroundStyle(.orange)
+                                                .font(.system(size: 22))
+                                        }
+                                        Text(recording.name)
+                                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                                            .foregroundStyle(Color("PrimaryText"))
+                                        Spacer()
+                                        if selectedSound == recording.file {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundStyle(.orange)
+                                                .font(.system(size: 18))
+                                        }
+                                        Button {
+                                            editingRecordingFile = recording.file
+                                            editingRecordingName = recording.name
+                                        } label: {
+                                            Image(systemName: "pencil.circle.fill")
+                                                .foregroundStyle(.orange)
+                                                .font(.system(size: 22))
+                                        }
+                                        Button {
+                                            deleteCustomRecording(file: recording.file)
+                                        } label: {
+                                            Image(systemName: "trash.circle.fill")
+                                                .foregroundStyle(.red)
+                                                .font(.system(size: 22))
+                                        }
+                                    }
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 8)
+                                    .background(selectedSound == recording.file ? Color.orange.opacity(0.15) : Color.clear)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        withAnimation(.spring(response: 0.3)) {
+                                            selectedSound = recording.file
+                                            hasRecording = true
+                                            isJustRecorded = false
+                                            recordingName = recording.name
+                                            UserDefaults.standard.set(recording.name, forKey: "voiceRecordingName_temp")
+                                            UserDefaults.standard.set(recording.file, forKey: "voiceRecordingFile_temp")
+                                        }
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    }
+                                    }
+                                } // ✅ closes else
+                            }
                         }
                         .padding(16)
                     }
                     .padding(.horizontal, 20)
                     .animation(.easeInOut(duration: 0.3), value: isJustRecorded)
                     .animation(.easeInOut(duration: 0.3), value: hasRecording)
-
                     // Sound card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
@@ -645,56 +1010,33 @@ struct AddAlarmView: View {
                                                     .foregroundStyle(playingSound == sound.file ? .red : .orange)
                                                     .font(.system(size: 24))
                                             }
-                                            let soundName = sound.name
-                                            Button {
-                                                selectedSound = sound.file
-                                            } label: {
-                                                Text(soundName)
-                                                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                                                    .foregroundStyle(Color("PrimaryText"))
-                                            }
+                                            Text(sound.name)
+                                                .font(.system(size: 15, weight: .medium, design: .rounded))
+                                                .foregroundStyle(Color("PrimaryText"))
                                             Spacer()
-                                            if selectedSound == sound.file {
+                                            if selectedSound == sound.file && !selectedSound.hasPrefix("custom_voice_") && !selectedSound.hasPrefix("alarm_voice_") {
                                                 Image(systemName: "checkmark.circle.fill")
                                                     .foregroundStyle(.orange)
                                                     .font(.system(size: 18))
                                             }
                                         }
                                         .padding(.vertical, 10)
+                                        .padding(.horizontal, 8)
+                                        .background(selectedSound == sound.file && !selectedSound.hasPrefix("custom_voice_") && !selectedSound.hasPrefix("alarm_voice_") ? Color.orange.opacity(0.15) : Color.clear)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            selectedSound = sound.file
+                                            hasRecording = false
+                                            recordingName = ""
+                                            UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
+                                            UserDefaults.standard.removeObject(forKey: "voiceRecordingFile_temp")
+                                        }
                                         Divider()
                                     }
                                 }
                             }
                             .frame(height: 200)
-                        }
-                        .padding(16)
-                    }
-                    .padding(.horizontal, 20)
-
-                    // Snooze card
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
-                        VStack(spacing: 12) {
-                            HStack {
-                                Image(systemName: "moon.zzz.fill").foregroundStyle(.orange)
-                                Text("Snooze")
-                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(Color("PrimaryText"))
-                                Spacer()
-                                Toggle("", isOn: $snoozeEnabled).tint(.orange)
-                            }
-                            if snoozeEnabled {
-                                Divider()
-                                HStack {
-                                    Text("Duration")
-                                        .font(.system(size: 14, design: .rounded))
-                                        .foregroundStyle(Color("SecondaryText"))
-                                    Spacer()
-                                    Stepper("\(snoozeDuration) min", value: $snoozeDuration, in: 1...30)
-                                        .foregroundStyle(Color("PrimaryText"))
-                                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                                }
-                            }
                         }
                         .padding(16)
                     }
@@ -713,8 +1055,21 @@ struct AddAlarmView: View {
                                 .tint(.orange)
                                 .onChange(of: addToCalendar) { _, newValue in
                                     if newValue {
-                                        Task {
-                                            await CalendarService.shared.requestPermissionIfNeeded()
+                                        let status = EKEventStore.authorizationStatus(for: .event)
+                                        if status == .denied {
+                                            addToCalendar = false
+                                            NotificationCenter.default.post(name: NSNotification.Name("showCalendarPermission"), object: nil)
+                                        } else if status == .notDetermined {
+                                            Task {
+                                                await CalendarService.shared.requestPermissionIfNeeded()
+                                                let newStatus = EKEventStore.authorizationStatus(for: .event)
+                                                await MainActor.run {
+                                                    if newStatus != .fullAccess {
+                                                        addToCalendar = false
+                                                        NotificationCenter.default.post(name: NSNotification.Name("showCalendarPermission"), object: nil)
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -732,16 +1087,28 @@ struct AddAlarmView: View {
                     } label: {
                         Text(isEditing ? "Update Alarm" : "Set Alarm")
                             .font(.system(size: 17, weight: .bold, design: .rounded))
-                            .foregroundStyle(.black)
+                            .foregroundStyle(hasChanges ? .black : Color("SecondaryText"))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 18)
-                            .background(.orange)
+                            .background(hasChanges ? Color.orange : Color("CardBackground"))
                             .clipShape(RoundedRectangle(cornerRadius: 18))
                     }
+                    .disabled(isEditing && !hasChanges)
                     .padding(.horizontal, 20)
                     .padding(.bottom, 32)
                 }
             }
+        }
+        .sheet(isPresented: $showScheduleSheet) {
+            ScheduleForFutureSheet(
+                selectedDate: $scheduledDate,
+                repeatType: $repeatType,
+                repeatDays: $repeatDays,
+                selectedHour: $selectedHour,
+                selectedMinute: $selectedMinute,
+                selectedAMPM: $selectedAMPM,
+                isEditing: isEditing
+            )
         }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
@@ -762,24 +1129,142 @@ struct AddAlarmView: View {
             if let id = editingAlarmID {
                 let url = voiceURL(for: id)
                 hasRecording = FileManager.default.fileExists(atPath: url.path)
+                // ✅ Load scheduledDate for one-time and yearly
+                if repeatType == "" || repeatType == "yearly" {
+                    if let item = AlarmService.shared.alarms.first(where: { $0.id.uuidString == id }),
+                       let fireDate = item.fireDate {
+                        scheduledDate = fireDate
+                    }
+                }
                 recordingName = UserDefaults.standard.string(forKey: voiceNameKey(for: id)) ?? ""
+                // ✅ Load sound — try alarm ID first, then group ID
+                if let savedSound = UserDefaults.standard.string(forKey: "alarmSound_\(id)") {
+                    selectedSound = savedSound
+                } else if let groupID = AlarmService.shared.getGroupID(for: UUID(uuidString: id) ?? UUID()),
+                          let savedSound = UserDefaults.standard.string(forKey: "alarmSound_\(groupID.uuidString)") {
+                    selectedSound = savedSound
+                }
+                // ✅ Also check if selectedSound is a custom recording
+                if selectedSound.hasPrefix("custom_voice_") || selectedSound.hasPrefix("alarm_voice_") {
+                    let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+                    let customURL = libraryURL.appendingPathComponent("Sounds/\(selectedSound)")
+                    if FileManager.default.fileExists(atPath: customURL.path) {
+                        hasRecording = true
+                        let saved = UserDefaults.standard.array(forKey: "customRecordingsList") as? [[String: String]] ?? []
+                        recordingName = saved.first(where: { $0["file"] == selectedSound })?["name"] ?? ""
+                    } else {
+                        // ✅ File missing — reset to default
+                        selectedSound = "nokia.caf"
+                        hasRecording = false
+                        recordingName = ""
+                    }
+                } else if let id = editingAlarmID, hasRecording {
+                    // ✅ Try to match alarm voice file to a custom recording by file
+                    let saved = UserDefaults.standard.array(forKey: "customRecordingsList") as? [[String: String]] ?? []
+                    let voiceFile = UserDefaults.standard.string(forKey: "voiceRecordingFile_\(id)") ?? ""
+                    if let match = saved.first(where: { $0["file"] == voiceFile }) {
+                        selectedSound = match["file"] ?? selectedSound
+                        recordingName = match["name"] ?? recordingName
+                    } else {
+                        // ✅ Fallback — match by name
+                        let voiceName = UserDefaults.standard.string(forKey: "voiceRecordingName_\(id)") ?? ""
+                        if let match = saved.first(where: { $0["name"] == voiceName }) {
+                            selectedSound = match["file"] ?? selectedSound
+                            recordingName = match["name"] ?? recordingName
+                        }
+                    }
+                }
+                originalHour = selectedHour
+                originalMinute = selectedMinute
+                originalAMPM = selectedAMPM
+                originalTitle = title
+                originalSound = selectedSound
+                originalRepeatDays = finalRepeatDays
+                originalRepeatType = repeatType
+                originalDayOfMonth = selectedDayOfMonth
+                originalSnoozeEnabled = snoozeEnabled
+                originalSnoozeDuration = snoozeDuration
+                // ✅ Check if this alarm has a calendar event
+                if let item = AlarmService.shared.alarms.first(where: { $0.id.uuidString == id }),
+                   let fireDate = item.fireDate {
+                    let key = fireDate.timeIntervalSince1970.description
+                    let map = UserDefaults.standard.dictionary(forKey: "calendarEventMap") as? [String: String] ?? [:]
+                    addToCalendar = map[key] != nil
+                }
+                originalAddToCalendar = addToCalendar
+                originalScheduledDate = scheduledDate
             } else {
                 try? FileManager.default.removeItem(at: tempRecordingURL)
                 UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
                 hasRecording = false
                 recordingName = ""
+                // ✅ Set scheduledDate for one-time calendar date
+                if repeatType == "" && !Calendar.current.isDateInToday(selectedDate) {
+                    scheduledDate = selectedDate
+                }
             }
-
+            loadCustomRecordings()
             if autoStartRecording, !didAutoStartRecording, !hasRecording {
                 didAutoStartRecording = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                     startRecording()
                 }
             }
-        }
-        .onDisappear {
+        }            .onDisappear {
             stopSoundPreview()
         }
+        .alert("Rename Recording", isPresented: Binding(
+            get: { editingRecordingFile != nil },
+            set: { if !$0 { editingRecordingFile = nil } }
+        )) {
+            TextField("Recording name", text: $editingRecordingName)
+            Button("Save") {
+                if let file = editingRecordingFile {
+                    renameCustomRecording(file: file, newName: editingRecordingName)
+                }
+                editingRecordingFile = nil
+            }
+            Button("Cancel", role: .cancel) {
+                editingRecordingFile = nil
+            }
+        } message: {
+            Text("Enter a new name for this recording")
+        }
+    }
+    private func loadCustomRecordings() {
+        let saved = UserDefaults.standard.array(forKey: "customRecordingsList") as? [[String: String]] ?? []
+        customRecordings = saved.compactMap {
+            guard let name = $0["name"], let file = $0["file"] else { return nil }
+            return (name: name, file: file)
+        }
+    }
+
+    private func saveCustomRecording(name: String, file: String) {
+        var saved = UserDefaults.standard.array(forKey: "customRecordingsList") as? [[String: String]] ?? []
+        saved.append(["name": name, "file": file])
+        UserDefaults.standard.set(saved, forKey: "customRecordingsList")
+        loadCustomRecordings()
+        // ✅ Upload to iCloud
+        AlarmService.shared.uploadRecordingToiCloud(fileName: file, name: name)
+    }
+    
+    private func renameCustomRecording(file: String, newName: String) {
+        var saved = UserDefaults.standard.array(forKey: "customRecordingsList") as? [[String: String]] ?? []
+        if let index = saved.firstIndex(where: { $0["file"] == file }) {
+            saved[index]["name"] = newName
+            UserDefaults.standard.set(saved, forKey: "customRecordingsList")
+            loadCustomRecordings()
+        }
+    }
+
+    private func deleteCustomRecording(file: String) {
+        var saved = UserDefaults.standard.array(forKey: "customRecordingsList") as? [[String: String]] ?? []
+        saved.removeAll { $0["file"] == file }
+        UserDefaults.standard.set(saved, forKey: "customRecordingsList")
+        let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+        let url = libraryURL.appendingPathComponent("Sounds/\(file)")
+        try? FileManager.default.removeItem(at: url)
+        loadCustomRecordings()
     }
 
     private func saveAlarm() {
@@ -788,7 +1273,19 @@ struct AddAlarmView: View {
         let savedDate = fireDate
         let savedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Alarm" : title
         let savedRecordingName = recordingName
-        onSave(savedDate, savedTitle, snoozeEnabled, TimeInterval(snoozeDuration * 60), selectedSound, finalRepeatDays)
+        let globalSnoozeEnabled = UserDefaults.standard.bool(forKey: "globalSnoozeEnabled")
+        let globalSnoozeDuration = UserDefaults.standard.integer(forKey: "globalSnoozeDuration")
+        let snoozeDur = globalSnoozeDuration > 0 ? globalSnoozeDuration : 5
+        onSave(savedDate, savedTitle, globalSnoozeEnabled, TimeInterval(snoozeDur * 60), selectedSound, finalRepeatDays)
+
+        // ✅ Save selected sound for this alarm
+        if let id = editingAlarmID {
+            UserDefaults.standard.set(selectedSound, forKey: "alarmSound_\(id)")
+            // ✅ Also save with group ID
+            if let groupID = AlarmService.shared.getGroupID(for: UUID(uuidString: id) ?? UUID()) {
+                UserDefaults.standard.set(selectedSound, forKey: "alarmSound_\(groupID.uuidString)")
+            }
+        }
 
         if hasRecording {
             Task {
@@ -798,26 +1295,106 @@ struct AddAlarmView: View {
                     return abs(fd.timeIntervalSince(savedDate)) < 2
                 }) {
                     let tempName = UserDefaults.standard.string(forKey: "voiceRecordingName_temp") ?? savedRecordingName
+                    let tempFile = UserDefaults.standard.string(forKey: "voiceRecordingFile_temp") ?? ""
                     UserDefaults.standard.set(tempName, forKey: self.voiceNameKey(for: newAlarm.id.uuidString))
+                    UserDefaults.standard.set(tempFile, forKey: "voiceRecordingFile_\(newAlarm.id.uuidString)")
                     UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
+                    UserDefaults.standard.removeObject(forKey: "voiceRecordingFile_temp")
                 }
             }
         }
-
         if addToCalendar {
             Task {
-                await CalendarService.shared.addAlarmToCalendar(
-                    title: savedTitle, date: savedDate,
-                    alarmID: savedDate.timeIntervalSince1970.description
-                )
+                // ✅ Remove old calendar event if editing
+                if let id = editingAlarmID,
+                   let item = AlarmService.shared.alarms.first(where: { $0.id.uuidString == id }),
+                   let fireDate = item.fireDate {
+                    let key = fireDate.timeIntervalSince1970.description
+                    CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
+                }
+                // ✅ Wait for alarms to be scheduled first
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                let groupID = AlarmService.shared.alarmGroups.first(where: {
+                    $0.label == savedTitle
+                })?.id
+                let alarmIDs = groupID.flatMap { AlarmService.shared.getAlarmIDs(forGroup: $0) } ?? []
+                
+                if alarmIDs.isEmpty {
+                    // ✅ Remove first to avoid duplicates
+                    CalendarService.shared.removeAlarmFromCalendar(alarmID: savedDate.timeIntervalSince1970.description)
+                    _ = await CalendarService.shared.addAlarmToCalendar(
+                        title: savedTitle, date: savedDate,
+                        alarmID: savedDate.timeIntervalSince1970.description
+                    )
+                } else {
+                    let isWeekly = finalRepeatDays.contains { $0 >= 1 && $0 <= 7 }
+                    let selectedMonths = finalRepeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                    let isMonthly = !isWeekly && (finalRepeatDays.contains { $0 >= 101 && $0 <= 112 } || finalRepeatDays.contains(100) || (finalRepeatDays.contains { $0 >= 1 && $0 <= 31 } && !finalRepeatDays.contains { $0 >= 2025 }))
+                    let isEveryMonth = isMonthly && selectedMonths.isEmpty
+                    let day = finalRepeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? Calendar.current.component(.day, from: savedDate)
+                    let currentYear = Calendar.current.component(.year, from: Date())
+
+                    if isEveryMonth {
+                        // ✅ Every month — add event for each remaining month this year
+                        let currentMonth = Calendar.current.component(.month, from: Date())
+                        for month in currentMonth...12 {
+                            var comps = DateComponents()
+                            comps.year = currentYear
+                            comps.month = month
+                            comps.day = day
+                            comps.hour = Calendar.current.component(.hour, from: savedDate)
+                            comps.minute = Calendar.current.component(.minute, from: savedDate)
+                            if let eventDate = Calendar.current.date(from: comps) {
+                                let alarmID = eventDate.timeIntervalSince1970.description
+                                _ = await CalendarService.shared.addAlarmToCalendar(
+                                    title: savedTitle, date: eventDate, alarmID: alarmID
+                                )
+                            }
+                        }
+                    } else {
+                        // ✅ Weekly/specific months — add each alarm
+                        for alarmID in alarmIDs {
+                            if let fireDate = AlarmService.shared.alarms.first(where: { $0.id == alarmID })?.fireDate {
+                                let weekday = Calendar.current.component(.weekday, from: fireDate)
+                                _ = await CalendarService.shared.addAlarmToCalendar(
+                                    title: savedTitle, date: fireDate,
+                                    alarmID: fireDate.timeIntervalSince1970.description,
+                                    weekday: isWeekly ? weekday : nil
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
         dismiss()
     }
 
     private func startRecording() {
-        AVAudioApplication.requestRecordPermission { granted in
-            guard granted else { return }
+        switch AVAudioApplication.shared.recordPermission {
+        case .denied:
+            NotificationCenter.default.post(name: NSNotification.Name("showMicPermission"), object: nil)
+            return
+        case .undetermined:
+            AVAudioApplication.requestRecordPermission { granted in
+                guard granted else {
+                    DispatchQueue.main.async {
+                        NotificationCenter.default.post(name: NSNotification.Name("showMicPermission"), object: nil)
+                    }
+                    return
+                }
+                DispatchQueue.main.async {
+                    self.startRecordingSession()
+                }
+            }
+            return
+        default:
+            break
+        }
+        startRecordingSession()
+    }
+
+    private func startRecordingSession() {
             DispatchQueue.main.async {
                 try? FileManager.default.removeItem(at: self.tempRecordingURL)
                 let settings: [String: Any] = [
@@ -832,8 +1409,7 @@ struct AddAlarmView: View {
                 self.audioRecorder?.record()
                 self.isRecording = true
             }
-        }
-    }
+}
 
     private func stopRecording() {
         audioRecorder?.stop()
@@ -845,7 +1421,12 @@ struct AddAlarmView: View {
     private func playRecording() {
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         try? AVAudioSession.sharedInstance().setActive(true)
-        if let id = editingAlarmID, !isJustRecorded {
+        // ✅ If selected sound is a custom recording from list, play that
+        if selectedSound.hasPrefix("custom_voice_") {
+            let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+            let url = libraryURL.appendingPathComponent("Sounds/\(selectedSound)")
+            audioPlayer = try? AVAudioPlayer(contentsOf: url)
+        } else if let id = editingAlarmID, !isJustRecorded {
             audioPlayer = try? AVAudioPlayer(contentsOf: voiceURL(for: id))
         } else {
             audioPlayer = try? AVAudioPlayer(contentsOf: tempRecordingURL)
@@ -854,9 +1435,22 @@ struct AddAlarmView: View {
     }
 
     private func saveRecordingWithName() {
-        UserDefaults.standard.set(recordingName, forKey: "voiceRecordingName_temp")
+        let name = recordingName.isEmpty ? "Recording \(Date().formatted(.dateTime.hour().minute()))" : recordingName
+        let fileName = "custom_voice_\(UUID().uuidString).caf"
+        let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+        let destURL = libraryURL.appendingPathComponent("Sounds/\(fileName)")
+        try? FileManager.default.copyItem(at: tempRecordingURL, to: destURL)
+        // ✅ Only save to list if toggle is ON
+        if saveToList {
+            saveCustomRecording(name: name, file: fileName)
+        }
+        UserDefaults.standard.set(name, forKey: "voiceRecordingName_temp")
+        UserDefaults.standard.set(fileName, forKey: "voiceRecordingFile_temp")
         hasRecording = true
         isJustRecorded = false
+        recordingName = name
+        selectedSound = fileName
+        saveToList = false
     }
 
     private func deleteRecording() {
@@ -887,5 +1481,10 @@ struct AddAlarmView: View {
         soundPlayer?.stop()
         soundPlayer = nil
         playingSound = nil
+    }
+    private func formatScheduledDate(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "EEE, MMM d yyyy"
+        return f.string(from: date)
     }
 }
