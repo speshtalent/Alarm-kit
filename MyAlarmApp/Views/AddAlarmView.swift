@@ -1320,7 +1320,8 @@ struct AddAlarmView: View {
                 let alarmIDs = groupID.flatMap { AlarmService.shared.getAlarmIDs(forGroup: $0) } ?? []
                 
                 if alarmIDs.isEmpty {
-                    // ✅ Single alarm — add once
+                    // ✅ Remove first to avoid duplicates
+                    CalendarService.shared.removeAlarmFromCalendar(alarmID: savedDate.timeIntervalSince1970.description)
                     _ = await CalendarService.shared.addAlarmToCalendar(
                         title: savedTitle, date: savedDate,
                         alarmID: savedDate.timeIntervalSince1970.description

@@ -443,7 +443,7 @@ final class AlarmService: ObservableObject {
             }
 
             // ✅ Monthly with only day selected (no months, no years, no forever/once flags)
-            let onlyDaySelected = !repeatDays.filter { $0 >= 1 && $0 <= 31 }.isEmpty &&
+            let onlyDaySelected = !repeatDays.filter { $0 >= 8 && $0 <= 31 }.isEmpty &&
                                    repeatDays.filter { $0 >= 101 && $0 <= 112 }.isEmpty &&
                                    repeatDays.filter { $0 >= 2025 }.isEmpty &&
                                    !repeatDays.contains(100) &&

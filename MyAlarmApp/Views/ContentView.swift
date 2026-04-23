@@ -887,15 +887,24 @@ struct SettingsView: View {
                 Button("Remove", role: .destructive) {
                     CalendarService.shared.removeAllCalendarEvents()
                     let alarmService = AlarmService.shared
+                    // ✅ Disable ALL alarms regardless of current state
                     for group in alarmService.alarmGroups {
-                        if group.isEnabled {
-                            for alarmID in group.alarmIDs {
+                        let groupUUID = group.id
+                        let alarmIDs = alarmService.getAlarmIDs(forGroup: groupUUID)
+                        let idsToDisable = alarmIDs.isEmpty ? group.alarmIDs : alarmIDs
+                        for alarmID in idsToDisable {
+                            if alarmService.alarms.first(where: { $0.id == alarmID })?.isEnabled == true {
                                 alarmService.toggleAlarm(id: alarmID)
                             }
                         }
                     }
-                    alarmService.loadAlarms()
-                    calendarEventCount = 0
+                    Task {
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        await MainActor.run {
+                            alarmService.loadAlarms()
+                            calendarEventCount = 0
+                        }
+                    }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {

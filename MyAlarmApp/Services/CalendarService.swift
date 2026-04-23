@@ -58,7 +58,7 @@ final class CalendarService: ObservableObject {
         }
 
         do {
-            try eventStore.save(event, span: .thisEvent)
+            try eventStore.save(event, span: .futureEvents)
             saveEventID(event.eventIdentifier, for: alarmID)
             print("✅ Added to calendar: \(title)")
             return true
@@ -70,17 +70,28 @@ final class CalendarService: ObservableObject {
 
     // delete event from iPhone Calendar when alarm is deleted
     func removeAlarmFromCalendar(alarmID: String) {
-        guard let eventID = getEventID(for: alarmID) else { return }
-        guard let event = eventStore.event(withIdentifier: eventID) else {
-            removeEventID(for: alarmID)
-            return
-        }
-        do {
-            try eventStore.remove(event, span: .futureEvents)
-            removeEventID(for: alarmID)
+        // ✅ Remove by event ID if we have it
+        if let eventID = getEventID(for: alarmID),
+           let event = eventStore.event(withIdentifier: eventID) {
+            try? eventStore.remove(event, span: .futureEvents)
             print("✅ Removed from calendar: \(alarmID)")
-        } catch {
-            print("Calendar remove error:", error)
+        }
+        removeEventID(for: alarmID)
+
+        // ✅ Also search by note to catch any orphaned events
+        let start = Calendar.current.date(byAdding: .year, value: -1, to: Date()) ?? Date()
+        let end = Calendar.current.date(byAdding: .year, value: 10, to: Date()) ?? Date()
+        let calendars = eventStore.calendars(for: .event)
+        let dateAlarmCal = calendars.filter { $0.title == "Date Alarm" }
+        let predicate = eventStore.predicateForEvents(withStart: start, end: end, calendars: dateAlarmCal.isEmpty ? nil : dateAlarmCal)
+        let events = eventStore.events(matching: predicate)
+        for event in events {
+            if event.notes == "Alarm set from Date Alarm app" {
+                let eventAlarmID = event.startDate.timeIntervalSince1970.description
+                if eventAlarmID == alarmID {
+                    try? eventStore.remove(event, span: .futureEvents)
+                }
+            }
         }
     }
 
