@@ -1326,6 +1326,7 @@ struct SettingsView: View {
         @AppStorage("use24HourFormat") private var use24HourFormat: Bool = false
         @StateObject private var alarmService = AlarmService.shared
         @State private var expandedGroupID: UUID? = nil
+        @State private var groupToEdit: AlarmService.AlarmGroup? = nil
         
         var body: some View {
             ZStack {
@@ -1355,27 +1356,74 @@ struct SettingsView: View {
                     } else {
                         List {
                             ForEach(Array(alarmService.alarmGroups.enumerated()), id: \.element.id) { index, group in
-                                VStack(spacing: 0) {
-                                    ScheduledRowView(group: group, use24Hour: use24HourFormat)
-                                        .onTapGesture {
-                                            withAnimation(.easeInOut(duration: 0.3)) {
-                                                expandedGroupID = expandedGroupID == group.id ? nil : group.id
-                                            }
+                                // ✅ Main alarm card row
+                                ScheduledRowView(group: group, use24Hour: use24HourFormat)
+                                    .onTapGesture {
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            expandedGroupID = expandedGroupID == group.id ? nil : group.id
                                         }
-                                    
-                                    if expandedGroupID == group.id {
-                                        AlarmDetailInlineView(group: group, use24Hour: use24HourFormat)
-                                            .transition(.opacity)
+                                    }
+                                    .listRowBackground(Color("AppBackground"))
+                                    .listRowSeparator(.hidden)
+                                    .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+
+                                // ✅ Expanded occurrence rows — each as its own List row
+                                if expandedGroupID == group.id {
+                                    let fired = firedOccurrences(for: group)
+                                    let upcoming = futureOccurrences(for: group)
+                                    let showMore = upcoming.count > 5
+                                    let displayUpcoming = showMore ? Array(upcoming.prefix(5)) : upcoming
+
+                                    // Fired rows
+                                    ForEach(Array(fired.enumerated()), id: \.offset) { _, date in
+                                        FiredOccurrenceRow(date: date, group: group, use24Hour: use24HourFormat)
+                                            .listRowBackground(Color("AppBackground"))
+                                            .listRowSeparator(.hidden)
+                                            .listRowInsets(EdgeInsets(top: 2, leading: 32, bottom: 2, trailing: 20))
+                                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                                Button(role: .destructive) {
+                                                    deleteFromHistory(date: date, group: group)
+                                                } label: {
+                                                    Label("Delete", systemImage: "trash")
+                                                }
+                                            }
+                                    }
+
+                                    // Upcoming rows
+                                    ForEach(Array(displayUpcoming.enumerated()), id: \.offset) { index, date in
+                                        UpcomingOccurrenceRow(date: date, group: group, use24Hour: use24HourFormat, isNext: index == 0)
+
+                                            .listRowBackground(Color("AppBackground"))
+                                            .listRowSeparator(.hidden)
+                                            .listRowInsets(EdgeInsets(top: 2, leading: 32, bottom: 2, trailing: 20))
+                                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                                Button {
+                                                    groupToEdit = group
+                                                } label: {
+                                                    Label("Edit", systemImage: "pencil")
+                                                }
+                                                .tint(.orange)
+                                            }
+                                            .onTapGesture {
+                                                groupToEdit = group
+                                            }
+                                    }
+
+                                    // More coming
+                                    if showMore {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "ellipsis.circle")
+                                                .font(.system(size: 12))
+                                                .foregroundStyle(.orange.opacity(0.5))
+                                            Text("more coming...")
+                                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                                .foregroundStyle(Color("SecondaryText").opacity(0.6))
+                                        }
+                                        .listRowBackground(Color("AppBackground"))
+                                        .listRowSeparator(.hidden)
+                                        .listRowInsets(EdgeInsets(top: 2, leading: 32, bottom: 6, trailing: 20))
                                     }
                                 }
-                                .listRowBackground(Color("AppBackground"))
-                                .listRowSeparator(.hidden)
-                                .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .bottom).combined(with: .opacity),
-                                    removal: .opacity
-                                ))
-                                .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(Double(index) * 0.08), value: alarmService.alarmGroups.count)
                             }
                         }
                         .listStyle(.plain)
@@ -1386,9 +1434,242 @@ struct SettingsView: View {
             }
             .onAppear {
                 alarmService.loadAlarms()
+                NotificationCenter.default.addObserver(
+                    forName: NSNotification.Name("EditAlarmGroup"),
+                    object: nil,
+                    queue: .main
+                ) { notification in
+                    if let group = notification.object as? AlarmService.AlarmGroup {
+                        groupToEdit = group
+                    }
+                }
             }
+            .sheet(item: $groupToEdit, onDismiss: {
+                alarmService.loadAlarms()
+            }) { group in
+                AddAlarmView(
+                    editingItem: alarmService.alarms.first(where: { group.alarmIDs.contains($0.id) }),
+                    repeatDaysToLoad: group.repeatDays,
+                    soundToLoad: UserDefaults.standard.string(forKey: "alarmSound_\(group.id.uuidString)") ?? "nokia.caf"
+                ) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays in
+                    Task {
+                        if let firstID = group.alarmIDs.first {
+                            alarmService.cancelAlarm(id: firstID)
+                        }
+                        _ = await alarmService.scheduleFutureAlarm(
+                            date: date, title: title,
+                            snoozeEnabled: snoozeEnabled,
+                            snoozeDuration: snoozeDuration,
+                            sound: sound,
+                            repeatDays: repeatDays
+                        )
+                        UserDefaults.standard.set(sound, forKey: "alarmSound_\(group.id.uuidString)")
+                        await MainActor.run { alarmService.loadAlarms() }
+                    }
+                }
+            }
+            
+        }
+        private func firedOccurrences(for group: AlarmService.AlarmGroup) -> [Date] {
+            let history = AlarmService.shared.loadHistory()
+            return history.compactMap { entry -> Date? in
+                guard let entryLabel = entry["label"] as? String,
+                      entryLabel == group.label,
+                      let firedAt = entry["firedAt"] as? TimeInterval else { return nil }
+                return Date(timeIntervalSince1970: firedAt)
+            }.sorted()
+        }
+
+        private func futureOccurrences(for group: AlarmService.AlarmGroup) -> [Date] {
+            guard let baseDate = group.fireDate else { return [] }
+            let cal = Calendar.current
+            let now = Date()
+            let repeatDays = group.repeatDays
+            let hour = cal.component(.hour, from: baseDate)
+            let minute = cal.component(.minute, from: baseDate)
+            var results: [Date] = []
+
+            if repeatDays.isEmpty {
+                if baseDate > now { results.append(baseDate) }
+                return results
+            }
+
+            let isWeekly = repeatDays.allSatisfy { $0 >= 1 && $0 <= 7 } && !repeatDays.isEmpty
+            if isWeekly {
+                for weekOffset in 0..<6 {
+                    for weekday in repeatDays.sorted() {
+                        var comps = DateComponents()
+                        comps.weekday = weekday
+                        comps.hour = hour
+                        comps.minute = minute
+                        comps.second = 0
+                        let searchFrom = now.addingTimeInterval(TimeInterval(weekOffset * 7 * 86400) - 1)
+                        if let next = cal.nextDate(after: searchFrom, matching: comps, matchingPolicy: .nextTime),
+                           next > now, !results.contains(next) {
+                            results.append(next)
+                        }
+                    }
+                }
+                results.sort()
+                return Array(results.prefix(5))
+            }
+
+            let selectedYears = repeatDays.filter { $0 >= 2025 }.sorted()
+            if !selectedYears.isEmpty {
+                let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? cal.component(.day, from: baseDate)
+                for year in selectedYears {
+                    let month = months.first.map { $0 - 100 } ?? cal.component(.month, from: baseDate)
+                    var comps = DateComponents()
+                    comps.year = year; comps.month = month; comps.day = day
+                    comps.hour = hour; comps.minute = minute; comps.second = 0
+                    if let date = cal.date(from: comps), date > now { results.append(date) }
+                }
+                return results
+            }
+
+            let selectedMonths = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+            let dayOfMonth = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? cal.component(.day, from: baseDate)
+            let isForever = repeatDays.contains(100)
+            let stopAfterFlag = repeatDays.filter { $0 >= 201 && $0 < 2025 }.first
+            let stopAfterYears = stopAfterFlag.map { $0 - 200 }
+            let currentYear = cal.component(.year, from: now)
+            let stopYear = stopAfterYears.map { currentYear + $0 } ?? (isForever ? currentYear + 10 : currentYear)
+            let monthsToUse = selectedMonths.isEmpty ? Array(101...112) : selectedMonths
+
+            for year in currentYear...stopYear {
+                for monthCode in monthsToUse {
+                    let month = monthCode - 100
+                    var comps = DateComponents()
+                    comps.year = year; comps.month = month; comps.day = dayOfMonth
+                    comps.hour = hour; comps.minute = minute; comps.second = 0
+                    if let date = cal.date(from: comps), date > now { results.append(date) }
+                }
+            }
+            return results
+        }
+
+        private func deleteFromHistory(date: Date, group: AlarmService.AlarmGroup) {
+            var history = AlarmService.shared.loadHistory()
+            history.removeAll { entry in
+                guard let entryLabel = entry["label"] as? String,
+                      let firedAt = entry["firedAt"] as? TimeInterval else { return false }
+                return entryLabel == group.label && abs(firedAt - date.timeIntervalSince1970) < 60
+            }
+            if let data = try? JSONSerialization.data(withJSONObject: history),
+               let json = String(data: data, encoding: .utf8) {
+                UserDefaults.standard.set(json, forKey: "AlarmHistory")
+                UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")?.set(json, forKey: "AlarmHistory")
+            }
+            alarmService.loadAlarms()
         }
     }
+// MARK: - Fired Occurrence Row
+struct FiredOccurrenceRow: View {
+    let date: Date
+    let group: AlarmService.AlarmGroup
+    let use24Hour: Bool
+
+    private func formatDate(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = use24Hour ? "EEE, MMM d yyyy • HH:mm" : "EEE, MMM d yyyy • h:mm a"
+        f.amSymbol = "AM"; f.pmSymbol = "PM"
+        return f.string(from: date)
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color.green)
+                .frame(width: 3)
+                .frame(maxHeight: .infinity)
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+                .font(.system(size: 14))
+            Text(formatDate(date))
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color("SecondaryText"))
+            Spacer()
+            Text("Done")
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundStyle(.green)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.green.opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .padding(12)
+        .background(Color("CardBackground").opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .opacity(0.6)
+    }
+}
+
+// MARK: - Upcoming Occurrence Row
+struct UpcomingOccurrenceRow: View {
+    let date: Date
+    let group: AlarmService.AlarmGroup
+    let use24Hour: Bool
+    var isNext: Bool = false
+
+    private var days: Int {
+        Calendar.current.dateComponents([.day], from: Date(), to: date).day ?? 0
+    }
+
+    private func formatDate(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = use24Hour ? "EEE, MMM d yyyy • HH:mm" : "EEE, MMM d yyyy • h:mm a"
+        f.amSymbol = "AM"; f.pmSymbol = "PM"
+        return f.string(from: date)
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color.orange)
+                .frame(width: 3)
+                .frame(maxHeight: .infinity)
+            Image(systemName: "alarm")
+                .foregroundStyle(.orange)
+                .font(.system(size: 14))
+            Text(formatDate(date))
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color("PrimaryText"))
+            Spacer()
+            if days == 0 {
+                Text("Today")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(.orange)
+            } else if days == 1 {
+                Text("Tomorrow")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(.orange)
+            } else {
+                Text("in \(days)d")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color("SecondaryText"))
+            }
+            if days == 0 || days == 1 {
+                Text("Next")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.orange.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            if days == 0 || days == 1 {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.orange)
+            }
+        }
+        .padding(12)
+        .background(Color("CardBackground"))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .opacity(isNext ? 1.0 : 0.45)
+    }
+}
     
     // MARK: - Scheduled Row
     struct ScheduledRowView: View {
@@ -1606,9 +1887,9 @@ struct SettingsView: View {
 struct AlarmDetailInlineView: View {
     let group: AlarmService.AlarmGroup
     let use24Hour: Bool
-
+    
     private let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-
+    
     private func firedOccurrences() -> [Date] {
         let history = AlarmService.shared.loadHistory()
         return history.compactMap { entry -> Date? in
@@ -1618,7 +1899,7 @@ struct AlarmDetailInlineView: View {
             return Date(timeIntervalSince1970: firedAt)
         }.sorted()
     }
-
+    
     private func futureOccurrences() -> [Date] {
         guard let baseDate = group.fireDate else { return [] }
         let cal = Calendar.current
@@ -1627,13 +1908,13 @@ struct AlarmDetailInlineView: View {
         let hour = cal.component(.hour, from: baseDate)
         let minute = cal.component(.minute, from: baseDate)
         var results: [Date] = []
-
+        
         // ONE-TIME
         if repeatDays.isEmpty {
             if baseDate > now { results.append(baseDate) }
             return results
         }
-
+        
         // WEEKLY
         let isWeekly = repeatDays.allSatisfy { $0 >= 1 && $0 <= 7 } && !repeatDays.isEmpty
         if isWeekly {
@@ -1654,7 +1935,7 @@ struct AlarmDetailInlineView: View {
             results.sort()
             return Array(results.prefix(5))
         }
-
+        
         // YEARLY specific years
         let selectedYears = repeatDays.filter { $0 >= 2025 }.sorted()
         if !selectedYears.isEmpty {
@@ -1671,7 +1952,7 @@ struct AlarmDetailInlineView: View {
             }
             return results
         }
-
+        
         // MONTHLY
         let selectedMonths = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
         let dayOfMonth = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? cal.component(.day, from: baseDate)
@@ -1681,7 +1962,7 @@ struct AlarmDetailInlineView: View {
         let currentYear = cal.component(.year, from: now)
         let stopYear = stopAfterYears.map { currentYear + $0 } ?? (isForever ? currentYear + 10 : currentYear)
         let monthsToUse = selectedMonths.isEmpty ? Array(101...112) : selectedMonths
-
+        
         for year in currentYear...stopYear {
             for monthCode in monthsToUse {
                 let month = monthCode - 100
@@ -1695,55 +1976,85 @@ struct AlarmDetailInlineView: View {
         }
         return results
     }
-
+    
     private func formatDate(_ date: Date) -> String {
         let f = DateFormatter()
         f.dateFormat = use24Hour ? "EEE, MMM d yyyy • HH:mm" : "EEE, MMM d yyyy • h:mm a"
         f.amSymbol = "AM"; f.pmSymbol = "PM"
         return f.string(from: date)
     }
-
+    
     private func daysUntil(_ date: Date) -> Int {
         Calendar.current.dateComponents([.day], from: Date(), to: date).day ?? 0
     }
-
+    
     var body: some View {
         let fired = firedOccurrences()
         let upcoming = futureOccurrences()
         let showMore = upcoming.count > 5
         let displayUpcoming = showMore ? Array(upcoming.prefix(5)) : upcoming
 
-        VStack(spacing: 8) {
-            // ✅ Fired dates with tick
-            ForEach(Array(fired.enumerated()), id: \.offset) { _, date in
-                HStack(spacing: 12) {
+        VStack(spacing: 4) {
+            ForEach(Array(fired.enumerated()), id: \.offset) { index, date in
+                HStack(spacing: 10) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.green)
+                        .frame(width: 3)
+                        .frame(maxHeight: .infinity)
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.green)
-                        .font(.system(size: 16))
+                        .font(.system(size: 14))
                     Text(formatDate(date))
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                         .foregroundStyle(Color("SecondaryText"))
                     Spacer()
-                    Text("Fired ✅")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    Text("Done")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
                         .foregroundStyle(.green)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.green.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
                 .padding(12)
-                .background(Color("AppBackground"))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .background(Color("CardBackground").opacity(0.5))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .opacity(0.6)
+                .contextMenu {
+                    Button(role: .destructive) {
+                        var history = AlarmService.shared.loadHistory()
+                        history.removeAll { entry in
+                            guard let entryLabel = entry["label"] as? String,
+                                  let firedAt = entry["firedAt"] as? TimeInterval else { return false }
+                            return entryLabel == group.label &&
+                                   abs(firedAt - date.timeIntervalSince1970) < 60
+                        }
+                        if let data = try? JSONSerialization.data(withJSONObject: history),
+                           let json = String(data: data, encoding: .utf8) {
+                            UserDefaults.standard.set(json, forKey: "AlarmHistory")
+                            let appGroup = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
+                            appGroup?.set(json, forKey: "AlarmHistory")
+                        }
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
             }
 
-            // ✅ Upcoming dates
             ForEach(Array(displayUpcoming.enumerated()), id: \.offset) { _, date in
-                let days = daysUntil(date)
-                HStack(spacing: 12) {
-                    Image(systemName: "clock.fill")
+                HStack(spacing: 10) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.orange)
+                        .frame(width: 3)
+                        .frame(maxHeight: .infinity)
+                    Image(systemName: "alarm")
                         .foregroundStyle(.orange)
-                        .font(.system(size: 16))
+                        .font(.system(size: 14))
                     Text(formatDate(date))
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                         .foregroundStyle(Color("PrimaryText"))
                     Spacer()
+                    let days = daysUntil(date)
                     if days == 0 {
                         Text("Today")
                             .font(.system(size: 11, weight: .bold, design: .rounded))
@@ -1757,13 +2068,34 @@ struct AlarmDetailInlineView: View {
                             .font(.system(size: 11, weight: .semibold, design: .rounded))
                             .foregroundStyle(Color("SecondaryText"))
                     }
+                    if days == 0 || days == 1 {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.orange)
+                    }
                 }
                 .padding(12)
-                .background(Color("AppBackground"))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .background(Color("CardBackground"))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("EditAlarmGroup"),
+                        object: group
+                    )
+                }
+                .contextMenu {
+                    Button {
+                        NotificationCenter.default.post(
+                            name: NSNotification.Name("EditAlarmGroup"),
+                            object: group
+                        )
+                    } label: {
+                        Label("Edit", systemImage: "pencil")
+                    }
+                }
             }
 
-            // ✅ More coming only if more than 5
             if showMore {
                 HStack(spacing: 6) {
                     Image(systemName: "ellipsis.circle")
@@ -1776,9 +2108,9 @@ struct AlarmDetailInlineView: View {
                 .padding(.top, 2)
             }
         }
+        .padding(.top, 4)
         .padding(.horizontal, 4)
         .padding(.bottom, 8)
     }
 }
-
 
