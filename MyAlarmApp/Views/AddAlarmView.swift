@@ -881,13 +881,9 @@ struct AddAlarmView: View {
                                         hasRecording = false; isJustRecorded = false; recordingName = ""
                                         UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
                                     } label: {
-                                        HStack(spacing: 4) {
-                                            Image(systemName: "mic.circle.fill")
-                                                .font(.system(size: 14))
-                                            Text("Re-record")
-                                                .font(.system(size: 12, weight: .medium, design: .rounded))
-                                        }
-                                        .foregroundStyle(.red)
+                                        Image(systemName: "trash.circle.fill")
+                                            .foregroundStyle(.red)
+                                            .font(.system(size: 34))
                                     }
                                 }
                                 .padding(10)

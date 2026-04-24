@@ -19,6 +19,8 @@ struct AddTimerView: View {
     @State private var isJustRecorded = false
     @State private var recordingName = ""
     @State private var saveToList: Bool = false
+    @State private var editingRecordingFile: String? = nil
+    @State private var editingRecordingName: String = ""
 
     let sounds: [(name: String, file: String)] = [
         (name: "Nokia", file: "nokia.caf"),
@@ -169,12 +171,6 @@ struct AddTimerView: View {
                                             .foregroundStyle(.white).padding(.horizontal, 16).padding(.vertical, 10)
                                             .background(Color.green).clipShape(RoundedRectangle(cornerRadius: 12))
                                         }
-                                        Button {
-                                            try? FileManager.default.removeItem(at: tempRecordingURL)
-                                            hasRecording = false; isJustRecorded = false; recordingName = ""
-                                        } label: {
-                                            Image(systemName: "trash.circle.fill").foregroundStyle(.red).font(.system(size: 34))
-                                        }
                                     }
                                 }
                             }
@@ -199,32 +195,46 @@ struct AddTimerView: View {
                                         }
                                         .foregroundStyle(.red)
                                     }
+                                    Button {
+                                        try? FileManager.default.removeItem(at: tempRecordingURL)
+                                        hasRecording = false; isJustRecorded = false; recordingName = ""
+                                        selectedSound = "nokia.caf"
+                                    } label: {
+                                        Image(systemName: "trash.circle.fill")
+                                            .foregroundStyle(.red)
+                                            .font(.system(size: 34))
+                                    }
                                 }
                                 .padding(10)
                                 .background(Color("AppBackground"))
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                             }
 
-                            // ✅ MY RECORDINGS — above ringtones
-                            if !customRecordings.isEmpty {
-                                Divider()
-                                Button {
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        showMyRecordings.toggle()
-                                    }
-                                } label: {
-                                    HStack {
-                                        Text("MY RECORDINGS")
-                                            .font(.system(size: 11, weight: .heavy, design: .rounded))
-                                            .foregroundStyle(Color("SecondaryText"))
-                                            .tracking(1.2)
-                                        Spacer()
-                                        Image(systemName: showMyRecordings ? "chevron.up" : "chevron.down")
-                                            .font(.system(size: 11, weight: .semibold))
-                                            .foregroundStyle(Color("SecondaryText"))
-                                    }
+                            // ✅ MY RECORDINGS — always show
+                            Divider()
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    showMyRecordings.toggle()
                                 }
-                                if showMyRecordings {
+                            } label: {
+                                HStack {
+                                    Text("MY RECORDINGS")
+                                        .font(.system(size: 11, weight: .heavy, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                        .tracking(1.2)
+                                    Spacer()
+                                    Image(systemName: showMyRecordings ? "chevron.up" : "chevron.down")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                }
+                            }
+                            if showMyRecordings {
+                                if customRecordings.isEmpty {
+                                    Text("No recordings yet")
+                                        .font(.system(size: 14, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                        .padding(.vertical, 8)
+                                } else {
                                     ForEach(customRecordings, id: \.file) { recording in
                                         HStack(spacing: 12) {
                                             Button {
@@ -246,6 +256,25 @@ struct AddTimerView: View {
                                                 Image(systemName: "checkmark.circle.fill")
                                                     .foregroundStyle(.orange).font(.system(size: 18))
                                             }
+                                            Button {
+                                                editingRecordingFile = recording.file
+                                                editingRecordingName = recording.name
+                                            } label: {
+                                                Image(systemName: "pencil.circle.fill")
+                                                    .foregroundStyle(.orange).font(.system(size: 22))
+                                            }
+                                            Button {
+                                                var saved = UserDefaults.standard.array(forKey: "customRecordingsList") as? [[String: String]] ?? []
+                                                saved.removeAll { $0["file"] == recording.file }
+                                                UserDefaults.standard.set(saved, forKey: "customRecordingsList")
+                                                let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+                                                let url = libraryURL.appendingPathComponent("Sounds/\(recording.file)")
+                                                try? FileManager.default.removeItem(at: url)
+                                                loadCustomRecordings()
+                                            } label: {
+                                                Image(systemName: "trash.circle.fill")
+                                                    .foregroundStyle(.red).font(.system(size: 22))
+                                            }
                                         }
                                         .padding(.vertical, 8).padding(.horizontal, 8)
                                         .background(selectedSound == recording.file ? Color.orange.opacity(0.15) : Color.clear)
@@ -253,11 +282,11 @@ struct AddTimerView: View {
                                         .contentShape(Rectangle())
                                         .onTapGesture {
                                             selectedSound = recording.file
-                                            hasRecording = false
+                                            hasRecording = true
                                             recordingName = recording.name
                                         }
                                     }
-                                }
+                                } // closes else
                             }
                         }
                         .padding(16)
@@ -348,6 +377,26 @@ struct AddTimerView: View {
                 .foregroundStyle(.orange)
                 .font(.system(size: 16, weight: .semibold))
             }
+        }
+        .alert("Rename Recording", isPresented: Binding(
+            get: { editingRecordingFile != nil },
+            set: { if !$0 { editingRecordingFile = nil } }
+        )) {
+            TextField("Recording name", text: $editingRecordingName)
+            Button("Save") {
+                if let file = editingRecordingFile {
+                    var saved = UserDefaults.standard.array(forKey: "customRecordingsList") as? [[String: String]] ?? []
+                    if let index = saved.firstIndex(where: { $0["file"] == file }) {
+                        saved[index]["name"] = editingRecordingName
+                        UserDefaults.standard.set(saved, forKey: "customRecordingsList")
+                        loadCustomRecordings()
+                    }
+                }
+                editingRecordingFile = nil
+            }
+            Button("Cancel", role: .cancel) { editingRecordingFile = nil }
+        } message: {
+            Text("Enter a new name for this recording")
         }
         .onAppear { loadCustomRecordings() }
         .onDisappear { stopSoundPreview() }
