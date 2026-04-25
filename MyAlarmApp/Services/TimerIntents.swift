@@ -17,10 +17,26 @@ struct StopAlarmIntent: LiveActivityIntent {
         guard let id = UUID(uuidString: alarmID) else { return .result() }
         // ✅ Clear snooze flag
         UserDefaults.standard.removeObject(forKey: "isSnoozed_\(alarmID)")
+        let appGroup = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
+        appGroup?.removeObject(forKey: "isSnoozed_\(alarmID)")
+        await LiveActivityCoordinator.endSnoozeActivity(alarmID: alarmID)
         try AlarmManager.shared.cancel(id: id)
 
-        // ✅ Use App Group — shared between extension and main app
-        let appGroup = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
+        if (appGroup?.double(forKey: "timerDuration_\(alarmID)") ?? 0) > 0 {
+            let timerKeys = [
+                "timerTitle_\(alarmID)",
+                "timerDuration_\(alarmID)",
+                "timerSound_\(alarmID)",
+                "timerEndDate_\(alarmID)"
+            ]
+            for key in timerKeys {
+                UserDefaults.standard.removeObject(forKey: key)
+                appGroup?.removeObject(forKey: key)
+            }
+            appGroup?.synchronize()
+            WidgetCenter.shared.reloadAllTimelines()
+            return .result()
+        }
 
         appGroup?.set(alarmID, forKey: "lastFiredAlarmID")
         appGroup?.set(true, forKey: "pendingVoicePlay")
@@ -107,89 +123,56 @@ struct RepeatAlarmIntent: LiveActivityIntent {
     func perform() async throws -> some IntentResult {
         guard let id = UUID(uuidString: alarmID) else { return .result() }
 
-        // ✅ Get snooze duration from UserDefaults
-        // ✅ Use original timer duration first, then snooze duration, then default
         let appGroup = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
         let timerDuration = appGroup?.double(forKey: "timerDuration_\(alarmID)") ?? 0
-        // ✅ Always use global snooze setting for alarms
-        let globalSnoozeDuration = appGroup?.double(forKey: "globalSnoozeDuration") ?? 0
-        let snoozeDuration = UserDefaults.standard.double(forKey: "snoozeDuration_\(alarmID)")
-        let duration = timerDuration > 0 ? timerDuration : (globalSnoozeDuration > 0 ? globalSnoozeDuration * 60 : (snoozeDuration > 0 ? snoozeDuration : 300))
+        let isTimer = timerDuration > 0
+        let duration: TimeInterval
+        if isTimer {
+            duration = timerDuration
+        } else {
+            let globalSnoozeDuration = appGroup?.double(forKey: "globalSnoozeDuration") ?? 0
+            let storedSnoozeDuration = appGroup?.double(forKey: "snoozeDuration_\(alarmID)") ?? UserDefaults.standard.double(forKey: "snoozeDuration_\(alarmID)")
+            duration = globalSnoozeDuration > 0 ? globalSnoozeDuration * 60 : (storedSnoozeDuration > 0 ? storedSnoozeDuration : 300)
+        }
 
-        // ✅ Get alarm label
-        let isTimer = (appGroup?.double(forKey: "timerDuration_\(alarmID)") ?? 0) > 0
-        let labels = UserDefaults.standard.dictionary(forKey: "AlarmLabelsByID") as? [String: String] ?? [:]
-        let label = labels[alarmID] ?? (isTimer ? "Timer" : "Alarm")
-
-        // ✅ Schedule new alarm after snooze duration
-        //let snoozeDate = Date().addingTimeInterval(duration)
+        let labels = (appGroup?.dictionary(forKey: "AlarmLabelsByID") as? [String: String])
+            ?? UserDefaults.standard.dictionary(forKey: "AlarmLabelsByID") as? [String: String]
+            ?? [:]
+        let label = isTimer
+            ? (appGroup?.string(forKey: "timerTitle_\(alarmID)") ?? "Timer")
+            : (labels[alarmID] ?? "Alarm")
+        let fireDate = Date().addingTimeInterval(duration)
 
         do {
             try AlarmManager.shared.cancel(id: id)
-            // ✅ Mark as snoozed
-            UserDefaults.standard.set(true, forKey: "isSnoozed_\(alarmID)")
-            appGroup?.set(true, forKey: "isSnoozed_\(alarmID)")
-            // ✅ Save snooze fire date so UI can show it
-            let snoozeFireDate = Date().addingTimeInterval(duration)
-            UserDefaults.standard.set(snoozeFireDate.timeIntervalSince1970, forKey: "disabledAlarmDate_\(alarmID)")
-            // ✅ Remove from disabled list
-            var disabled = UserDefaults.standard.stringArray(forKey: "DisabledAlarmIDs") ?? []
-            disabled.removeAll { $0 == alarmID }
-            UserDefaults.standard.set(disabled, forKey: "DisabledAlarmIDs")
         } catch {
             print("❌ Cancel error:", error)
         }
 
-        Task {
-            let titleResource = LocalizedStringResource(stringLiteral: label)
+        let titleResource = LocalizedStringResource(stringLiteral: label)
+        let scheduled: Alarm?
+        if isTimer {
+            await LiveActivityCoordinator.endTimerActivities()
             let alert: AlarmPresentation.Alert
-            if isTimer {
-                if #available(iOS 26.1, *) {
-                    alert = AlarmPresentation.Alert(
-                        title: titleResource,
-                        secondaryButton: AlarmButton(
-                            text: "Repeat",
-                            textColor: .white,
-                            systemImageName: "repeat"
-                        ),
-                        secondaryButtonBehavior: .countdown
-                    )
-                } else {
-                    alert = AlarmPresentation.Alert(
-                        title: titleResource,
-                        stopButton: AlarmButton(
-                            text: "Stop",
-                            textColor: .white,
-                            systemImageName: "stop.fill"
-                        )
-                    )
-                }
+            if #available(iOS 26.1, *) {
+                alert = AlarmPresentation.Alert(
+                    title: titleResource,
+                    secondaryButton: AlarmButton(
+                        text: "Repeat",
+                        textColor: .white,
+                        systemImageName: "repeat"
+                    ),
+                    secondaryButtonBehavior: .countdown
+                )
             } else {
-                if #available(iOS 26.1, *) {
-                    alert = AlarmPresentation.Alert(
-                        title: titleResource,
-                        stopButton: AlarmButton(
-                            text: "Stop Alarm",
-                            textColor: .white,
-                            systemImageName: "alarm.fill"
-                        ),
-                        secondaryButton: AlarmButton(
-                            text: "Snooze",
-                            textColor: .white,
-                            systemImageName: "moon.zzz.fill"
-                        ),
-                        secondaryButtonBehavior: .countdown
+                alert = AlarmPresentation.Alert(
+                    title: titleResource,
+                    stopButton: AlarmButton(
+                        text: "Stop",
+                        textColor: .white,
+                        systemImageName: "stop.fill"
                     )
-                } else {
-                    alert = AlarmPresentation.Alert(
-                        title: titleResource,
-                        stopButton: AlarmButton(
-                            text: "Stop Alarm",
-                            textColor: .white,
-                            systemImageName: "alarm.fill"
-                        )
-                    )
-                }
+                )
             }
             let presentation = AlarmPresentation(
                 alert: alert,
@@ -197,9 +180,9 @@ struct RepeatAlarmIntent: LiveActivityIntent {
                     title: LocalizedStringResource(stringLiteral: label)
                 )
             )
-            let attributes = AlarmAttributes(
+            let attributes: AlarmAttributes<TimerLiveActivityMetadata> = AlarmAttributes(
                 presentation: presentation,
-                metadata: AppAlarmMetadata(title: label, icon: isTimer ? "timer" : "alarm"),
+                metadata: TimerLiveActivityMetadata(title: label, icon: "timer"),
                 tintColor: Color.orange
             )
             let configuration = AlarmManager.AlarmConfiguration.timer(
@@ -207,25 +190,82 @@ struct RepeatAlarmIntent: LiveActivityIntent {
                 attributes: attributes,
                 stopIntent: StopAlarmIntent(alarmID: alarmID),
                 secondaryIntent: RepeatAlarmIntent(alarmID: alarmID),
-                sound: {
-                    let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
-                    // ✅ Check custom voice file first
-                    let voicePath = libraryURL.appendingPathComponent("Sounds/alarm_voice_\(alarmID).caf").path
-                    if FileManager.default.fileExists(atPath: voicePath) {
-                        return .named("alarm_voice_\(alarmID).caf")
-                    }
-                    // ✅ Check saved ringtone for this alarm
-                    let alarmToGroup = UserDefaults.standard.dictionary(forKey: "AlarmToGroupID") as? [String: String] ?? [:]
-                    let groupID = alarmToGroup[alarmID] ?? alarmID
-                    let savedSound = UserDefaults.standard.string(forKey: "alarmSound_\(groupID)") ??
-                                     UserDefaults.standard.string(forKey: "alarmSound_\(alarmID)") ?? "nokia.caf"
-                    return .named(savedSound)
-                }()
+                sound: .named(appGroup?.string(forKey: "timerSound_\(alarmID)") ?? "nokia.caf")
             )
-            if let scheduled = try? await AlarmManager.shared.schedule(id: id, configuration: configuration) {
-                print("✅ Snooze scheduled: \(String(describing: scheduled.schedule))")
-                print("✅ Countdown duration: \(String(describing: scheduled.countdownDuration))")
+            appGroup?.set(fireDate.timeIntervalSince1970, forKey: "timerEndDate_\(alarmID)")
+            scheduled = try? await AlarmManager.shared.schedule(id: id, configuration: configuration)
+        } else {
+            UserDefaults.standard.set(true, forKey: "isSnoozed_\(alarmID)")
+            appGroup?.set(true, forKey: "isSnoozed_\(alarmID)")
+            UserDefaults.standard.set(fireDate.timeIntervalSince1970, forKey: "disabledAlarmDate_\(alarmID)")
+            var disabled = UserDefaults.standard.stringArray(forKey: "DisabledAlarmIDs") ?? []
+            disabled.removeAll { $0 == alarmID }
+            UserDefaults.standard.set(disabled, forKey: "DisabledAlarmIDs")
+
+            await LiveActivityCoordinator.endAlarmActivities()
+            let alert: AlarmPresentation.Alert
+            if #available(iOS 26.1, *) {
+                alert = AlarmPresentation.Alert(
+                    title: titleResource,
+                    stopButton: AlarmButton(
+                        text: "Stop Alarm",
+                        textColor: .white,
+                        systemImageName: "alarm.fill"
+                    ),
+                    secondaryButton: AlarmButton(
+                        text: "Snooze",
+                        textColor: .white,
+                        systemImageName: "moon.zzz.fill"
+                    ),
+                    secondaryButtonBehavior: .countdown
+                )
+            } else {
+                alert = AlarmPresentation.Alert(
+                    title: titleResource,
+                    stopButton: AlarmButton(
+                        text: "Stop Alarm",
+                        textColor: .white,
+                        systemImageName: "alarm.fill"
+                    )
+                )
             }
+            let presentation = AlarmPresentation(alert: alert)
+            let attributes: AlarmAttributes<AlarmLiveActivityMetadata> = AlarmAttributes(
+                presentation: presentation,
+                metadata: AlarmLiveActivityMetadata(title: label, icon: "alarm.fill"),
+                tintColor: Color.orange
+            )
+            let soundName: String = {
+                let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+                let voicePath = libraryURL.appendingPathComponent("Sounds/alarm_voice_\(alarmID).caf").path
+                if FileManager.default.fileExists(atPath: voicePath) {
+                    return "alarm_voice_\(alarmID).caf"
+                }
+                let alarmToGroup = UserDefaults.standard.dictionary(forKey: "AlarmToGroupID") as? [String: String] ?? [:]
+                let groupID = alarmToGroup[alarmID] ?? alarmID
+                return UserDefaults.standard.string(forKey: "alarmSound_\(groupID)") ??
+                    UserDefaults.standard.string(forKey: "alarmSound_\(alarmID)") ??
+                    "nokia.caf"
+            }()
+            let configuration = AlarmManager.AlarmConfiguration(
+                countdownDuration: nil,
+                schedule: .fixed(fireDate),
+                attributes: attributes,
+                stopIntent: StopAlarmIntent(alarmID: alarmID),
+                secondaryIntent: RepeatAlarmIntent(alarmID: alarmID),
+                sound: .named(soundName)
+            )
+            scheduled = try? await AlarmManager.shared.schedule(id: id, configuration: configuration)
+            await LiveActivityCoordinator.startSnoozeActivity(
+                alarmID: alarmID,
+                title: label,
+                endDate: fireDate
+            )
+        }
+
+        if let scheduled {
+            print("✅ Repeat scheduled: \(String(describing: scheduled.schedule))")
+            print("✅ Countdown duration: \(String(describing: scheduled.countdownDuration))")
         }
 
         return .result()

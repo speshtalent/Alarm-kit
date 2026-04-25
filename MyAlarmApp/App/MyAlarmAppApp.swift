@@ -154,6 +154,7 @@ struct MyAlarmAppApp: App {
 
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
                     Task { @MainActor in
+                        AlarmService.shared.loadAlarms()
                         if UserDefaults.standard.bool(forKey: "pendingVoicePlay") {
                             UserDefaults.standard.set(false, forKey: "pendingVoicePlay")
                             AlarmHandler.shared.playVoiceIfNeeded()

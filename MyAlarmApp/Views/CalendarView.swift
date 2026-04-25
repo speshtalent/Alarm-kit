@@ -193,10 +193,11 @@ struct CalendarView: View {
     }
     
     var body: some View {
-        ZStack {
-            Color("AppBackground").ignoresSafeArea()
-            
-            VStack(spacing: 0) {
+        NavigationStack {
+            ZStack {
+                Color("AppBackground").ignoresSafeArea()
+                
+                VStack(spacing: 0) {
                 // MARK: Header
                 HStack {
                     Text("Calendar")
@@ -240,27 +241,29 @@ struct CalendarView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 16)
                 
-                switch viewMode {
-                case .monthly: monthlyView
-                case .weekly:  weeklyView
-                case .daily:   dailyView
+                    switch viewMode {
+                    case .monthly: monthlyView
+                    case .weekly:  weeklyView
+                    case .daily:   dailyView
+                    }
                 }
             }
         }
+        .navigationBarHidden(true)
         .onAppear {
             alarmService.loadAlarms()
         }
-        .sheet(isPresented: $showAddAlarm, onDismiss: {
-            alarmService.loadAlarms()
-        }) {
-            AddAlarmView(preselectedDate: selectedDate, hideDateToggle: viewMode == .daily) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays in
+        .navigationDestination(isPresented: $showAddAlarm) {
+            AddAlarmView(preselectedDate: selectedDate, hideDateToggle: viewMode == .daily) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays, calendarEnabled in
                 Task {
                     _ = await alarmService.scheduleFutureAlarm(
                         date: date,
                         title: title,
                         snoozeEnabled: snoozeEnabled,
                         snoozeDuration: snoozeDuration,
-                        sound: sound
+                        sound: sound,
+                        repeatDays: repeatDays,
+                        calendarEnabled: calendarEnabled
                     )
                     await MainActor.run { alarmService.loadAlarms() }
                 }
@@ -271,12 +274,10 @@ struct CalendarView: View {
         } message: {
             Text("Please select a future date to add an alarm.")
         }
-        .sheet(item: $editingItem, onDismiss: {
-            alarmService.loadAlarms()
-        }) { item in
+        .navigationDestination(item: $editingItem) { item in
             let groupID = alarmService.getGroupID(for: item.id) ?? item.id
             let groupRepeatDays = alarmService.getRepeatDays(forGroup: groupID)
-            AddAlarmView(editingItem: item, repeatDaysToLoad: groupRepeatDays) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays in
+            AddAlarmView(editingItem: item, repeatDaysToLoad: groupRepeatDays) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays, calendarEnabled in
                 Task {
                     alarmService.cancelAlarm(id: item.id)
                     _ = await alarmService.scheduleFutureAlarm(
@@ -285,7 +286,8 @@ struct CalendarView: View {
                         snoozeEnabled: snoozeEnabled,
                         snoozeDuration: snoozeDuration,
                         sound: sound,
-                        repeatDays: repeatDays
+                        repeatDays: repeatDays,
+                        calendarEnabled: calendarEnabled
                     )
                     await MainActor.run { alarmService.loadAlarms() }
                 }
