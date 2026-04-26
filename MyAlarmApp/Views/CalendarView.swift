@@ -3,6 +3,7 @@ import SwiftUI
 
 struct CalendarView: View {
     @StateObject private var alarmService = AlarmService.shared
+    @AppStorage("use24HourFormat") private var use24Hour: Bool = false
     @State private var selectedDate: Date = Date()
     @State private var currentMonth: Date = Date()
     @State private var showAddAlarm = false
@@ -198,49 +199,49 @@ struct CalendarView: View {
                 Color("AppBackground").ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                // MARK: Header
-                HStack {
-                    Text("Calendar")
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color("PrimaryText"))
-                    Spacer()
-                    Button {
-                        showAddAlarm = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(.black)
-                            .frame(width: 36, height: 36)
-                            .background(.orange)
-                            .clipShape(Circle())
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 12)
-                
-                // MARK: Segment
-                HStack(spacing: 0) {
-                    ForEach(ViewMode.allCases, id: \.self) { mode in
+                    // MARK: Header
+                    HStack {
+                        Text("Calendar")
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color("PrimaryText"))
+                        Spacer()
                         Button {
-                            withAnimation(.spring(response: 0.3)) { viewMode = mode }
+                            showAddAlarm = true
                         } label: {
-                            Text(mode.rawValue)
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                .foregroundStyle(viewMode == mode ? .black : Color("SecondaryText"))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 9)
-                                .background(viewMode == mode ? Color.orange : Color.clear)
-                                .clipShape(RoundedRectangle(cornerRadius: 11))
+                            Image(systemName: "plus")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(.black)
+                                .frame(width: 36, height: 36)
+                                .background(.orange)
+                                .clipShape(Circle())
                         }
                     }
-                }
-                .padding(4)
-                .background(Color("CardBackground"))
-                .clipShape(RoundedRectangle(cornerRadius: 15))
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
-                
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 12)
+                    
+                    // MARK: Segment
+                    HStack(spacing: 0) {
+                        ForEach(ViewMode.allCases, id: \.self) { mode in
+                            Button {
+                                withAnimation(.spring(response: 0.3)) { viewMode = mode }
+                            } label: {
+                                Text(mode.rawValue)
+                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(viewMode == mode ? .black : Color("SecondaryText"))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 9)
+                                    .background(viewMode == mode ? Color.orange : Color.clear)
+                                    .clipShape(RoundedRectangle(cornerRadius: 11))
+                            }
+                        }
+                    }
+                    .padding(4)
+                    .background(Color("CardBackground"))
+                    .clipShape(RoundedRectangle(cornerRadius: 15))
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
+                    
                     switch viewMode {
                     case .monthly: monthlyView
                     case .weekly:  weeklyView
@@ -248,53 +249,52 @@ struct CalendarView: View {
                     }
                 }
             }
-        }
-        .navigationBarHidden(true)
-        .onAppear {
-            alarmService.loadAlarms()
-        }
-        .navigationDestination(isPresented: $showAddAlarm) {
-            AddAlarmView(preselectedDate: selectedDate, hideDateToggle: viewMode == .daily) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays, calendarEnabled in
-                Task {
-                    _ = await alarmService.scheduleFutureAlarm(
-                        date: date,
-                        title: title,
-                        snoozeEnabled: snoozeEnabled,
-                        snoozeDuration: snoozeDuration,
-                        sound: sound,
-                        repeatDays: repeatDays,
-                        calendarEnabled: calendarEnabled
-                    )
-                    await MainActor.run { alarmService.loadAlarms() }
+            .onAppear {
+                alarmService.loadAlarms()
+            }
+            .navigationDestination(isPresented: $showAddAlarm) {
+                AddAlarmView(preselectedDate: selectedDate, hideDateToggle: viewMode == .daily) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays, calendarEnabled in
+                    Task {
+                        _ = await alarmService.scheduleFutureAlarm(
+                            date: date,
+                            title: title,
+                            snoozeEnabled: snoozeEnabled,
+                            snoozeDuration: snoozeDuration,
+                            sound: sound,
+                            repeatDays: repeatDays,
+                            calendarEnabled: calendarEnabled
+                        )
+                        await MainActor.run { alarmService.loadAlarms() }
+                    }
                 }
             }
-        }
-        .alert("Date Already Passed", isPresented: $showPastDateAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Please select a future date to add an alarm.")
-        }
-        .navigationDestination(item: $editingItem) { item in
-            let groupID = alarmService.getGroupID(for: item.id) ?? item.id
-            let groupRepeatDays = alarmService.getRepeatDays(forGroup: groupID)
-            AddAlarmView(editingItem: item, repeatDaysToLoad: groupRepeatDays) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays, calendarEnabled in
-                Task {
-                    alarmService.cancelAlarm(id: item.id)
-                    _ = await alarmService.scheduleFutureAlarm(
-                        date: date,
-                        title: title,
-                        snoozeEnabled: snoozeEnabled,
-                        snoozeDuration: snoozeDuration,
-                        sound: sound,
-                        repeatDays: repeatDays,
-                        calendarEnabled: calendarEnabled
-                    )
-                    await MainActor.run { alarmService.loadAlarms() }
+            .alert("Date Already Passed", isPresented: $showPastDateAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Please select a future date to add an alarm.")
+            }
+            .navigationDestination(item: $editingItem) { item in
+                
+                let groupID = alarmService.getGroupID(for: item.id) ?? item.id
+                let groupRepeatDays = alarmService.getRepeatDays(forGroup: groupID)
+                AddAlarmView(editingItem: item, repeatDaysToLoad: groupRepeatDays) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays, calendarEnabled in
+                    Task {
+                        alarmService.cancelAlarm(id: item.id)
+                        _ = await alarmService.scheduleFutureAlarm(
+                            date: date,
+                            title: title,
+                            snoozeEnabled: snoozeEnabled,
+                            snoozeDuration: snoozeDuration,
+                            sound: sound,
+                            repeatDays: repeatDays,
+                            calendarEnabled: calendarEnabled
+                        )
+                        await MainActor.run { alarmService.loadAlarms() }
+                    }
                 }
             }
         }
     }
-    
     // MARK: - Monthly View
     var monthlyView: some View {
         ScrollView {
@@ -745,20 +745,22 @@ struct CalendarView: View {
                 HStack(alignment: .lastTextBaseline, spacing: 4) {
                     Text(item.fireDate.flatMap {
                         let f = DateFormatter()
-                        f.dateFormat = "h:mm"
+                        f.dateFormat = use24Hour ? "HH:mm" : "h:mm"
                         return f.string(from: $0)
                     } ?? "--:--")
                     .font(.system(size: 24, weight: .heavy, design: .rounded))
                     .foregroundStyle(Color("PrimaryText"))
-                    Text(item.fireDate.flatMap {
-                        let f = DateFormatter()
-                        f.amSymbol = "AM"
-                        f.pmSymbol = "PM"
-                        f.dateFormat = "a"
-                        return f.string(from: $0)
-                    } ?? "")
-                    .font(.system(size: 14, weight: .heavy, design: .rounded))
-                    .foregroundStyle(item.isEnabled ? .orange : Color("SecondaryText"))
+                    if !use24Hour {
+                        Text(item.fireDate.flatMap {
+                            let f = DateFormatter()
+                            f.amSymbol = "AM"
+                            f.pmSymbol = "PM"
+                            f.dateFormat = "a"
+                            return f.string(from: $0)
+                        } ?? "")
+                        .font(.system(size: 14, weight: .heavy, design: .rounded))
+                        .foregroundStyle(item.isEnabled ? .orange : Color("SecondaryText"))
+                    }
                 }
                 Spacer()
                 Toggle("", isOn: Binding(
