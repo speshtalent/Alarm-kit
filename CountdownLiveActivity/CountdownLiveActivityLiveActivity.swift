@@ -1,82 +1,87 @@
-//
-//  CountdownLiveActivityLiveActivity.swift
-//  CountdownLiveActivity
-//
-//  Created by Maniraj on 2/26/26.
-//
-
 import ActivityKit
 import WidgetKit
 import SwiftUI
+import AppIntents
 
-struct CountdownLiveActivityAttributes: ActivityAttributes {
-    public struct ContentState: Codable, Hashable {
-        // Dynamic stateful properties about your activity go here!
-        var emoji: String
-    }
-
-    // Fixed non-changing properties about your activity go here!
-    var name: String
-}
-
-struct CountdownLiveActivityLiveActivity: Widget {
+struct SnoozeLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
-        ActivityConfiguration(for: CountdownLiveActivityAttributes.self) { context in
-            // Lock screen/banner UI goes here
-            VStack {
-                Text("Hello \(context.state.emoji)")
+        ActivityConfiguration(for: SnoozeLiveActivityAttributes.self) { context in
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "alarm.fill")
+                            .foregroundStyle(.orange)
+                        Text("Snoozed")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.orange)
+                    }
+
+                    Text(context.state.title)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+
+                    Text(context.state.endDate, style: .timer)
+                        .font(.system(size: 28, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.orange)
+                }
+
+                Spacer(minLength: 12)
+
+                Button(intent: StopAlarmIntent(alarmID: context.attributes.alarmID)) {
+                    Image(systemName: "xmark")
+                        .foregroundStyle(.white)
+                        .font(.system(size: 18, weight: .bold))
+                        .padding(10)
+                        .background(.gray.opacity(0.3), in: Circle())
+                }
+                .buttonStyle(.plain)
             }
-            .activityBackgroundTint(Color.cyan)
-            .activitySystemActionForegroundColor(Color.black)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .activityBackgroundTint(.black)
+            .activitySystemActionForegroundColor(.white)
 
         } dynamicIsland: { context in
             DynamicIsland {
-                // Expanded UI goes here.  Compose the expanded UI through
-                // various regions, like leading/trailing/center/bottom
                 DynamicIslandExpandedRegion(.leading) {
-                    Text("Leading")
+                    Image(systemName: "alarm.fill")
+                        .foregroundStyle(.orange)
+                }
+                DynamicIslandExpandedRegion(.center) {
+                    Text(context.state.title)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text("Trailing")
+                    Text(context.state.endDate, style: .timer)
+                        .font(.caption.bold().monospaced())
+                    .foregroundStyle(.orange)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    Text("Bottom \(context.state.emoji)")
-                    // more content
+                    HStack(spacing: 16) {
+                        Text("Snoozed")
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        Button(intent: StopAlarmIntent(alarmID: context.attributes.alarmID)) {
+                            Image(systemName: "xmark")
+                        }
+                        .buttonStyle(.plain)
+                    }
+                        .foregroundStyle(.orange)
                 }
             } compactLeading: {
-                Text("L")
+                Image(systemName: "alarm.fill")
+                    .foregroundStyle(.orange)
             } compactTrailing: {
-                Text("T \(context.state.emoji)")
+                Text(context.state.endDate, style: .timer)
+                    .font(.caption.bold().monospaced())
+                    .foregroundStyle(.orange)
             } minimal: {
-                Text(context.state.emoji)
+                Image(systemName: "alarm.fill")
+                    .foregroundStyle(.orange)
             }
-            .widgetURL(URL(string: "http://www.apple.com"))
-            .keylineTint(Color.red)
+            .keylineTint(.orange)
         }
     }
 }
-
-extension CountdownLiveActivityAttributes {
-    fileprivate static var preview: CountdownLiveActivityAttributes {
-        CountdownLiveActivityAttributes(name: "World")
-    }
-}
-
-extension CountdownLiveActivityAttributes.ContentState {
-    fileprivate static var smiley: CountdownLiveActivityAttributes.ContentState {
-        CountdownLiveActivityAttributes.ContentState(emoji: "😀")
-     }
-     
-     fileprivate static var starEyes: CountdownLiveActivityAttributes.ContentState {
-         CountdownLiveActivityAttributes.ContentState(emoji: "🤩")
-     }
-}
-
-#if DEBUG && targetEnvironment(simulator)
-#Preview("Notification", as: .content, using: CountdownLiveActivityAttributes.preview) {
-   CountdownLiveActivityLiveActivity()
-} contentStates: {
-    CountdownLiveActivityAttributes.ContentState.smiley
-    CountdownLiveActivityAttributes.ContentState.starEyes
-}
-#endif

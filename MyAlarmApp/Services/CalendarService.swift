@@ -13,14 +13,46 @@ final class CalendarService: ObservableObject {
         authorizationStatus = EKEventStore.authorizationStatus(for: .event)
     }
 
+    // WHY: The app only needs to branch on "usable" versus "needs permission UI",
+    // and EventKit can report either `.authorized` or `.fullAccess` depending on OS/runtime.
+    var hasCalendarAccess: Bool {
+        Self.hasCalendarAccess(status: authorizationStatus)
+    }
+
+    var shouldShowPermissionUI: Bool {
+        switch authorizationStatus {
+        case .notDetermined, .denied:
+            return true
+        default:
+            return false
+        }
+    }
+
+    static func hasCalendarAccess(status: EKAuthorizationStatus) -> Bool {
+        switch status {
+        case .authorized, .fullAccess:
+            return true
+        default:
+            return false
+        }
+    }
+
+    func refreshAuthorizationStatus() {
+        authorizationStatus = EKEventStore.authorizationStatus(for: .event)
+    }
+
     // request calendar permission
     func requestAccess() async -> Bool {
+        refreshAuthorizationStatus()
+        guard !hasCalendarAccess else { return true }
+
         do {
             let granted = try await eventStore.requestFullAccessToEvents()
-            authorizationStatus = EKEventStore.authorizationStatus(for: .event)
-            return granted
+            refreshAuthorizationStatus()
+            return granted && hasCalendarAccess
         } catch {
             print("Calendar access error:", error)
+            refreshAuthorizationStatus()
             return false
         }
     }
@@ -165,7 +197,8 @@ final class CalendarService: ObservableObject {
     }
     func removeAllDateAlarmEvents() async {
         // ✅ Only run if already authorized — don't ask for permission
-        guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return }
+        refreshAuthorizationStatus()
+        guard hasCalendarAccess else { return }
         let granted = await requestAccess()
         guard granted else { return }
         

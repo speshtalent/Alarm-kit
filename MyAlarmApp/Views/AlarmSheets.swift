@@ -73,16 +73,10 @@ struct ScheduleForFutureSheet: View {
         ZStack {
             Color("AppBackground").ignoresSafeArea()
             VStack(spacing: 0) {
-                
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color("SecondaryText").opacity(0.4))
-                    .frame(width: 40, height: 5)
-                    .padding(.top, 12)
-                    .padding(.bottom, 12)
-                
                 Text("Schedule for Future")
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundStyle(Color("PrimaryText"))
+                    .padding(.top, 12)
                     .padding(.bottom, 12)
                 
                 // Time display compact
@@ -262,7 +256,8 @@ struct ScheduleForFutureSheet: View {
                 
                 Spacer()
                 
-                // Done & Cancel
+                // WHY: This is a pushed screen now, so confirmation stays here
+                // while navigation back is handled by the system back button.
                 HStack(spacing: 12) {
                     Button {
                         if selectedTab == 0 {
@@ -289,9 +284,10 @@ struct ScheduleForFutureSheet: View {
                                 return
                             }
                             repeatType = "yearly"
+                            // WHY: Scheduled one-time dates and repeat rules need to stay mutually exclusive,
+                            // so yearly recurrence should live entirely in `repeatDays`.
                             selectedDate = nil
                             if let date = yearlyDate {
-                                selectedDate = date
                                 var result: Set<Int> = []
                                 let cal = Calendar.current
                                 let year = cal.component(.year, from: date)
@@ -323,17 +319,6 @@ struct ScheduleForFutureSheet: View {
                             .clipShape(RoundedRectangle(cornerRadius: 18))
                     }
                     .disabled(isEditing && !hasSheetChanges)
-                    Button {
-                        dismiss()
-                    } label: {
-                        Text("Cancel")
-                            .font(.system(size: 17, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color("SecondaryText"))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 18)
-                            .background(Color("CardBackground"))
-                            .clipShape(RoundedRectangle(cornerRadius: 18))
-                    }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 16)
                 }
@@ -379,6 +364,10 @@ struct ScheduleForFutureSheet: View {
                 }
             }
         }
+        // WHY: Schedule Future should look like a standard pushed editor, not a modal.
+        .navigationTitle("Schedule Future")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(false)
     }
     
     // MARK: - One Time Tab
