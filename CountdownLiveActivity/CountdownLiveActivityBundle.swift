@@ -5,5 +5,7 @@ import SwiftUI
 struct CountdownLiveActivityBundle: WidgetBundle {
     var body: some Widget {
         CountdownLiveActivityWidget()
+        TimerLiveActivityWidget()
+        SnoozeLiveActivityWidget()
     }
 }

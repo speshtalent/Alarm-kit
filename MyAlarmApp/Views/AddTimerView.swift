@@ -21,6 +21,7 @@ struct AddTimerView: View {
     @State private var saveToList: Bool = false
     @State private var editingRecordingFile: String? = nil
     @State private var editingRecordingName: String = ""
+    private let editingTimerID: UUID?
 
     let sounds: [(name: String, file: String)] = [
         (name: "Nokia", file: "nokia.caf"),
@@ -36,6 +37,22 @@ struct AddTimerView: View {
     ]
 
     var onStart: (TimeInterval, String, String) -> Void
+
+    init(
+        editingTimer: TimerViewModel? = nil,
+        onStart: @escaping (TimeInterval, String, String) -> Void
+    ) {
+        self.onStart = onStart
+        self.editingTimerID = editingTimer?.id
+
+        if let editingTimer {
+            let totalSeconds = max(Int(editingTimer.totalDuration.rounded()), 0)
+            _minutes = State(initialValue: totalSeconds / 60)
+            _seconds = State(initialValue: totalSeconds % 60)
+            _title = State(initialValue: editingTimer.title == "Timer" ? "" : editingTimer.title)
+            _selectedSound = State(initialValue: editingTimer.sound)
+        }
+    }
 
     private var tempRecordingURL: URL {
         let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
@@ -54,7 +71,7 @@ struct AddTimerView: View {
                         .frame(width: 40, height: 5)
                         .padding(.top, 12)
 
-                    Text("New Timer")
+                    Text(editingTimerID == nil ? "New Timer" : "Edit Timer")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundStyle(Color("PrimaryText"))
 
@@ -355,7 +372,7 @@ struct AddTimerView: View {
                         onStart(duration, timerTitle, selectedSound)
                         dismiss()
                     } label: {
-                        Text("Start Timer")
+                        Text(editingTimerID == nil ? "Start Timer" : "Update Timer")
                             .font(.system(size: 17, weight: .bold, design: .rounded))
                             .foregroundStyle(.black)
                             .frame(maxWidth: .infinity)

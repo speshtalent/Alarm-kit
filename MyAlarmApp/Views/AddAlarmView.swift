@@ -82,7 +82,7 @@ struct AddAlarmView: View {
         ("Thu", 5), ("Fri", 6), ("Sat", 7), ("Sun", 1)
     ]
 
-    var onSave: (Date, String, Bool, TimeInterval, String, Set<Int>) -> Void
+    var onSave: (Date, String, Bool, TimeInterval, String, Set<Int>, Bool) -> Void
 
     init(
         preselectedDate: Date? = nil,
@@ -92,7 +92,7 @@ struct AddAlarmView: View {
         autoStartRecording: Bool = false,
         repeatDaysToLoad: Set<Int> = [],
         soundToLoad: String = "nokia.caf",
-        onSave: @escaping (Date, String, Bool, TimeInterval, String, Set<Int>) -> Void
+        onSave: @escaping (Date, String, Bool, TimeInterval, String, Set<Int>, Bool) -> Void
     ) {
         self.hideDateToggle = hideDateToggle
         self.autoStartRecording = autoStartRecording
@@ -229,7 +229,7 @@ struct AddAlarmView: View {
             hour24 = h
         }
         // ✅ If scheduledDate is set, use it as base (one-time or yearly)
-        if let scheduled = scheduledDate, (repeatType == "" || repeatType == "yearly") {
+        if let scheduled = scheduledDate, repeatType == "" {
             var components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: scheduled)
             components.hour = hour24
             components.minute = selectedMinute
@@ -336,7 +336,9 @@ struct AddAlarmView: View {
         let formatter = DateFormatter()
         formatter.amSymbol = "AM"
         formatter.pmSymbol = "PM"
-        formatter.dateFormat = "h:mm a"
+        // WHY: The confirmation copy should match the same 12/24-hour preference
+        // the rest of the alarm editor uses, otherwise the preview disagrees with the picker.
+        formatter.dateFormat = use24HourFormat ? "HH:mm" : "h:mm a"
         let timeStr = formatter.string(from: date)
         let calendar = Calendar.current
 
@@ -436,25 +438,6 @@ struct AddAlarmView: View {
             Color("AppBackground").ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 20) {
-
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color("SecondaryText").opacity(0.4))
-                        .frame(width: 40, height: 5)
-                        .padding(.top, 12)
-
-                    HStack {
-                        if isEditing {
-                            Button { dismiss() } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 28))
-                                    .foregroundStyle(Color("SecondaryText").opacity(0.6))
-                            }
-                            .padding(.leading, 20)
-                        }
-                        Spacer()
-                    }
-
-
                     Text(isEditing ? "Edit Alarm" : "New Alarm")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundStyle(Color("PrimaryText"))
@@ -657,8 +640,8 @@ struct AddAlarmView: View {
                                             .background(isSelected ? Color.orange : Color("AppBackground"))
                                             .clipShape(RoundedRectangle(cornerRadius: 8))
                                     }
-                                    .opacity(repeatType == "monthly" || scheduledDate != nil ? 0.3 : 1.0)
-                                    .disabled(repeatType == "monthly" || scheduledDate != nil)
+                                    .opacity(repeatType == "monthly" ? 0.3 : 1.0)
+                                    .disabled(repeatType == "monthly")
                                 }
                             }
 
@@ -1051,16 +1034,18 @@ struct AddAlarmView: View {
                                 .tint(.orange)
                                 .onChange(of: addToCalendar) { _, newValue in
                                     if newValue {
-                                        let status = EKEventStore.authorizationStatus(for: .event)
-                                        if status == .denied {
+                                        CalendarService.shared.refreshAuthorizationStatus()
+                                        let status = CalendarService.shared.authorizationStatus
+                                        if CalendarService.shared.shouldShowPermissionUI && status == .denied {
                                             addToCalendar = false
                                             NotificationCenter.default.post(name: NSNotification.Name("showCalendarPermission"), object: nil)
                                         } else if status == .notDetermined {
                                             Task {
                                                 await CalendarService.shared.requestPermissionIfNeeded()
-                                                let newStatus = EKEventStore.authorizationStatus(for: .event)
+                                                CalendarService.shared.refreshAuthorizationStatus()
+                                                let newStatus = CalendarService.shared.authorizationStatus
                                                 await MainActor.run {
-                                                    if newStatus != .fullAccess {
+                                                    if !CalendarService.hasCalendarAccess(status: newStatus) {
                                                         addToCalendar = false
                                                         NotificationCenter.default.post(name: NSNotification.Name("showCalendarPermission"), object: nil)
                                                     }
@@ -1095,7 +1080,7 @@ struct AddAlarmView: View {
                 }
             }
         }
-        .sheet(isPresented: $showScheduleSheet) {
+        .navigationDestination(isPresented: $showScheduleSheet) {
             ScheduleForFutureSheet(
                 selectedDate: $scheduledDate,
                 repeatType: $repeatType,
@@ -1106,6 +1091,11 @@ struct AddAlarmView: View {
                 isEditing: isEditing
             )
         }
+        // WHY: Create/Edit Alarm is now a pushed destination, so it should use
+        // the system back button and inline title instead of custom sheet chrome.
+        .navigationTitle(isEditing ? "Edit Alarm" : "New Alarm")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(false)
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
@@ -1126,7 +1116,7 @@ struct AddAlarmView: View {
                 let url = voiceURL(for: id)
                 hasRecording = FileManager.default.fileExists(atPath: url.path)
                 // ✅ Load scheduledDate for one-time and yearly
-                if repeatType == "" || repeatType == "yearly" {
+                if repeatType == "" {
                     if let item = AlarmService.shared.alarms.first(where: { $0.id.uuidString == id }),
                        let fireDate = item.fireDate {
                         scheduledDate = fireDate
@@ -1180,13 +1170,11 @@ struct AddAlarmView: View {
                 originalDayOfMonth = selectedDayOfMonth
                 originalSnoozeEnabled = snoozeEnabled
                 originalSnoozeDuration = snoozeDuration
-                // ✅ Check if this alarm has a calendar event
-                if let item = AlarmService.shared.alarms.first(where: { $0.id.uuidString == id }),
-                   let fireDate = item.fireDate {
-                    let key = fireDate.timeIntervalSince1970.description
-                    let map = UserDefaults.standard.dictionary(forKey: "calendarEventMap") as? [String: String] ?? [:]
-                    addToCalendar = map[key] != nil
-                }
+                let resolvedID = UUID(uuidString: id) ?? UUID()
+                let groupID = AlarmService.shared.getGroupID(for: resolvedID) ?? resolvedID
+                // WHY: Calendar intent should follow the user's saved preference,
+                // not the presence of orphaned calendar events left behind by older bugs.
+                addToCalendar = AlarmService.shared.isCalendarEnabled(forGroup: groupID)
                 originalAddToCalendar = addToCalendar
                 originalScheduledDate = scheduledDate
             } else {
@@ -1272,7 +1260,7 @@ struct AddAlarmView: View {
         let globalSnoozeEnabled = UserDefaults.standard.bool(forKey: "globalSnoozeEnabled")
         let globalSnoozeDuration = UserDefaults.standard.integer(forKey: "globalSnoozeDuration")
         let snoozeDur = globalSnoozeDuration > 0 ? globalSnoozeDuration : 5
-        onSave(savedDate, savedTitle, globalSnoozeEnabled, TimeInterval(snoozeDur * 60), selectedSound, finalRepeatDays)
+        onSave(savedDate, savedTitle, globalSnoozeEnabled, TimeInterval(snoozeDur * 60), selectedSound, finalRepeatDays, addToCalendar)
 
         // ✅ Save selected sound for this alarm
         if let id = editingAlarmID {
@@ -1296,70 +1284,6 @@ struct AddAlarmView: View {
                     UserDefaults.standard.set(tempFile, forKey: "voiceRecordingFile_\(newAlarm.id.uuidString)")
                     UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
                     UserDefaults.standard.removeObject(forKey: "voiceRecordingFile_temp")
-                }
-            }
-        }
-        if addToCalendar {
-            Task {
-                // ✅ Remove old calendar event if editing
-                if let id = editingAlarmID,
-                   let item = AlarmService.shared.alarms.first(where: { $0.id.uuidString == id }),
-                   let fireDate = item.fireDate {
-                    let key = fireDate.timeIntervalSince1970.description
-                    CalendarService.shared.removeAlarmFromCalendar(alarmID: key)
-                }
-                // ✅ Wait for alarms to be scheduled first
-                try? await Task.sleep(nanoseconds: 500_000_000)
-                let groupID = AlarmService.shared.alarmGroups.first(where: {
-                    $0.label == savedTitle
-                })?.id
-                let alarmIDs = groupID.flatMap { AlarmService.shared.getAlarmIDs(forGroup: $0) } ?? []
-                
-                if alarmIDs.isEmpty {
-                    // ✅ Remove first to avoid duplicates
-                    CalendarService.shared.removeAlarmFromCalendar(alarmID: savedDate.timeIntervalSince1970.description)
-                    _ = await CalendarService.shared.addAlarmToCalendar(
-                        title: savedTitle, date: savedDate,
-                        alarmID: savedDate.timeIntervalSince1970.description
-                    )
-                } else {
-                    let isWeekly = finalRepeatDays.contains { $0 >= 1 && $0 <= 7 }
-                    let selectedMonths = finalRepeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
-                    let isMonthly = !isWeekly && (finalRepeatDays.contains { $0 >= 101 && $0 <= 112 } || finalRepeatDays.contains(100) || (finalRepeatDays.contains { $0 >= 1 && $0 <= 31 } && !finalRepeatDays.contains { $0 >= 2025 }))
-                    let isEveryMonth = isMonthly && selectedMonths.isEmpty
-                    let day = finalRepeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? Calendar.current.component(.day, from: savedDate)
-                    let currentYear = Calendar.current.component(.year, from: Date())
-
-                    if isEveryMonth {
-                        // ✅ Every month — add event for each remaining month this year
-                        let currentMonth = Calendar.current.component(.month, from: Date())
-                        for month in currentMonth...12 {
-                            var comps = DateComponents()
-                            comps.year = currentYear
-                            comps.month = month
-                            comps.day = day
-                            comps.hour = Calendar.current.component(.hour, from: savedDate)
-                            comps.minute = Calendar.current.component(.minute, from: savedDate)
-                            if let eventDate = Calendar.current.date(from: comps) {
-                                let alarmID = eventDate.timeIntervalSince1970.description
-                                _ = await CalendarService.shared.addAlarmToCalendar(
-                                    title: savedTitle, date: eventDate, alarmID: alarmID
-                                )
-                            }
-                        }
-                    } else {
-                        // ✅ Weekly/specific months — add each alarm
-                        for alarmID in alarmIDs {
-                            if let fireDate = AlarmService.shared.alarms.first(where: { $0.id == alarmID })?.fireDate {
-                                let weekday = Calendar.current.component(.weekday, from: fireDate)
-                                _ = await CalendarService.shared.addAlarmToCalendar(
-                                    title: savedTitle, date: fireDate,
-                                    alarmID: fireDate.timeIntervalSince1970.description,
-                                    weekday: isWeekly ? weekday : nil
-                                )
-                            }
-                        }
-                    }
                 }
             }
         }
