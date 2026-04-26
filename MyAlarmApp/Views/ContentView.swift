@@ -771,7 +771,7 @@ struct ScheduledView: View {
                     List {
                         ForEach(Array(alarmService.alarmGroups.enumerated()), id: \.element.id) { index, group in
                             // ✅ Main alarm card row
-                            ScheduledRowView(group: group, use24Hour: use24HourFormat)
+                            ScheduledRowView(group: group)
                                 .onTapGesture {
                                     withAnimation(.easeInOut(duration: 0.3)) {
                                         expandedGroupID = expandedGroupID == group.id ? nil : group.id
@@ -790,7 +790,7 @@ struct ScheduledView: View {
                                 
                                 // Fired rows
                                 ForEach(Array(fired.enumerated()), id: \.offset) { _, date in
-                                    FiredOccurrenceRow(date: date, group: group, use24Hour: use24HourFormat)
+                                    FiredOccurrenceRow(date: date, group: group)
                                         .listRowBackground(Color("AppBackground"))
                                         .listRowSeparator(.hidden)
                                         .listRowInsets(EdgeInsets(top: 2, leading: 32, bottom: 2, trailing: 20))
@@ -805,7 +805,7 @@ struct ScheduledView: View {
                                 
                                 // Upcoming rows
                                 ForEach(Array(displayUpcoming.enumerated()), id: \.offset) { index, date in
-                                    UpcomingOccurrenceRow(date: date, group: group, use24Hour: use24HourFormat, isNext: index == 0)
+                                    UpcomingOccurrenceRow(date: date, group: group, isNext: index == 0)
                                     
                                         .listRowBackground(Color("AppBackground"))
                                         .listRowSeparator(.hidden)
@@ -983,7 +983,7 @@ struct ScheduledView: View {
 struct FiredOccurrenceRow: View {
     let date: Date
     let group: AlarmService.AlarmGroup
-    let use24Hour: Bool
+    @AppStorage("use24HourFormat") private var use24Hour: Bool = false
     
     private func formatDate(_ date: Date) -> String {
         let f = DateFormatter()
@@ -1024,7 +1024,7 @@ struct FiredOccurrenceRow: View {
 struct UpcomingOccurrenceRow: View {
     let date: Date
     let group: AlarmService.AlarmGroup
-    let use24Hour: Bool
+    @AppStorage("use24HourFormat") private var use24Hour: Bool = false
     var isNext: Bool = false
     
     private var days: Int {
@@ -1089,7 +1089,7 @@ struct UpcomingOccurrenceRow: View {
 // MARK: - Scheduled Row
 struct ScheduledRowView: View {
     let group: AlarmService.AlarmGroup
-    let use24Hour: Bool
+    @AppStorage("use24HourFormat") private var use24Hour: Bool = false
     
     private var timeText: String {
         let f = DateFormatter()

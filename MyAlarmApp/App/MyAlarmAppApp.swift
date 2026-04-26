@@ -16,6 +16,15 @@ struct MyAlarmAppApp: App {
     init() {
         AlarmAppShortcutsProvider.updateAppShortcutParameters()
         setupAlarmStopListener()
+        setupTimeFormat()
+    }
+
+    private func setupTimeFormat() {
+        // ✅ Only set on first launch
+        guard !UserDefaults.standard.bool(forKey: "timeFormatInitialized") else { return }
+        let is24Hour = DateFormatter.dateFormat(fromTemplate: "j", options: 0, locale: Locale.current)?.contains("a") == false
+        UserDefaults.standard.set(is24Hour, forKey: "use24HourFormat")
+        UserDefaults.standard.set(true, forKey: "timeFormatInitialized")
     }
 
     private func setupAlarmStopListener() {
