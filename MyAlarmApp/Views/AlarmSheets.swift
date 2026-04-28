@@ -72,6 +72,7 @@ struct ScheduleForFutureSheet: View {
     var body: some View {
         ZStack {
             Color("AppBackground").ignoresSafeArea()
+            ScrollView {
             VStack(spacing: 0) {
                 Text("Schedule for Future")
                     .font(.system(size: 20, weight: .bold, design: .rounded))
@@ -260,6 +261,26 @@ struct ScheduleForFutureSheet: View {
                 // while navigation back is handled by the system back button.
                 HStack(spacing: 12) {
                     Button {
+                        // ✅ Cancel — restore originals
+                        selectedDate = originalDate
+                        repeatDays = originalRepeatDays
+                        repeatType = originalRepeatType
+                        selectedHour = originalHour
+                        selectedMinute = originalMinute
+                        selectedAMPM = originalAMPM
+                        dismiss()
+                    } label: {
+                        Text("Cancel")
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                            .foregroundStyle(.orange)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(Color("CardBackground"))
+                            .clipShape(RoundedRectangle(cornerRadius: 18))
+                    }
+                    .padding(.leading, 20)
+
+                    Button {
                         if selectedTab == 0 {
                             repeatType = ""
                             repeatDays = []
@@ -319,7 +340,7 @@ struct ScheduleForFutureSheet: View {
                             .clipShape(RoundedRectangle(cornerRadius: 18))
                     }
                     .disabled(isEditing && !hasSheetChanges)
-                    .padding(.horizontal, 20)
+                    .padding(.trailing, 20)
                     .padding(.vertical, 16)
                 }
                 .alert("Please Select a Day", isPresented: $showNoDayAlert) {
@@ -363,11 +384,30 @@ struct ScheduleForFutureSheet: View {
                     originalAMPM = selectedAMPM
                 }
             }
+            } // closes ScrollView
         }
         // WHY: Schedule Future should look like a standard pushed editor, not a modal.
         .navigationTitle("Schedule Future")
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(false)
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        // ✅ Same as Cancel — restore originals
+                        selectedDate = originalDate
+                        repeatDays = originalRepeatDays
+                        repeatType = originalRepeatType
+                        selectedHour = originalHour
+                        selectedMinute = originalMinute
+                        selectedAMPM = originalAMPM
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 22))
+                            .foregroundStyle(Color("SecondaryText").opacity(0.6))
+                    }
+                }
+            }
     }
     
     // MARK: - One Time Tab
