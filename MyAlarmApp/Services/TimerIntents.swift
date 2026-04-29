@@ -34,6 +34,7 @@ struct StopAlarmIntent: LiveActivityIntent {
                 appGroup?.removeObject(forKey: key)
             }
             await LiveActivityCoordinator.endTimerActivities()
+            appGroup?.set(alarmID, forKey: "pendingTimerStop")
             appGroup?.synchronize()
             WidgetCenter.shared.reloadAllTimelines()
             return .result()

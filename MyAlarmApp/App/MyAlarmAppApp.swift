@@ -163,6 +163,14 @@ struct MyAlarmAppApp: App {
 
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
                     Task { @MainActor in
+                        let appGroup = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
+                        if let stoppedID = appGroup?.string(forKey: "pendingTimerStop"),
+                           let uuid = UUID(uuidString: stoppedID) {
+                            appGroup?.removeObject(forKey: "pendingTimerStop")
+                            appGroup?.synchronize()
+                            TimerService.shared.cancelTimer(id: uuid)
+                            TimerService.shared.loadTimers()
+                        }
                         AlarmService.shared.loadAlarms()
                         if UserDefaults.standard.bool(forKey: "pendingVoicePlay") {
                             UserDefaults.standard.set(false, forKey: "pendingVoicePlay")

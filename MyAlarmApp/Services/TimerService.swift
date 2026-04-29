@@ -183,11 +183,13 @@ final class TimerService: ObservableObject {
             timers.removeAll { $0.id == id }
             removeMetadata(for: id)
             timerViewModels = timers.map(makeViewModel).sorted { $0.title < $1.title }
+            Task { await LiveActivityCoordinator.endTimerActivities() }
             print("🗑️ Timer cancelled")
         } catch {
             timers.removeAll { $0.id == id }
             removeMetadata(for: id)
             timerViewModels = timers.map(makeViewModel).sorted { $0.title < $1.title }
+            Task { await LiveActivityCoordinator.endTimerActivities() }
             print("❌ Failed to cancel timer:", error)
         }
     }
