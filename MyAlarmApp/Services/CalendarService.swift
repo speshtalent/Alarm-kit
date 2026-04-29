@@ -192,8 +192,7 @@ final class CalendarService: ObservableObject {
         }
     }
     func requestPermissionIfNeeded() async {
-        let store = EKEventStore()
-        _ = try? await store.requestFullAccessToEvents()
+        _ = await requestAccess()
     }
     func removeAllDateAlarmEvents() async {
         // ✅ Only run if already authorized — don't ask for permission
