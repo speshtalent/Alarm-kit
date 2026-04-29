@@ -78,23 +78,70 @@ struct AddTimerView: View {
                     // Time Picker card
                     ZStack {
                         RoundedRectangle(cornerRadius: 20).fill(Color("CardBackground"))
-                        HStack(spacing: 0) {
-                            Picker("Minutes", selection: $minutes) {
-                                ForEach(0...179, id: \.self) { m in
-                                    Text("\(m) min").tag(m)
+                        VStack(spacing: 0) {
+                            // ✅ Orange header
+                            HStack {
+                                Spacer()
+                                Text("Timer Duration")
+                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.black)
+                                Spacer()
+                            }
+                            .padding(.vertical, 12)
+                            .background(Color.orange)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                            // ✅ Big number display
+                            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                                VStack(spacing: 2) {
+                                    Text("MIN")
+                                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                    Text("\(minutes)")
+                                        .font(.system(size: 72, weight: .heavy, design: .rounded))
+                                        .foregroundStyle(Color("PrimaryText"))
+                                }
+                                Text(":")
+                                    .font(.system(size: 60, weight: .heavy, design: .rounded))
+                                    .foregroundStyle(.orange)
+                                    .padding(.bottom, 8)
+                                VStack(spacing: 2) {
+                                    Text("SEC")
+                                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                    Text(String(format: "%02d", seconds))
+                                        .font(.system(size: 72, weight: .heavy, design: .rounded))
+                                        .foregroundStyle(Color("PrimaryText"))
                                 }
                             }
-                            .pickerStyle(.wheel).frame(maxWidth: .infinity)
-                            Picker("Seconds", selection: $seconds) {
-                                ForEach(0...59, id: \.self) { s in
-                                    Text("\(s) sec").tag(s)
+                            .padding(.vertical, 16)
+
+                            // ✅ Wheel pickers
+                            HStack(spacing: 0) {
+                                Picker("Minutes", selection: $minutes) {
+                                    ForEach(0...179, id: \.self) { m in
+                                        Text("\(m)").tag(m)
+                                    }
                                 }
+                                .pickerStyle(.wheel)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 100)
+
+                                Picker("Seconds", selection: $seconds) {
+                                    ForEach(0...59, id: \.self) { s in
+                                        Text(String(format: "%02d", s)).tag(s)
+                                    }
+                                }
+                                .pickerStyle(.wheel)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 100)
                             }
-                            .pickerStyle(.wheel).frame(maxWidth: .infinity)
+                            .colorScheme(colorScheme)
+                            .padding(.bottom, 8)
                         }
-                        .colorScheme(colorScheme).padding(8)
                     }
                     .padding(.horizontal, 20)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
 
                     // Title card
                     ZStack {

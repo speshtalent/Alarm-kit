@@ -846,44 +846,42 @@ struct ScheduledView: View {
                 }
                 }
             }
-        }
-        .navigationBarHidden(true)
-        .onAppear {
-            alarmService.loadAlarms()
-            NotificationCenter.default.addObserver(
-                forName: NSNotification.Name("EditAlarmGroup"),
-                object: nil,
-                queue: .main
-            ) { notification in
-                if let group = notification.object as? AlarmService.AlarmGroup {
-                    groupToEdit = group
-                }
-            }
-        }
-        .navigationDestination(item: $groupToEdit) { group in
-            AddAlarmView(
-                editingItem: alarmService.alarms.first(where: { group.alarmIDs.contains($0.id) }),
-                repeatDaysToLoad: group.repeatDays,
-                soundToLoad: UserDefaults.standard.string(forKey: "alarmSound_\(group.id.uuidString)") ?? "nokia.caf"
-            ) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays, calendarEnabled in
-                Task {
-                    if let firstID = group.alarmIDs.first {
-                        alarmService.cancelAlarm(id: firstID)
+            .onAppear {
+                alarmService.loadAlarms()
+                NotificationCenter.default.addObserver(
+                    forName: NSNotification.Name("EditAlarmGroup"),
+                    object: nil,
+                    queue: .main
+                ) { notification in
+                    if let group = notification.object as? AlarmService.AlarmGroup {
+                        groupToEdit = group
                     }
-                    _ = await alarmService.scheduleFutureAlarm(
-                        date: date, title: title,
-                        snoozeEnabled: snoozeEnabled,
-                        snoozeDuration: snoozeDuration,
-                        sound: sound,
-                        repeatDays: repeatDays,
-                        calendarEnabled: calendarEnabled
-                    )
-                    UserDefaults.standard.set(sound, forKey: "alarmSound_\(group.id.uuidString)")
-                    await MainActor.run { alarmService.loadAlarms() }
+                }
+            }
+            .navigationDestination(item: $groupToEdit) { group in
+                AddAlarmView(
+                    editingItem: alarmService.alarms.first(where: { group.alarmIDs.contains($0.id) }),
+                    repeatDaysToLoad: group.repeatDays,
+                    soundToLoad: UserDefaults.standard.string(forKey: "alarmSound_\(group.id.uuidString)") ?? "nokia.caf"
+                ) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays, calendarEnabled in
+                    Task {
+                        if let firstID = group.alarmIDs.first {
+                            alarmService.cancelAlarm(id: firstID)
+                        }
+                        _ = await alarmService.scheduleFutureAlarm(
+                            date: date, title: title,
+                            snoozeEnabled: snoozeEnabled,
+                            snoozeDuration: snoozeDuration,
+                            sound: sound,
+                            repeatDays: repeatDays,
+                            calendarEnabled: calendarEnabled
+                        )
+                        UserDefaults.standard.set(sound, forKey: "alarmSound_\(group.id.uuidString)")
+                        await MainActor.run { alarmService.loadAlarms() }
+                    }
                 }
             }
         }
-        
     }
     private func firedOccurrences(for group: AlarmService.AlarmGroup) -> [Date] {
         let history = AlarmService.shared.loadHistory()
@@ -911,7 +909,7 @@ struct ScheduledView: View {
         
         let isWeekly = repeatDays.allSatisfy { $0 >= 1 && $0 <= 7 } && !repeatDays.isEmpty
         if isWeekly {
-            for weekOffset in 0..<6 {
+            for weekOffset in 0..<12 {
                 for weekday in repeatDays.sorted() {
                     var comps = DateComponents()
                     comps.weekday = weekday
@@ -926,7 +924,7 @@ struct ScheduledView: View {
                 }
             }
             results.sort()
-            return Array(results.prefix(5))
+            return results
         }
         
         let selectedYears = repeatDays.filter { $0 >= 2025 }.sorted()

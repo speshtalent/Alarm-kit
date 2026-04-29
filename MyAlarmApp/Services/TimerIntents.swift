@@ -33,6 +33,8 @@ struct StopAlarmIntent: LiveActivityIntent {
                 UserDefaults.standard.removeObject(forKey: key)
                 appGroup?.removeObject(forKey: key)
             }
+            await LiveActivityCoordinator.endTimerActivities()
+            appGroup?.set(alarmID, forKey: "pendingTimerStop")
             appGroup?.synchronize()
             WidgetCenter.shared.reloadAllTimelines()
             return .result()
@@ -62,6 +64,7 @@ struct StopAlarmIntent: LiveActivityIntent {
         if let data = try? JSONSerialization.data(withJSONObject: history),
            let json = String(data: data, encoding: .utf8) {
             appGroup?.set(json, forKey: "AlarmHistory")
+            UserDefaults.standard.set(json, forKey: "AlarmHistory")
         }
 
         // ✅ Save fired one-time alarm to UserDefaults

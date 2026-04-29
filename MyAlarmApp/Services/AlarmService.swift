@@ -1280,9 +1280,10 @@ final class AlarmService: ObservableObject {
         if let data = try? JSONSerialization.data(withJSONObject: history),
            let json = String(data: data, encoding: .utf8) {
             UserDefaults.standard.set(json, forKey: historyKey)
+            UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")?.set(json, forKey: historyKey)
         }
     }
-    // ✅ Save fired one-time alarm so it shows as disabled in list
+    // ✅ Save fired one-time alarm
     func saveFiredAlarm(alarmID: String, label: String, firedAt: Date) {
         var fired = loadFiredAlarms()
         fired[alarmID] = [
@@ -1372,8 +1373,9 @@ final class AlarmService: ObservableObject {
                 guard !repeatDays.isEmpty else { continue }
 
                 let allGone = alarmIDStrs.allSatisfy { !activeAlarmIDs.contains($0) }
+                let anyFired = alarmIDStrs.contains { !activeAlarmIDs.contains($0) && !disabledIDs.contains($0) }
                 let allDisabled = alarmIDStrs.allSatisfy { disabledIDs.contains($0) }
-                guard allGone && !allDisabled else { continue }
+                guard (allGone || anyFired) && !allDisabled else { continue }
 
                 // ✅ Prevent rescheduling same group more than once per 60 seconds
                 let lastRescheduleKey = "lastReschedule_\(groupIDStr)"
@@ -1396,12 +1398,54 @@ final class AlarmService: ObservableObject {
                 let isYearly = repeatDays.contains { $0 >= 2025 }
                 let isMonthly = !isWeekly && !isYearly
 
-                // ✅ Save fired occurrence to history before cancelling
-                let firedInterval = alarmIDStrs.compactMap {
-                    UserDefaults.standard.object(forKey: "disabledAlarmDate_\($0)") as? TimeInterval
-                }.first ?? Date().timeIntervalSince1970
-                let firedDate = Date(timeIntervalSince1970: firedInterval)
-                AlarmService.shared.saveToHistory(alarmID: groupIDStr, label: label, firedAt: firedDate)
+                // ✅ Save history per individually fired alarm
+                for alarmIDStr in alarmIDStrs {
+                    if !activeAlarmIDs.contains(alarmIDStr) && !disabledIDs.contains(alarmIDStr) {
+                        AlarmService.shared.saveToHistory(alarmID: alarmIDStr, label: label, firedAt: Date())
+                    }
+                }
+
+                // ✅ Weekly — only reschedule fired day, keep others alive
+                if isWeekly {
+                    let firedAlarmIDs = alarmIDStrs.filter {
+                        !activeAlarmIDs.contains($0) && !disabledIDs.contains($0)
+                    }
+                    let timeComponents = Calendar.current.dateComponents([.hour, .minute], from: originalDate)
+                    Task {
+                        let cal = Calendar.current
+                        let now = Date()
+                        for firedIDStr in firedAlarmIDs {
+                            guard let firedUUID = UUID(uuidString: firedIDStr) else { continue }
+                            let savedInterval = UserDefaults.standard.object(forKey: "disabledAlarmDate_\(firedIDStr)") as? TimeInterval ?? Date().timeIntervalSince1970
+                            let firedDate = Date(timeIntervalSince1970: savedInterval)
+                            let weekday = cal.component(.weekday, from: firedDate)
+                            var comps = DateComponents()
+                            comps.weekday = weekday
+                            comps.hour = timeComponents.hour
+                            comps.minute = timeComponents.minute
+                            guard let nextOccurrence = cal.nextDate(after: now, matching: comps, matchingPolicy: .nextTime) else { continue }
+                            do { try AlarmManager.shared.cancel(id: firedUUID) } catch {}
+                            let newID = UUID()
+                            _ = try? await scheduleAlarmWithID(id: newID, date: nextOccurrence, label: label, sound: savedSound)
+                            saveLabel(label, for: newID)
+                            var groups = loadGroupIDs()
+                            if var groupAlarmIDs = groups[groupIDStr] {
+                                groupAlarmIDs.removeAll { $0 == firedIDStr }
+                                groupAlarmIDs.append(newID.uuidString)
+                                groups[groupIDStr] = groupAlarmIDs
+                                UserDefaults.standard.set(groups, forKey: groupIDsKey)
+                                var alarmToGroup = loadAlarmToGroup()
+                                alarmToGroup.removeValue(forKey: firedIDStr)
+                                alarmToGroup[newID.uuidString] = groupIDStr
+                                UserDefaults.standard.set(alarmToGroup, forKey: alarmToGroupKey)
+                            }
+                            print("✅ Rescheduled weekday \(weekday) to \(nextOccurrence)")
+                        }
+                        try? await Task.sleep(nanoseconds: 200_000_000)
+                        await MainActor.run { loadAlarms() }
+                    }
+                    continue
+                }
 
                 cancelAlarm(id: groupUUID)
 
