@@ -39,12 +39,23 @@ struct ContentView: View {
         mainTabInterface
             .animation(.easeInOut(duration: 0.4), value: hasSeenOnboarding)
             .preferredColorScheme(preferredColorScheme)
-            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
-                alarmService.loadAlarms()
-            }
+            // Avoid `willResignActive` → loadAlarms: it fires for Control Center, calls, etc. and churns AlarmKit / Live Activities.
+            // Only reconcile when actually backgrounding, and await teardown so Dynamic Island clears before suspend.
             .onChange(of: scenePhase) { _, phase in
-                if phase == .background {
-                    alarmService.loadAlarms()
+                guard phase == .background else { return }
+                var token = UIBackgroundTaskIdentifier.invalid
+                token = UIApplication.shared.beginBackgroundTask(withName: "com.speshtalent.FutureAlarm26.liveactivity") {
+                    UIApplication.shared.endBackgroundTask(token)
+                    token = .invalid
+                }
+                Task {
+                    await alarmService.loadAlarmsAwaitingLiveActivitySync()
+                    await MainActor.run {
+                        if token != .invalid {
+                            UIApplication.shared.endBackgroundTask(token)
+                            token = .invalid
+                        }
+                    }
                 }
             }
     }

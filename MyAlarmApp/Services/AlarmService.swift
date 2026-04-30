@@ -316,7 +316,32 @@ final class AlarmService: ObservableObject {
         rebuildGroups()
     }
 
+    private struct LiveActivitySyncInputs {
+        let removedOrphanTimers: Bool
+        let labels: [String: String]
+        let alarmKitSnapshot: Result<[Alarm], Error>
+        let activeSnoozes: [String: Date]
+        let hasTimers: Bool
+        let persistedGroups: Bool
+        let snoozeActive: Bool
+    }
+
+    /// Reloads alarms from AlarmKit / storage (synchronous), then schedules Live Activity sync.
     func loadAlarms() {
+        let inputs = performLoadAlarmsSynchronously()
+        Task {
+            await synchronizeLiveActivities(inputs)
+        }
+    }
+
+    /// Same as `loadAlarms()` but **awaits** Live Activity / Dynamic Island teardown before returning.
+    /// Use when going to background so idle users don’t keep a phantom Island pill after suspend.
+    func loadAlarmsAwaitingLiveActivitySync() async {
+        let inputs = performLoadAlarmsSynchronously()
+        await synchronizeLiveActivities(inputs)
+    }
+
+    private func performLoadAlarmsSynchronously() -> LiveActivitySyncInputs {
         let labels = loadLabels()
         let removedOrphanTimers = TimerService.shared.cancelOrphanAlarmKitTimerRecords()
         let alarmKitSnapshot: Result<[Alarm], Error>
@@ -393,21 +418,31 @@ final class AlarmService: ObservableObject {
         let persistedGroups = !loadGroupIDs().isEmpty
         let snoozeActive = !activeSnoozes.isEmpty
 
-        Task {
-            if removedOrphanTimers {
-                await LiveActivityCoordinator.endTimerActivities()
-            }
-            await LiveActivityCoordinator.syncSnoozeActivities(
-                activeSnoozes: activeSnoozes,
-                labels: labels
-            )
-            await LiveActivityCoordinator.reconcileIdleIslandPresentation(
-                alarmKitSnapshot: alarmKitSnapshot,
-                hasActiveSnooze: snoozeActive,
-                hasActiveLocalTimers: hasTimers,
-                userHasPersistedAlarmGroups: persistedGroups
-            )
+        return LiveActivitySyncInputs(
+            removedOrphanTimers: removedOrphanTimers,
+            labels: labels,
+            alarmKitSnapshot: alarmKitSnapshot,
+            activeSnoozes: activeSnoozes,
+            hasTimers: hasTimers,
+            persistedGroups: persistedGroups,
+            snoozeActive: snoozeActive
+        )
+    }
+
+    private func synchronizeLiveActivities(_ inputs: LiveActivitySyncInputs) async {
+        if inputs.removedOrphanTimers {
+            await LiveActivityCoordinator.endTimerActivities()
         }
+        await LiveActivityCoordinator.syncSnoozeActivities(
+            activeSnoozes: inputs.activeSnoozes,
+            labels: inputs.labels
+        )
+        await LiveActivityCoordinator.reconcileIdleIslandPresentation(
+            alarmKitSnapshot: inputs.alarmKitSnapshot,
+            hasActiveSnooze: inputs.snoozeActive,
+            hasActiveLocalTimers: inputs.hasTimers,
+            userHasPersistedAlarmGroups: inputs.persistedGroups
+        )
     }
 
     func rebuildGroups() {
