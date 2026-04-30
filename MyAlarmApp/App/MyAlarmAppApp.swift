@@ -17,6 +17,11 @@ struct MyAlarmAppApp: App {
         AlarmAppShortcutsProvider.updateAppShortcutParameters()
         setupAlarmStopListener()
         setupTimeFormat()
+        // Clear any zombie / leftover Live Activities (AlarmKit can keep them alive across reinstall).
+        // Doing this here means a fresh install never starts with a phantom Dynamic Island pill.
+        Task.detached(priority: .userInitiated) {
+            await LiveActivityCoordinator.endAllActivities()
+        }
     }
 
     private func setupTimeFormat() {
