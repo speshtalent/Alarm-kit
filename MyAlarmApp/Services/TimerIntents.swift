@@ -153,50 +153,12 @@ struct RepeatAlarmIntent: LiveActivityIntent {
         }
 
         let titleResource = LocalizedStringResource(stringLiteral: label)
-        let scheduled: Alarm?
+        var scheduled: Alarm?
         if isTimer {
             await LiveActivityCoordinator.endTimerActivities()
-            let alert: AlarmPresentation.Alert
-            if #available(iOS 26.1, *) {
-                alert = AlarmPresentation.Alert(
-                    title: titleResource,
-                    secondaryButton: AlarmButton(
-                        text: "Repeat",
-                        textColor: .white,
-                        systemImageName: "repeat"
-                    ),
-                    secondaryButtonBehavior: .countdown
-                )
-            } else {
-                alert = AlarmPresentation.Alert(
-                    title: titleResource,
-                    stopButton: AlarmButton(
-                        text: "Stop",
-                        textColor: .white,
-                        systemImageName: "stop.fill"
-                    )
-                )
-            }
-            let presentation = AlarmPresentation(
-                alert: alert,
-                countdown: AlarmPresentation.Countdown(
-                    title: LocalizedStringResource(stringLiteral: label)
-                )
-            )
-            let attributes: AlarmAttributes<TimerLiveActivityMetadata> = AlarmAttributes(
-                presentation: presentation,
-                metadata: TimerLiveActivityMetadata(title: label, icon: "timer"),
-                tintColor: Color.orange
-            )
-            let configuration = AlarmManager.AlarmConfiguration.timer(
-                duration: duration,
-                attributes: attributes,
-                stopIntent: StopAlarmIntent(alarmID: alarmID),
-                secondaryIntent: RepeatAlarmIntent(alarmID: alarmID),
-                sound: .named(appGroup?.string(forKey: "timerSound_\(alarmID)") ?? "nokia.caf")
-            )
-            appGroup?.set(fireDate.timeIntervalSince1970, forKey: "timerEndDate_\(alarmID)")
-            scheduled = try? await AlarmManager.shared.schedule(id: id, configuration: configuration)
+            appGroup?.set(alarmID, forKey: "pendingTimerStop")
+            appGroup?.synchronize()
+            WidgetCenter.shared.reloadAllTimelines()
         } else {
             UserDefaults.standard.set(true, forKey: "isSnoozed_\(alarmID)")
             appGroup?.set(true, forKey: "isSnoozed_\(alarmID)")

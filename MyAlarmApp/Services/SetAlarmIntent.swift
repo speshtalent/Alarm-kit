@@ -339,39 +339,6 @@ struct SetVoiceAlarmIntent: AppIntent {
     }
 }
 
-// MARK: - Timer Intents
-struct FiveMinTimerIntent: AppIntent {
-    static var title: LocalizedStringResource = "5 Minute Timer"
-    static var description = IntentDescription("Instantly starts a 5 minute timer.")
-
-    @MainActor
-    func perform() async throws -> some IntentResult & ProvidesDialog {
-        await TimerService.shared.startTimer(duration: 300, title: "5 Min Timer", sound: "nokia.caf")
-        return .result(dialog: IntentDialog("5 minute timer started."))
-    }
-}
-
-struct StartTimerIntent: AppIntent {
-    static var title: LocalizedStringResource = "Start Timer"
-    static var description = IntentDescription("Starts a countdown timer for a custom duration.")
-
-    @Parameter(title: "Duration (minutes)")
-    var minutes: Int
-
-    static var parameterSummary: some ParameterSummary {
-        Summary("Start a \(\.$minutes) minute timer")
-    }
-
-    init() {}
-
-    @MainActor
-    func perform() async throws -> some IntentResult & ProvidesDialog {
-        let duration = TimeInterval(minutes * 60)
-        await TimerService.shared.startTimer(duration: duration, title: "\(minutes) Min Timer", sound: "nokia.caf")
-        return .result(dialog: IntentDialog("Started a \(minutes) minute timer."))
-    }
-}
-
 // MARK: - App Shortcuts
 struct AlarmAppShortcutsProvider: AppShortcutsProvider {
     static var shortcutTileColor: ShortcutTileColor = .orange
@@ -387,24 +354,6 @@ struct AlarmAppShortcutsProvider: AppShortcutsProvider {
             ],
             shortTitle: "Set Alarm",
             systemImageName: "alarm"
-        )
-        AppShortcut(
-            intent: FiveMinTimerIntent(),
-            phrases: [
-                "Start a 5 minute \(.applicationName) timer",
-                "Set a 5 min \(.applicationName) timer"
-            ],
-            shortTitle: "5 Min Timer",
-            systemImageName: "timer"
-        )
-        AppShortcut(
-            intent: StartTimerIntent(),
-            phrases: [
-                "Start a \(.applicationName) timer",
-                "Set a \(.applicationName) timer"
-            ],
-            shortTitle: "Start Timer",
-            systemImageName: "timer.circle"
         )
         AppShortcut(
             intent: OpenDateAlarmIntent(),

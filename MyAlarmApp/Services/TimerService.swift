@@ -1,9 +1,8 @@
 import Foundation
 import Combine
 import AlarmKit
-import SwiftUI
-import AppIntents
 import ActivityKit
+import UserNotifications
 
 struct TimerViewModel: Identifiable, Equatable, Hashable {
     enum State {
@@ -57,118 +56,72 @@ final class TimerService: ObservableObject {
 
     static let shared = TimerService()
 
-    @Published var timers: [Alarm] = []
+    @Published var timers: [TimerViewModel] = []
     @Published var timerViewModels: [TimerViewModel] = []
 
     private init() {}
+
+    private struct StoredTimer: Codable, Identifiable, Hashable {
+        let id: UUID
+        let title: String
+        let duration: TimeInterval
+        let sound: String
+        let endDate: Date
+    }
+
+    private let timersKey = "LocalTimers"
 
     private func titleKey(for id: UUID) -> String { "timerTitle_\(id.uuidString)" }
     private func durationKey(for id: UUID) -> String { "timerDuration_\(id.uuidString)" }
     private func soundKey(for id: UUID) -> String { "timerSound_\(id.uuidString)" }
     private func endDateKey(for id: UUID) -> String { "timerEndDate_\(id.uuidString)" }
 
-    private func makeAlert(for title: String) -> AlarmPresentation.Alert {
-        let titleResource = LocalizedStringResource(stringLiteral: title)
-        if #available(iOS 26.1, *) {
-            return AlarmPresentation.Alert(
-                title: titleResource,
-                secondaryButton: AlarmButton(
-                    text: "Repeat",
-                    textColor: .white,
-                    systemImageName: "repeat"
-                ),
-                secondaryButtonBehavior: .countdown
-            )
-        } else {
-            return AlarmPresentation.Alert(
-                title: titleResource,
-                stopButton: AlarmButton(
-                    text: "Stop",
-                    textColor: .white,
-                    systemImageName: "stop.fill"
-                )
-            )
-        }
-    }
-
     // MARK: - Load timers
     func loadTimers() {
-        do {
-            timers = try AlarmManager.shared.alarms.filter {
-                $0.schedule == nil
-            }
-            timerViewModels = timers.map(makeViewModel).sorted { $0.title < $1.title }
-            removeMetadataForInactiveTimers()
-        } catch {
-            print("Failed to load timers:", error)
-            timerViewModels = []
+        let now = Date()
+        let storedTimers = loadStoredTimers()
+        let activeTimers = storedTimers.filter { $0.endDate > now }
+        if activeTimers.count != storedTimers.count {
+            saveStoredTimers(activeTimers)
         }
+        timerViewModels = activeTimers.map(makeViewModel).sorted { $0.title < $1.title }
+        timers = timerViewModels
+        removeMetadataForInactiveTimers(activeIDs: Set(activeTimers.map(\.id.uuidString)))
+        Task { await cleanupLegacyAlarmKitTimers(activeIDs: Set(activeTimers.map(\.id.uuidString))) }
     }
 
     // MARK: - Start timer
     func startTimer(duration: TimeInterval, title: String, sound: String = "nokia.caf") async {
         do {
-            let id = Alarm.ID()
-            await LiveActivityCoordinator.endTimerActivities()
-            let alert = makeAlert(for: title)
-
-            let countdown = AlarmPresentation.Countdown(
-                title: LocalizedStringResource(stringLiteral: title),
-                pauseButton: AlarmButton(
-                    text: "Pause",
-                    textColor: .orange,
-                    systemImageName: "pause.fill"
-                )
-            )
-
-            let paused = AlarmPresentation.Paused(
-                title: LocalizedStringResource(stringLiteral: "Paused"),
-                resumeButton: AlarmButton(
-                    text: "Resume",
-                    textColor: .orange,
-                    systemImageName: "play.fill"
-                )
-            )
-
-            let presentation = AlarmPresentation(
-                alert: alert,
-                countdown: countdown,
-                paused: paused
-            )
-
+            await cleanupLegacyAlarmKitTimers(activeIDs: [])
+            let id = UUID()
             let endDate = Date().addingTimeInterval(duration)
-            let attributes: AlarmAttributes<TimerLiveActivityMetadata> = AlarmAttributes(
-                presentation: presentation,
-                metadata: TimerLiveActivityMetadata(title: title, icon: "timer"),
-                tintColor: .orange
-            )
-
-            let configuration = AlarmManager.AlarmConfiguration.timer(
-                duration: duration,
-                attributes: attributes,
-                stopIntent: StopAlarmIntent(alarmID: id.uuidString),
-                secondaryIntent: RepeatAlarmIntent(alarmID: id.uuidString),
-                sound: .named(sound)
-            )
-
-            let timer = try await AlarmManager.shared.schedule(
+            let timer = StoredTimer(
                 id: id,
-                configuration: configuration
+                title: title,
+                duration: duration,
+                sound: sound,
+                endDate: endDate
             )
-            // ✅ Save timer duration so RepeatAlarmIntent can use it
-            UserDefaults.standard.set(duration, forKey: "timerDuration_\(id.uuidString)")
+            try await scheduleNotification(for: timer)
+
+            var storedTimers = loadStoredTimers()
+            storedTimers.removeAll { $0.id == id }
+            storedTimers.append(timer)
+            saveStoredTimers(storedTimers)
+
             UserDefaults.standard.set(title, forKey: titleKey(for: id))
-            UserDefaults.standard.set(sound, forKey: "timerSound_\(id.uuidString)")
+            UserDefaults.standard.set(duration, forKey: durationKey(for: id))
+            UserDefaults.standard.set(sound, forKey: soundKey(for: id))
             UserDefaults.standard.set(endDate.timeIntervalSince1970, forKey: endDateKey(for: id))
-            // ✅ Also save to App Group so intent extension can read it
+
             let appGroup = UserDefaults(suiteName: "group.com.speshtalent.FutureAlarm26")
-            appGroup?.set(duration, forKey: "timerDuration_\(id.uuidString)")
-            appGroup?.set(sound, forKey: "timerSound_\(id.uuidString)")
             appGroup?.set(title, forKey: titleKey(for: id))
+            appGroup?.set(duration, forKey: durationKey(for: id))
+            appGroup?.set(sound, forKey: soundKey(for: id))
             appGroup?.set(endDate.timeIntervalSince1970, forKey: endDateKey(for: id))
 
-            timers.append(timer)
-            timerViewModels = timers.map(makeViewModel).sorted { $0.title < $1.title }
+            loadTimers()
             print("⏱️ Timer started:", duration, "sound:", sound)
 
         } catch {
@@ -177,58 +130,37 @@ final class TimerService: ObservableObject {
     }
 
     // MARK: - Cancel timer
-    func cancelTimer(id: Alarm.ID) {
-        do {
-            try AlarmManager.shared.cancel(id: id)
-            timers.removeAll { $0.id == id }
-            removeMetadata(for: id)
-            timerViewModels = timers.map(makeViewModel).sorted { $0.title < $1.title }
-            Task { await LiveActivityCoordinator.endTimerActivities() }
-            print("🗑️ Timer cancelled")
-        } catch {
-            timers.removeAll { $0.id == id }
-            removeMetadata(for: id)
-            timerViewModels = timers.map(makeViewModel).sorted { $0.title < $1.title }
-            Task { await LiveActivityCoordinator.endTimerActivities() }
-            print("❌ Failed to cancel timer:", error)
+    func cancelTimer(id: UUID) {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [notificationIdentifier(for: id)]
+        )
+        var storedTimers = loadStoredTimers()
+        storedTimers.removeAll { $0.id == id }
+        saveStoredTimers(storedTimers)
+        removeMetadata(for: id)
+        Task {
+            try? AlarmManager.shared.cancel(id: id)
+            await LiveActivityCoordinator.endTimerActivities()
         }
+        loadTimers()
+        print("🗑️ Timer cancelled")
     }
 
     func viewModel(for id: UUID) -> TimerViewModel? {
         timerViewModels.first(where: { $0.id == id })
     }
 
-    private func makeViewModel(for timer: Alarm) -> TimerViewModel {
-        let storedTitle = UserDefaults.standard.string(forKey: titleKey(for: timer.id)) ?? "Timer"
-        let storedDuration = UserDefaults.standard.double(forKey: durationKey(for: timer.id))
-        let storedSound = UserDefaults.standard.string(forKey: soundKey(for: timer.id)) ?? "nokia.caf"
-        let storedEndDate = UserDefaults.standard.object(forKey: endDateKey(for: timer.id)) as? TimeInterval
-        let endDate = storedEndDate.map(Date.init(timeIntervalSince1970:))
-        let countdown = timer.countdownDuration
-
-        // WHY: AlarmKit already tells us whether there is active or paused countdown data,
-        // so the row should render from that single derived state instead of duplicating rules in the view.
-        let state: TimerViewModel.State
-        let remaining: TimeInterval
-        if let runningRemaining = countdown?.preAlert, runningRemaining > 0 {
-            state = .running
-            remaining = runningRemaining
-        } else if let pausedRemaining = countdown?.postAlert, pausedRemaining > 0 {
-            state = .paused
-            remaining = pausedRemaining
-        } else {
-            state = .idle
-            remaining = max(storedDuration, 0)
-        }
+    private func makeViewModel(for timer: StoredTimer) -> TimerViewModel {
+        let remaining = max(timer.endDate.timeIntervalSinceNow, 0)
 
         return TimerViewModel(
             id: timer.id,
-            title: storedTitle,
-            state: state,
-            totalDuration: max(storedDuration, remaining),
+            title: timer.title,
+            state: remaining > 0 ? .running : .idle,
+            totalDuration: max(timer.duration, remaining),
             remainingDuration: remaining,
-            sound: storedSound,
-            endDate: state == .running ? (endDate ?? Date().addingTimeInterval(remaining)) : nil
+            sound: timer.sound,
+            endDate: remaining > 0 ? timer.endDate : nil
         )
     }
 
@@ -246,13 +178,64 @@ final class TimerService: ObservableObject {
         }
     }
 
-    private func removeMetadataForInactiveTimers() {
-        let activeIDs = Set(timers.map(\.id.uuidString))
+    private func removeMetadataForInactiveTimers(activeIDs: Set<String>) {
         let keys = UserDefaults.standard.dictionaryRepresentation().keys
         for key in keys where key.hasPrefix("timerDuration_") {
             let id = key.replacingOccurrences(of: "timerDuration_", with: "")
             guard !activeIDs.contains(id), let uuid = UUID(uuidString: id) else { continue }
             removeMetadata(for: uuid)
         }
+    }
+
+    private func loadStoredTimers() -> [StoredTimer] {
+        guard let data = UserDefaults.standard.data(forKey: timersKey) else { return [] }
+        return (try? JSONDecoder().decode([StoredTimer].self, from: data)) ?? []
+    }
+
+    private func saveStoredTimers(_ timers: [StoredTimer]) {
+        if let data = try? JSONEncoder().encode(timers) {
+            UserDefaults.standard.set(data, forKey: timersKey)
+        }
+    }
+
+    private func notificationIdentifier(for id: UUID) -> String {
+        "timer_\(id.uuidString)"
+    }
+
+    private func scheduleNotification(for timer: StoredTimer) async throws {
+        let content = UNMutableNotificationContent()
+        content.title = timer.title
+        content.body = "Timer finished"
+        content.sound = UNNotificationSound(named: UNNotificationSoundName(timer.sound))
+
+        let trigger = UNTimeIntervalNotificationTrigger(
+            timeInterval: max(timer.endDate.timeIntervalSinceNow, 1),
+            repeats: false
+        )
+        let request = UNNotificationRequest(
+            identifier: notificationIdentifier(for: timer.id),
+            content: content,
+            trigger: trigger
+        )
+        try await UNUserNotificationCenter.current().add(request)
+    }
+
+    private func cleanupLegacyAlarmKitTimers(activeIDs: Set<String>) async {
+        var timerIDs = UserDefaults.standard.dictionaryRepresentation().keys.compactMap { key -> UUID? in
+            guard key.hasPrefix("timerDuration_") else { return nil }
+            let id = key.replacingOccurrences(of: "timerDuration_", with: "")
+            guard !activeIDs.contains(id) else { return nil }
+            return UUID(uuidString: id)
+        }
+        let alarmKitTimerIDs = (try? AlarmManager.shared.alarms.compactMap { alarm -> UUID? in
+            guard alarm.schedule == nil, !activeIDs.contains(alarm.id.uuidString) else { return nil }
+            return alarm.id
+        }) ?? []
+        timerIDs.append(contentsOf: alarmKitTimerIDs)
+
+        for id in Set(timerIDs) {
+            try? AlarmManager.shared.cancel(id: id)
+        }
+        await LiveActivityCoordinator.endTimerActivities()
     }
 }

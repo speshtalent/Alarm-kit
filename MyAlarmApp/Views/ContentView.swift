@@ -3,23 +3,16 @@ import AlarmKit
 import CoreSpotlight
 
 struct ContentView: View {
-    
-    enum Mode { case alarms, timers }
-    
-    @State private var mode: Mode = .alarms
     @State private var showAddAlarm = false
-    @State private var showAddTimer = false
     @State private var showSettings = false
     @State private var selectedTab: Int = 0
     @State private var groupToEdit: AlarmService.AlarmGroup? = nil
-    @State private var timerToEdit: TimerViewModel? = nil
     @State private var showAlarmPermissionAlert = false
     @State private var showMicPermissionAlert = false
     @State private var showCalendarPermissionAlert = false
     @State private var pendingIntentAlarmDraft: PendingSetAlarmIntentDraft? = nil
     
     @StateObject private var alarmService = AlarmService.shared
-    @StateObject private var timerService = TimerService.shared
     
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
     @AppStorage("appColorScheme") private var appColorScheme: String = "system"
@@ -38,7 +31,7 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             TabView(selection: $selectedTab) {
-                alarmsTimersTab
+                alarmsTab
                     .tabItem { Label("Alarms", systemImage: "alarm") }
                     .tag(0)
                 CalendarView()
@@ -70,7 +63,7 @@ struct ContentView: View {
         .preferredColorScheme(preferredColorScheme)
     }
     
-    var alarmsTimersTab: some View {
+    var alarmsTab: some View {
         NavigationStack {
             ZStack {
                 Color("AppBackground").ignoresSafeArea()
@@ -78,7 +71,7 @@ struct ContentView: View {
                 VStack(spacing: 0) {
                     
                     HStack {
-                        Text(mode == .alarms ? "Alarms" : "Timers")
+                        Text("Alarms")
                             .font(.system(size: 34, weight: .bold, design: .rounded))
                             .foregroundStyle(Color("PrimaryText"))
                         Spacer()
@@ -95,19 +88,15 @@ struct ContentView: View {
                         .padding(.trailing, 8)
                         
                         Button {
-                            if mode == .alarms {
-                                Task {
-                                    await AlarmService.shared.requestAuthorizationIfNeeded()
-                                    await MainActor.run {
-                                        if AlarmManager.shared.authorizationState == .denied {
-                                            showAlarmPermissionAlert = true
-                                        } else {
-                                            showAddAlarm = true
-                                        }
+                            Task {
+                                await AlarmService.shared.requestAuthorizationIfNeeded()
+                                await MainActor.run {
+                                    if AlarmManager.shared.authorizationState == .denied {
+                                        showAlarmPermissionAlert = true
+                                    } else {
+                                        showAddAlarm = true
                                     }
                                 }
-                            } else {
-                                showAddTimer = true
                             }
                         } label: {
                             Image(systemName: "plus")
@@ -120,128 +109,70 @@ struct ContentView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 16)
-                    .padding(.bottom, 8)
-                    
-                    HStack(spacing: 0) {
-                        ForEach([Mode.alarms, Mode.timers], id: \.self) { m in
-                            Button {
-                                withAnimation(.spring(response: 0.3)) { mode = m }
-                            } label: {
-                                Text(m == .alarms ? "Alarms" : "Timers")
-                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(mode == m ? .black : Color("SecondaryText"))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 10)
-                                    .background(mode == m ? .orange : .clear)
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                            }
-                        }
-                    }
-                    .padding(4)
-                    .background(Color("CardBackground"))
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .padding(.horizontal, 20)
                     .padding(.bottom, 20)
                     
                     List {
-                        if mode == .alarms {
-                            if alarmService.alarmGroups.isEmpty {
-                                emptyState(icon: "alarm", text: "No alarms yet")
-                                    .listRowBackground(Color("AppBackground"))
-                                    .listRowSeparator(.hidden)
-                            } else {
-                                ForEach(alarmService.alarmGroups) { group in
-                                    AlarmGroupRow(group: group) {
-                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                        for alarmID in group.alarmIDs {
-                                            alarmService.toggleAlarm(id: alarmID)
-                                        }
-                                        Task {
-                                            try? await Task.sleep(nanoseconds: 300_000_000)
-                                            await MainActor.run {
-                                                alarmService.loadAlarms()
-                                            }
-                                        }
+                        if alarmService.alarmGroups.isEmpty {
+                            emptyState(icon: "alarm", text: "No alarms yet")
+                                .listRowBackground(Color("AppBackground"))
+                                .listRowSeparator(.hidden)
+                        } else {
+                            ForEach(alarmService.alarmGroups) { group in
+                                AlarmGroupRow(group: group) {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    for alarmID in group.alarmIDs {
+                                        alarmService.toggleAlarm(id: alarmID)
                                     }
-                                    .listRowBackground(Color("AppBackground"))
-                                    .listRowSeparator(.hidden)
-                                    .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
-                                    .onTapGesture {
-                                        if group.isFired {
-                                            // ✅ Fired alarm — open AddAlarmView with label pre-filled, remove from fired list
-                                            AlarmService.shared.removeFiredAlarm(alarmID: group.id.uuidString)
-                                            AlarmService.shared.loadAlarms()
-                                            groupToEdit = group
-                                        } else {
-                                            groupToEdit = group
-                                        }
-                                    }
-                                    .swipeActions(edge: .leading) {}
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                        Button(role: .destructive) {
-                                            UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                                            if let firstID = group.alarmIDs.first {
-                                                alarmService.cancelAlarm(id: firstID)
-                                            }
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
-                                        Button {
-                                            groupToEdit = group
-                                        } label: {
-                                            Label("Edit", systemImage: "pencil")
-                                        }
-                                        .tint(.orange)
-                                    }
-                                    .contextMenu {
-                                        Button {
-                                            groupToEdit = group
-                                        } label: {
-                                            Label("Edit", systemImage: "pencil")
-                                        }
-                                        Button(role: .destructive) {
-                                            UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                                            if let firstID = group.alarmIDs.first {
-                                                alarmService.cancelAlarm(id: firstID)
-                                            }
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
+                                    Task {
+                                        try? await Task.sleep(nanoseconds: 300_000_000)
+                                        await MainActor.run {
+                                            alarmService.loadAlarms()
                                         }
                                     }
                                 }
-                            }
-                        } else {
-                            if timerService.timers.isEmpty {
-                                emptyState(icon: "timer", text: "No timers yet")
-                                    .listRowBackground(Color("AppBackground"))
-                                    .listRowSeparator(.hidden)
-                            } else {
-                                ForEach(timerService.timerViewModels) { timer in
-                                    TimerRow(timer: timer)
-                                        .listRowBackground(Color("AppBackground"))
-                                        .listRowSeparator(.hidden)
-                                        .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
-                                        .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            timerToEdit = timer
+                                .listRowBackground(Color("AppBackground"))
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                                .onTapGesture {
+                                    if group.isFired {
+                                        AlarmService.shared.removeFiredAlarm(alarmID: group.id.uuidString)
+                                        AlarmService.shared.loadAlarms()
+                                        groupToEdit = group
+                                    } else {
+                                        groupToEdit = group
+                                    }
+                                }
+                                .swipeActions(edge: .leading) {}
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                                        if let firstID = group.alarmIDs.first {
+                                            alarmService.cancelAlarm(id: firstID)
                                         }
-                                        .swipeActions(edge: .leading) {}
-                                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                            Button(role: .destructive) {
-                                                UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                                                timerService.cancelTimer(id: timer.id)
-                                            } label: {
-                                                Label("Delete", systemImage: "trash")
-                                            }
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                    Button {
+                                        groupToEdit = group
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    .tint(.orange)
+                                }
+                                .contextMenu {
+                                    Button {
+                                        groupToEdit = group
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    Button(role: .destructive) {
+                                        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                                        if let firstID = group.alarmIDs.first {
+                                            alarmService.cancelAlarm(id: firstID)
                                         }
-                                        .contextMenu {
-                                            Button(role: .destructive) {
-                                                UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                                                timerService.cancelTimer(id: timer.id)
-                                            } label: {
-                                                Label("Delete", systemImage: "trash")
-                                            }
-                                        }
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
                             }
                         }
@@ -304,25 +235,6 @@ struct ContentView: View {
                     }
                 }
             }
-            .navigationDestination(item: $timerToEdit) { timer in
-                AddTimerView(editingTimer: timer) { duration, title, sound in
-                    Task {
-                        timerService.cancelTimer(id: timer.id)
-                        await timerService.startTimer(duration: duration, title: title, sound: sound)
-                        await MainActor.run { timerService.loadTimers() }
-                    }
-                }
-            }
-            .sheet(isPresented: $showAddTimer, onDismiss: {
-                timerService.loadTimers()
-            }) {
-                AddTimerView { duration, title, sound in
-                    Task {
-                        await timerService.startTimer(duration: duration, title: title, sound: sound)
-                        await MainActor.run { timerService.loadTimers() }
-                    }
-                }
-            }
             .alert("Permission Required", isPresented: $showAlarmPermissionAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -340,7 +252,6 @@ struct ContentView: View {
             }
             .onAppear {
                 alarmService.loadAlarms()
-                timerService.loadTimers()
                 consumePendingIntentAlarmFlowIfNeeded()
                 SpotlightService.shared.indexAlarms(alarmService.alarmGroups)
                 NotificationCenter.default.addObserver(forName: NSNotification.Name("showMicPermission"), object: nil, queue: .main) { _ in
@@ -359,7 +270,6 @@ struct ContentView: View {
                 consumePendingIntentAlarmFlowIfNeeded()
                 CalendarService.shared.refreshAuthorizationStatus()
                 alarmService.loadAlarms()
-                timerService.loadTimers()
             }
             .onContinueUserActivity(CSSearchableItemActionType) { activity in
                 if let id = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String {
@@ -379,14 +289,7 @@ struct ContentView: View {
         quickActionMode.wrappedValue = nil
         switch action {
         case "newAlarm":
-            selectedTab = 0; mode = .alarms; showAddAlarm = true
-        case "newTimer":
-            selectedTab = 0; mode = .timers; showAddTimer = true
-        case "fiveMinTimer":
-            Task {
-                await timerService.startTimer(duration: 300, title: "5 Min Timer", sound: "nokia.caf")
-                await MainActor.run { timerService.loadTimers(); selectedTab = 0; mode = .timers }
-            }
+            selectedTab = 0; showAddAlarm = true
         case "settings":
             showSettings = true
         default: break
@@ -398,8 +301,6 @@ struct ContentView: View {
         pendingIntentAlarmDraft = draft
         groupToEdit = nil
         selectedTab = 0
-        mode = .alarms
-        showAddTimer = false
         showAddAlarm = true
     }
     
@@ -695,45 +596,6 @@ struct AlarmGroupRow: View {
         return group.fireDate.flatMap { f.string(from: $0) } ?? ""
     }
 }
-// MARK: - Timer Row
-struct TimerRow: View {
-    let timer: TimerViewModel
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(.orange.opacity(0.15))
-                    .frame(width: 48, height: 48)
-                Image(systemName: "timer")
-                    .foregroundStyle(.orange)
-                    .font(.system(size: 20))
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                Text(timer.displayDurationText)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color("PrimaryText"))
-                if timer.state == .running, let endDate = timer.endDate {
-                    Text(timerInterval: Date()...endDate, countsDown: true)
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
-                        .foregroundStyle(.orange)
-                } else {
-                    Text(timer.fallbackRemainingText)
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
-                        .foregroundStyle(timer.state == .paused ? .orange : Color("SecondaryText"))
-                }
-            }
-            Spacer()
-            Text(timer.statusText)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundStyle(timer.state == .running ? .orange : Color("SecondaryText"))
-        }
-        .padding(16)
-        .background(Color("CardBackground"))
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-    }
-}
-
 // MARK: - History View
 struct ScheduledView: View {
     @AppStorage("use24HourFormat") private var use24HourFormat: Bool = false

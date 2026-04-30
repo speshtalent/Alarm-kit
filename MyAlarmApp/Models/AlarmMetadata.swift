@@ -7,6 +7,11 @@ nonisolated struct AlarmLiveActivityMetadata: AlarmMetadata {
     var icon: String
 }
 
+nonisolated struct TimerAlarmMetadata: AlarmMetadata {
+    var title: String
+    var icon: String
+}
+
 nonisolated struct TimerLiveActivityMetadata: AlarmMetadata {
     var title: String
     var icon: String
@@ -33,6 +38,7 @@ enum LiveActivityCoordinator {
     }
 
     static func endTimerActivities() async {
+        await endActivities(for: Activity<AlarmAttributes<TimerAlarmMetadata>>.activities)
         await endActivities(for: Activity<AlarmAttributes<TimerLiveActivityMetadata>>.activities)
     }
 

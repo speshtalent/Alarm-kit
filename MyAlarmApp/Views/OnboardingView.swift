@@ -391,7 +391,7 @@ private struct Screen3: View {
     }
 }
  
-// MARK: - Screen 4: Timers & Live Activity
+// MARK: - Screen 4: Lock Screen Alarms
 private struct Screen4: View {
     @State private var progress: CGFloat = 0.65
  
@@ -475,7 +475,7 @@ private struct Screen4: View {
                         .padding(.horizontal, 14)
  
                         HStack {
-                            Text("⏱ Kitchen Timer")
+                            Text("🔔 Morning Alarm")
                                 .font(.system(size: 10, design: .rounded))
                                 .foregroundStyle(Color.white.opacity(0.38))
                             Spacer()
@@ -499,12 +499,12 @@ private struct Screen4: View {
                 }
             }
  
-            Text("Timers & Live Activity")
+            Text("Lock Screen Alarms")
                 .font(.system(size: 30, weight: .heavy, design: .rounded))
                 .foregroundStyle(.white)
                 .padding(.bottom, 12)
  
-            Text("Countdown timers live on your lock screen.\nNo need to unlock — always in sight!")
+            Text("Keep important alarms visible\nwith quick actions when they ring.")
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .foregroundStyle(Color.white.opacity(0.42))
                 .multilineTextAlignment(.center)
