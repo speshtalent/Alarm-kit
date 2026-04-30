@@ -561,6 +561,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 39;
+				DEVELOPMENT_TEAM = 6G23VUNY63;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MyAlarmApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Date Alarm";
@@ -602,6 +603,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 39;
+				DEVELOPMENT_TEAM = N29GGJ96UE;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MyAlarmApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Date Alarm";

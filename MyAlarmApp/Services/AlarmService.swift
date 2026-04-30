@@ -318,6 +318,7 @@ final class AlarmService: ObservableObject {
 
     func loadAlarms() {
         let labels = loadLabels()
+        let removedOrphanTimers = TimerService.shared.cancelOrphanAlarmKitTimerRecords()
         do {
             let all = try AlarmManager.shared.alarms
             let disabled = loadDisabledIDs()
@@ -386,10 +387,14 @@ final class AlarmService: ObservableObject {
             }
         )
         Task {
+            if removedOrphanTimers {
+                await LiveActivityCoordinator.endTimerActivities()
+            }
             await LiveActivityCoordinator.syncSnoozeActivities(
                 activeSnoozes: activeSnoozes,
                 labels: labels
             )
+            await LiveActivityCoordinator.endAlarmLiveActivitiesIfAlarmKitEmpty()
         }
     }
 

@@ -3,6 +3,7 @@ import AlarmKit
 import CoreSpotlight
 
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showAddAlarm = false
     @State private var showSettings = false
     @State private var selectedTab: Int = 0
@@ -29,6 +30,23 @@ struct ContentView: View {
     }
     
     var body: some View {
+        rootChrome
+    }
+
+    /// Split from `body` so the compiler can type-check the tab shell without growing the main `body` expression.
+    private var rootChrome: some View {
+        mainTabInterface
+            .animation(.easeInOut(duration: 0.4), value: hasSeenOnboarding)
+            .preferredColorScheme(preferredColorScheme)
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .background {
+                    alarmService.loadAlarms()
+                }
+            }
+    }
+
+    @ViewBuilder
+    private var mainTabInterface: some View {
         ZStack {
             TabView(selection: $selectedTab) {
                 alarmsTab
@@ -52,189 +70,198 @@ struct ContentView: View {
             .onChange(of: quickActionMode.wrappedValue) {
                 handleQuickAction()
             }
-            
+
             if !hasSeenOnboarding {
                 OnboardingView()
                     .transition(.opacity)
                     .zIndex(1)
             }
         }
-        .animation(.easeInOut(duration: 0.4), value: hasSeenOnboarding)
-        .preferredColorScheme(preferredColorScheme)
     }
-    
-    var alarmsTab: some View {
+
+    @ViewBuilder
+    private var alarmsTabMainContent: some View {
+        ZStack {
+            Color("AppBackground").ignoresSafeArea()
+
+            VStack(spacing: 0) {
+
+                HStack {
+                    Text("Alarms")
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color("PrimaryText"))
+                    Spacer()
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(Color("SecondaryText"))
+                            .frame(width: 36, height: 36)
+                            .background(Color("CardBackground"))
+                            .clipShape(Circle())
+                    }
+                    .padding(.trailing, 8)
+
+                    Button {
+                        Task {
+                            await AlarmService.shared.requestAuthorizationIfNeeded()
+                            await MainActor.run {
+                                if AlarmManager.shared.authorizationState == .denied {
+                                    showAlarmPermissionAlert = true
+                                } else {
+                                    showAddAlarm = true
+                                }
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.black)
+                            .frame(width: 36, height: 36)
+                            .background(.orange)
+                            .clipShape(Circle())
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 20)
+
+                List {
+                    if alarmService.alarmGroups.isEmpty {
+                        emptyState(icon: "alarm", text: "No alarms yet")
+                            .listRowBackground(Color("AppBackground"))
+                            .listRowSeparator(.hidden)
+                    } else {
+                        ForEach(alarmService.alarmGroups) { group in
+                            AlarmGroupRow(group: group) {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                for alarmID in group.alarmIDs {
+                                    alarmService.toggleAlarm(id: alarmID)
+                                }
+                                Task {
+                                    try? await Task.sleep(nanoseconds: 300_000_000)
+                                    await MainActor.run {
+                                        alarmService.loadAlarms()
+                                    }
+                                }
+                            }
+                            .listRowBackground(Color("AppBackground"))
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                            .onTapGesture {
+                                if group.isFired {
+                                    AlarmService.shared.removeFiredAlarm(alarmID: group.id.uuidString)
+                                    AlarmService.shared.loadAlarms()
+                                    groupToEdit = group
+                                } else {
+                                    groupToEdit = group
+                                }
+                            }
+                            .swipeActions(edge: .leading) {}
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                                    if let firstID = group.alarmIDs.first {
+                                        alarmService.cancelAlarm(id: firstID)
+                                    }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                Button {
+                                    groupToEdit = group
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.orange)
+                            }
+                            .contextMenu {
+                                Button {
+                                    groupToEdit = group
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                Button(role: .destructive) {
+                                    UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                                    if let firstID = group.alarmIDs.first {
+                                        alarmService.cancelAlarm(id: firstID)
+                                    }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
+                    }
+                }
+                .listStyle(.plain)
+                .background(Color("AppBackground"))
+                .scrollContentBackground(.hidden)
+            }
+        }
+    }
+
+    /// Navigation destinations must attach to the stack’s **inner** root (`alarmsTabMainContent`).
+    /// Chaining a second `.navigationDestination` on the `NavigationStack` broke `showAddAlarm` (\+ button).
+    private var alarmsTabNavigationStack: some View {
         NavigationStack {
-            ZStack {
-                Color("AppBackground").ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    
-                    HStack {
-                        Text("Alarms")
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color("PrimaryText"))
-                        Spacer()
-                        Button {
-                            showSettings = true
-                        } label: {
-                            Image(systemName: "gearshape.fill")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundStyle(Color("SecondaryText"))
-                                .frame(width: 36, height: 36)
-                                .background(Color("CardBackground"))
-                                .clipShape(Circle())
-                        }
-                        .padding(.trailing, 8)
-                        
-                        Button {
-                            Task {
-                                await AlarmService.shared.requestAuthorizationIfNeeded()
-                                await MainActor.run {
-                                    if AlarmManager.shared.authorizationState == .denied {
-                                        showAlarmPermissionAlert = true
-                                    } else {
-                                        showAddAlarm = true
-                                    }
-                                }
-                            }
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundStyle(.black)
-                                .frame(width: 36, height: 36)
-                                .background(.orange)
-                                .clipShape(Circle())
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                    .padding(.bottom, 20)
-                    
-                    List {
-                        if alarmService.alarmGroups.isEmpty {
-                            emptyState(icon: "alarm", text: "No alarms yet")
-                                .listRowBackground(Color("AppBackground"))
-                                .listRowSeparator(.hidden)
-                        } else {
-                            ForEach(alarmService.alarmGroups) { group in
-                                AlarmGroupRow(group: group) {
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    for alarmID in group.alarmIDs {
-                                        alarmService.toggleAlarm(id: alarmID)
-                                    }
-                                    Task {
-                                        try? await Task.sleep(nanoseconds: 300_000_000)
-                                        await MainActor.run {
-                                            alarmService.loadAlarms()
-                                        }
-                                    }
-                                }
-                                .listRowBackground(Color("AppBackground"))
-                                .listRowSeparator(.hidden)
-                                .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
-                                .onTapGesture {
-                                    if group.isFired {
-                                        AlarmService.shared.removeFiredAlarm(alarmID: group.id.uuidString)
-                                        AlarmService.shared.loadAlarms()
-                                        groupToEdit = group
-                                    } else {
-                                        groupToEdit = group
-                                    }
-                                }
-                                .swipeActions(edge: .leading) {}
-                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    Button(role: .destructive) {
-                                        UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                                        if let firstID = group.alarmIDs.first {
-                                            alarmService.cancelAlarm(id: firstID)
-                                        }
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                    Button {
-                                        groupToEdit = group
-                                    } label: {
-                                        Label("Edit", systemImage: "pencil")
-                                    }
-                                    .tint(.orange)
-                                }
-                                .contextMenu {
-                                    Button {
-                                        groupToEdit = group
-                                    } label: {
-                                        Label("Edit", systemImage: "pencil")
-                                    }
-                                    Button(role: .destructive) {
-                                        UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                                        if let firstID = group.alarmIDs.first {
-                                            alarmService.cancelAlarm(id: firstID)
-                                        }
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                }
+            alarmsTabMainContent
+                .navigationDestination(isPresented: $showAddAlarm) {
+                    AddAlarmView(
+                        preselectedDate: pendingIntentAlarmDraft?.date,
+                        initialTitle: pendingIntentAlarmDraft?.label,
+                        autoStartRecording: pendingIntentAlarmDraft?.shouldRecordVoice == true,
+                        repeatDaysToLoad: pendingIntentAlarmDraft?.repeatDays ?? []
+                    ) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays, calendarEnabled in
+                        Task {
+                            _ = await alarmService.scheduleFutureAlarm(
+                                date: date, title: title,
+                                snoozeEnabled: snoozeEnabled,
+                                snoozeDuration: snoozeDuration,
+                                sound: sound,
+                                repeatDays: repeatDays,
+                                calendarEnabled: calendarEnabled
+                            )
+                            await MainActor.run {
+                                pendingIntentAlarmDraft = nil
+                                alarmService.loadAlarms()
                             }
                         }
                     }
-                    .listStyle(.plain)
-                    .background(Color("AppBackground"))
-                    .scrollContentBackground(.hidden)
                 }
-            }
-            // Navigation and presentation modifiers attached directly to this NavigationStack
-            .navigationBarHidden(true)
-            .sheet(isPresented: $showSettings) {
-                SettingsView(preferredColorScheme: preferredColorScheme)
-                    .id(appColorScheme)
-            }
-            .navigationDestination(isPresented: $showAddAlarm) {
-                AddAlarmView(
-                    preselectedDate: pendingIntentAlarmDraft?.date,
-                    initialTitle: pendingIntentAlarmDraft?.label,
-                    autoStartRecording: pendingIntentAlarmDraft?.shouldRecordVoice == true,
-                    repeatDaysToLoad: pendingIntentAlarmDraft?.repeatDays ?? []
-                ) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays, calendarEnabled in
-                    Task {
-                        _ = await alarmService.scheduleFutureAlarm(
-                            date: date, title: title,
-                            snoozeEnabled: snoozeEnabled,
-                            snoozeDuration: snoozeDuration,
-                            sound: sound,
-                            repeatDays: repeatDays,
-                            calendarEnabled: calendarEnabled
-                        )
-                        await MainActor.run {
-                            pendingIntentAlarmDraft = nil
-                            alarmService.loadAlarms()
+                .navigationDestination(item: $groupToEdit) { group in
+                    AddAlarmView(
+                        initialTitle: group.isFired ? group.label : nil,
+                        editingItem: alarmService.alarms.first(where: { group.alarmIDs.contains($0.id) }),
+                        repeatDaysToLoad: group.repeatDays,
+                        soundToLoad: UserDefaults.standard.string(forKey: "alarmSound_\(group.id.uuidString)") ?? "nokia.caf"
+                    ) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays, calendarEnabled in
+                        Task {
+                            if let firstID = group.alarmIDs.first {
+                                alarmService.cancelAlarm(id: firstID)
+                            }
+                            _ = await alarmService.scheduleFutureAlarm(
+                                date: date, title: title,
+                                snoozeEnabled: snoozeEnabled,
+                                snoozeDuration: snoozeDuration,
+                                sound: sound,
+                                repeatDays: repeatDays,
+                                calendarEnabled: calendarEnabled
+                            )
+                            UserDefaults.standard.set(sound, forKey: "alarmSound_\(group.id.uuidString)")
+                            await MainActor.run { alarmService.loadAlarms() }
                         }
                     }
                 }
-            }
-            .navigationDestination(item: $groupToEdit) { group in
-                AddAlarmView(
-                    initialTitle: group.isFired ? group.label : nil,
-                    editingItem: alarmService.alarms.first(where: { group.alarmIDs.contains($0.id) }),
-                    repeatDaysToLoad: group.repeatDays,
-                    soundToLoad: UserDefaults.standard.string(forKey: "alarmSound_\(group.id.uuidString)") ?? "nokia.caf"
-                ) { date, title, snoozeEnabled, snoozeDuration, sound, repeatDays, calendarEnabled in
-                    Task {
-                        if let firstID = group.alarmIDs.first {
-                            alarmService.cancelAlarm(id: firstID)
-                        }
-                        _ = await alarmService.scheduleFutureAlarm(
-                            date: date, title: title,
-                            snoozeEnabled: snoozeEnabled,
-                            snoozeDuration: snoozeDuration,
-                            sound: sound,
-                            repeatDays: repeatDays,
-                            calendarEnabled: calendarEnabled
-                        )
-                        UserDefaults.standard.set(sound, forKey: "alarmSound_\(group.id.uuidString)")
-                        await MainActor.run { alarmService.loadAlarms() }
-                    }
-                }
-            }
+        }
+        .navigationBarHidden(true)
+        .sheet(isPresented: $showSettings) {
+            SettingsView(preferredColorScheme: preferredColorScheme)
+                .id(appColorScheme)
+        }
+    }
+
+    var alarmsTab: some View {
+        alarmsTabNavigationStack
             .alert("Permission Required", isPresented: $showAlarmPermissionAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -281,7 +308,6 @@ struct ContentView: View {
                     }
                 }
             }
-        }
     }
     
     func handleQuickAction() {

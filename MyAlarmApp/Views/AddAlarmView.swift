@@ -433,653 +433,656 @@ struct AddAlarmView: View {
         }
     }
 
-    var body: some View {
+    private var addAlarmScaffold: some View {
         ZStack {
             Color("AppBackground").ignoresSafeArea()
             ScrollView {
-                VStack(spacing: 20) {
-                    Text(isEditing ? "Edit Alarm" : "New Alarm")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color("PrimaryText"))
+                addAlarmFormStack
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var addAlarmFormStack: some View {
+        VStack(spacing: 20) {
+                // Picker card — Calendar style
+                ZStack {
+                    RoundedRectangle(cornerRadius: 20).fill(Color("CardBackground"))
+                    VStack(spacing: 0) {
+                        // Orange rings header
+                        Text(ringsAtText)
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(.black)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .background(Color.orange)
+                            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 20, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 20))
 
 
-
-                    // Picker card — Calendar style
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 20).fill(Color("CardBackground"))
-                        VStack(spacing: 0) {
-                            // Orange rings header
-                            Text(ringsAtText)
-                                .font(.system(size: 15, weight: .bold, design: .rounded))
-                                .foregroundStyle(.black)
-                                .multilineTextAlignment(.center)
-                                .frame(maxWidth: .infinity)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
-                                .background(Color.orange)
-                                .clipShape(UnevenRoundedRectangle(topLeadingRadius: 20, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 20))
-
-
-                            // Big time display
-                            HStack(spacing: 0) {
-                                Spacer()
-                                VStack(spacing: 2) {
-                                    Text("HR")
-                                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                                        .foregroundStyle(Color("SecondaryText"))
-                                        .tracking(2)
-                                    Text(use24HourFormat ? String(format: "%02d", selectedHour) : String(format: "%d", selectedHour))
-                                        .font(.system(size: 72, weight: .heavy, design: .rounded))
-                                        .foregroundStyle(showHourPicker ? .orange : Color("PrimaryText"))
-                                        .contentTransition(.numericText())
-                                        .animation(.spring(response: 0.3), value: selectedHour)
-                                        .onTapGesture {
-                                            withAnimation(.spring(response: 0.3)) {
-                                                showHourPicker.toggle()
-                                                showMinutePicker = false
-                                            }
-                                        }
-                                }
-                                Text(":")
-                                    .font(.system(size: 52, weight: .heavy, design: .rounded))
-                                    .foregroundStyle(.orange)
-                                    .padding(.horizontal, 4)
-                                    .padding(.bottom, 20)
-                                VStack(spacing: 2) {
-                                    Text("MIN")
-                                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                                        .foregroundStyle(Color("SecondaryText"))
-                                        .tracking(2)
-                                    Text(String(format: "%02d", selectedMinute))
-                                        .font(.system(size: 72, weight: .heavy, design: .rounded))
-                                        .foregroundStyle(showMinutePicker ? .orange : Color("PrimaryText"))
-                                        .contentTransition(.numericText())
-                                        .animation(.spring(response: 0.3), value: selectedMinute)
-                                        .onTapGesture {
-                                            withAnimation(.spring(response: 0.3)) {
-                                                showMinutePicker.toggle()
-                                                showHourPicker = false
-                                            }
-                                        }
-                                }
-                                if !use24HourFormat {
-                                    VStack(spacing: 6) {
-                                        Button {
-                                            withAnimation(.spring(response: 0.3)) { selectedAMPM = 0 }
-                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                        } label: {
-                                            Text("AM")
-                                                .font(.system(size: 15, weight: .heavy, design: .rounded))
-                                                .foregroundStyle(selectedAMPM == 0 ? .black : Color("SecondaryText"))
-                                                .frame(width: 54, height: 38)
-                                                .background(selectedAMPM == 0 ? Color.orange : Color("AppBackground"))
-                                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                        }
-                                        Button {
-                                            withAnimation(.spring(response: 0.3)) { selectedAMPM = 1 }
-                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                        } label: {
-                                            Text("PM")
-                                                .font(.system(size: 15, weight: .heavy, design: .rounded))
-                                                .foregroundStyle(selectedAMPM == 1 ? .black : Color("SecondaryText"))
-                                                .frame(width: 54, height: 38)
-                                                .background(selectedAMPM == 1 ? Color.orange : Color("AppBackground"))
-                                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        // Big time display
+                        HStack(spacing: 0) {
+                            Spacer()
+                            VStack(spacing: 2) {
+                                Text("HR")
+                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Color("SecondaryText"))
+                                    .tracking(2)
+                                Text(use24HourFormat ? String(format: "%02d", selectedHour) : String(format: "%d", selectedHour))
+                                    .font(.system(size: 72, weight: .heavy, design: .rounded))
+                                    .foregroundStyle(showHourPicker ? .orange : Color("PrimaryText"))
+                                    .contentTransition(.numericText())
+                                    .animation(.spring(response: 0.3), value: selectedHour)
+                                    .onTapGesture {
+                                        withAnimation(.spring(response: 0.3)) {
+                                            showHourPicker.toggle()
+                                            showMinutePicker = false
                                         }
                                     }
-                                    .padding(.leading, 8)
-                                    .padding(.bottom, 4)
-                                }
-                                Spacer()
                             }
-                            .padding(.vertical, 16)
-
-                            // Hour wheel picker
-                            if showHourPicker {
-                                VStack(spacing: 8) {
-                                    Text("SET HOUR")
-                                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                                        .foregroundStyle(Color("SecondaryText"))
-                                        .tracking(2)
-                                    Picker("Hour", selection: $selectedHour) {
-                                        if use24HourFormat {
-                                            ForEach(0...23, id: \.self) { h in
-                                                Text(String(format: "%02d", h))
-                                                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                                                    .tag(h)
-                                            }
-                                        } else {
-                                            ForEach(1...12, id: \.self) { h in
-                                                Text(String(format: "%d", h))
-                                                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                                                    .tag(h)
-                                            }
+                            Text(":")
+                                .font(.system(size: 52, weight: .heavy, design: .rounded))
+                                .foregroundStyle(.orange)
+                                .padding(.horizontal, 4)
+                                .padding(.bottom, 20)
+                            VStack(spacing: 2) {
+                                Text("MIN")
+                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Color("SecondaryText"))
+                                    .tracking(2)
+                                Text(String(format: "%02d", selectedMinute))
+                                    .font(.system(size: 72, weight: .heavy, design: .rounded))
+                                    .foregroundStyle(showMinutePicker ? .orange : Color("PrimaryText"))
+                                    .contentTransition(.numericText())
+                                    .animation(.spring(response: 0.3), value: selectedMinute)
+                                    .onTapGesture {
+                                        withAnimation(.spring(response: 0.3)) {
+                                            showMinutePicker.toggle()
+                                            showHourPicker = false
                                         }
                                     }
-                                    .pickerStyle(.wheel)
-                                    .frame(height: 120)
-                                    .background(Color("AppBackground"))
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.top, 8)
-                                .transition(.move(edge: .top).combined(with: .opacity))
                             }
+                            if !use24HourFormat {
+                                VStack(spacing: 6) {
+                                    Button {
+                                        withAnimation(.spring(response: 0.3)) { selectedAMPM = 0 }
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    } label: {
+                                        Text("AM")
+                                            .font(.system(size: 15, weight: .heavy, design: .rounded))
+                                            .foregroundStyle(selectedAMPM == 0 ? .black : Color("SecondaryText"))
+                                            .frame(width: 54, height: 38)
+                                            .background(selectedAMPM == 0 ? Color.orange : Color("AppBackground"))
+                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    }
+                                    Button {
+                                        withAnimation(.spring(response: 0.3)) { selectedAMPM = 1 }
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    } label: {
+                                        Text("PM")
+                                            .font(.system(size: 15, weight: .heavy, design: .rounded))
+                                            .foregroundStyle(selectedAMPM == 1 ? .black : Color("SecondaryText"))
+                                            .frame(width: 54, height: 38)
+                                            .background(selectedAMPM == 1 ? Color.orange : Color("AppBackground"))
+                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    }
+                                }
+                                .padding(.leading, 8)
+                                .padding(.bottom, 4)
+                            }
+                            Spacer()
+                        }
+                        .padding(.vertical, 16)
 
-                            // Minute wheel picker
-                            if showMinutePicker {
-                                VStack(spacing: 8) {
-                                    Text("SET MINUTE")
-                                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                                        .foregroundStyle(Color("SecondaryText"))
-                                        .tracking(2)
-                                    Picker("Minute", selection: $selectedMinute) {
-                                        ForEach(0...59, id: \.self) { m in
-                                            Text(String(format: "%02d", m))
+                        // Hour wheel picker
+                        if showHourPicker {
+                            VStack(spacing: 8) {
+                                Text("SET HOUR")
+                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Color("SecondaryText"))
+                                    .tracking(2)
+                                Picker("Hour", selection: $selectedHour) {
+                                    if use24HourFormat {
+                                        ForEach(0...23, id: \.self) { h in
+                                            Text(String(format: "%02d", h))
                                                 .font(.system(size: 22, weight: .bold, design: .rounded))
-                                                .tag(m)
+                                                .tag(h)
+                                        }
+                                    } else {
+                                        ForEach(1...12, id: \.self) { h in
+                                            Text(String(format: "%d", h))
+                                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                                .tag(h)
                                         }
                                     }
-                                    .pickerStyle(.wheel)
-                                    .frame(height: 120)
-                                    .background(Color("AppBackground"))
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
                                 }
-                                .padding(.horizontal, 12)
-                                .padding(.top, 8)
-                                .transition(.move(edge: .top).combined(with: .opacity))
+                                .pickerStyle(.wheel)
+                                .frame(height: 120)
+                                .background(Color("AppBackground"))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
+                            .padding(.horizontal, 12)
+                            .padding(.top, 8)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+
+                        // Minute wheel picker
+                        if showMinutePicker {
+                            VStack(spacing: 8) {
+                                Text("SET MINUTE")
+                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Color("SecondaryText"))
+                                    .tracking(2)
+                                Picker("Minute", selection: $selectedMinute) {
+                                    ForEach(0...59, id: \.self) { m in
+                                        Text(String(format: "%02d", m))
+                                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                                            .tag(m)
+                                    }
+                                }
+                                .pickerStyle(.wheel)
+                                .frame(height: 120)
+                                .background(Color("AppBackground"))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.top, 8)
+                            .transition(.move(edge: .top).combined(with: .opacity))
                         }
                     }
-                    .padding(.horizontal, 20)
-                    // Single Repeat card
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Image(systemName: "repeat").foregroundStyle(.orange)
-                                Text("Repeat")
-                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(Color("PrimaryText"))
-                                Spacer()
-                                if repeatType == "weekly" && !repeatDays.isEmpty {
-                                    let label = repeatDays.count == 7 ? "Every day" :
-                                        repeatDays == Set([2,3,4,5,6]) ? "Weekdays" :
-                                        repeatDays == Set([7,1]) ? "Weekends" :
-                                        weekDays.filter { repeatDays.contains($0.value) }.map { $0.label }.joined(separator: ", ")
-                                    Text(label)
-                                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                                        .foregroundStyle(.orange)
-                                } else if repeatType == "monthly" {
-                                    Text("Monthly")
-                                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                                        .foregroundStyle(.orange)
-                                }
+                }
+                .padding(.horizontal, 20)
+                // Single Repeat card
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "repeat").foregroundStyle(.orange)
+                            Text("Repeat")
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color("PrimaryText"))
+                            Spacer()
+                            if repeatType == "weekly" && !repeatDays.isEmpty {
+                                let label = repeatDays.count == 7 ? "Every day" :
+                                    repeatDays == Set([2,3,4,5,6]) ? "Weekdays" :
+                                    repeatDays == Set([7,1]) ? "Weekends" :
+                                    weekDays.filter { repeatDays.contains($0.value) }.map { $0.label }.joined(separator: ", ")
+                                Text(label)
+                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.orange)
+                            } else if repeatType == "monthly" {
+                                Text("Monthly")
+                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.orange)
                             }
-                            Divider()
-                            HStack(spacing: 6) {
-                                ForEach(weekDays, id: \.value) { day in
-                                    let isSelected = repeatType == "weekly" && repeatDays.contains(day.value)
-                                    Button {
-                                        if isSelected {
-                                            repeatDays.remove(day.value)
-                                        } else {
-                                            repeatDays.insert(day.value)
-                                        }
-                                        repeatType = repeatDays.isEmpty ? (repeatType == "monthly" ? "monthly" : "") : "weekly"
-                                        // ✅ Clear scheduled date when weekly selected
-                                        if !repeatDays.isEmpty {
-                                            scheduledDate = nil
-                                        }
-                                    }label: {
-                                        Text(day.label)
-                                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                                            .foregroundStyle(isSelected ? .black : Color("SecondaryText"))
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 8)
-                                            .background(isSelected ? Color.orange : Color("AppBackground"))
-                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        Divider()
+                        HStack(spacing: 6) {
+                            ForEach(weekDays, id: \.value) { day in
+                                let isSelected = repeatType == "weekly" && repeatDays.contains(day.value)
+                                Button {
+                                    if isSelected {
+                                        repeatDays.remove(day.value)
+                                    } else {
+                                        repeatDays.insert(day.value)
                                     }
-                                    .opacity(repeatType == "monthly" ? 0.3 : 1.0)
-                                    .disabled(repeatType == "monthly")
+                                    repeatType = repeatDays.isEmpty ? (repeatType == "monthly" ? "monthly" : "") : "weekly"
+                                    // ✅ Clear scheduled date when weekly selected
+                                    if !repeatDays.isEmpty {
+                                        scheduledDate = nil
+                                    }
+                                }label: {
+                                    Text(day.label)
+                                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                                        .foregroundStyle(isSelected ? .black : Color("SecondaryText"))
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 8)
+                                        .background(isSelected ? Color.orange : Color("AppBackground"))
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                }
+                                .opacity(repeatType == "monthly" ? 0.3 : 1.0)
+                                .disabled(repeatType == "monthly")
+                            }
+                        }
+
+                    }
+                    .padding(16)
+                }
+                .padding(.horizontal, 20)
+                
+                // ✅ Schedule for Future button
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color("CardBackground"))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke((scheduledDate != nil || (repeatType == "monthly" && !repeatDays.isEmpty) || (repeatType == "yearly" && !repeatDays.isEmpty)) ? Color.orange.opacity(0.6) : Color.orange.opacity(0.2), lineWidth: 1)
+
+                        )
+                    Button {
+                        showScheduleSheet = true
+                    } label: {
+                        HStack(spacing: 14) {
+                            ZStack {
+                                let isScheduled = scheduledDate != nil || (repeatType == "monthly" && !repeatDays.isEmpty) || (repeatType == "yearly" && !repeatDays.isEmpty)
+                                Circle()
+                                    .fill(isScheduled ? Color.orange : Color.orange.opacity(0.15))
+                                    .frame(width: 48, height: 48)
+                                Image(systemName: "calendar.badge.clock")
+                                    .foregroundStyle(isScheduled ? .black : .orange)                                        .font(.system(size: 22))
+                            }
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Schedule for Future")
+                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                    .foregroundStyle(Color("SecondaryText"))
+                                if let date = scheduledDate, repeatType != "yearly" {
+                                    Text(formatScheduledDate(date))
+                                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                                        .foregroundStyle(Color("PrimaryText"))
+                                } else if repeatType == "monthly" && !repeatDays.isEmpty {
+                                    let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+                                    let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? 0
+                                    let monthsArray = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                                    let months = monthsArray.map { monthNames[$0 - 101] }.joined(separator: ", ")
+                                    let isForever = repeatDays.contains(100)
+                                    let stopYear = repeatDays.filter { $0 >= 201 }.first.map { $0 - 200 }
+                                    let repeatStr: String = {
+                                        if isForever { return "Forever" }
+                                        if let stop = stopYear { return "Until \(Calendar.current.component(.year, from: Date()) + stop)" }
+                                        return "This year only"
+                                    }()
+                                    let monthStr = (monthsArray.isEmpty || monthsArray.count == 12) ? "Every month" : months
+                                    Text("Day \(day) · \(monthStr) · \(repeatStr)")
+                                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        .foregroundStyle(Color("PrimaryText"))
+                                        .multilineTextAlignment(.leading)
+                                } else if repeatType == "yearly" && !repeatDays.isEmpty {
+                                    let monthNamesLocal = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+                                    let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? 0
+                                    let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
+                                    let monthStr = months.isEmpty ? "" : monthNamesLocal[months[0] - 101]
+                                    let years = repeatDays.filter { $0 >= 2025 }.sorted()
+                                    let yearStr = years.isEmpty ? "" : years.count == 1 ? "\(years[0])" : "\(years.first!) → \(years.last!)"
+                                    Text("\(monthStr) \(day) · \(yearStr)")
+                                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                                        .foregroundStyle(Color("PrimaryText"))                                    } else {
+                                    Text("One time · Monthly · Yearly")
+                                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(Color("PrimaryText"))
                                 }
                             }
-
+                            Spacer()
+                            if scheduledDate != nil || (repeatType == "monthly" && !repeatDays.isEmpty) || (repeatType == "yearly" && !repeatDays.isEmpty) {
+                                Button {
+                                    withAnimation(.spring(response: 0.3)) {
+                                        scheduledDate = nil
+                                        repeatType = ""
+                                        repeatDays = []
+                                    }
+                                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 22))
+                                        .foregroundStyle(Color("SecondaryText").opacity(0.6))
+                                }
+                            } else {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(.orange)
+                            }
                         }
                         .padding(16)
                     }
-                    .padding(.horizontal, 20)
-                    
-                    // ✅ Schedule for Future button
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color("CardBackground"))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke((scheduledDate != nil || (repeatType == "monthly" && !repeatDays.isEmpty) || (repeatType == "yearly" && !repeatDays.isEmpty)) ? Color.orange.opacity(0.6) : Color.orange.opacity(0.2), lineWidth: 1)
-
-                            )
-                        Button {
-                            showScheduleSheet = true
-                        } label: {
-                            HStack(spacing: 14) {
-                                ZStack {
-                                    let isScheduled = scheduledDate != nil || (repeatType == "monthly" && !repeatDays.isEmpty) || (repeatType == "yearly" && !repeatDays.isEmpty)
-                                    Circle()
-                                        .fill(isScheduled ? Color.orange : Color.orange.opacity(0.15))
-                                        .frame(width: 48, height: 48)
-                                    Image(systemName: "calendar.badge.clock")
-                                        .foregroundStyle(isScheduled ? .black : .orange)                                        .font(.system(size: 22))
-                                }
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Schedule for Future")
-                                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                                        .foregroundStyle(Color("SecondaryText"))
-                                    if let date = scheduledDate, repeatType != "yearly" {
-                                        Text(formatScheduledDate(date))
-                                            .font(.system(size: 18, weight: .bold, design: .rounded))
-                                            .foregroundStyle(Color("PrimaryText"))
-                                    } else if repeatType == "monthly" && !repeatDays.isEmpty {
-                                        let monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-                                        let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? 0
-                                        let monthsArray = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
-                                        let months = monthsArray.map { monthNames[$0 - 101] }.joined(separator: ", ")
-                                        let isForever = repeatDays.contains(100)
-                                        let stopYear = repeatDays.filter { $0 >= 201 }.first.map { $0 - 200 }
-                                        let repeatStr: String = {
-                                            if isForever { return "Forever" }
-                                            if let stop = stopYear { return "Until \(Calendar.current.component(.year, from: Date()) + stop)" }
-                                            return "This year only"
-                                        }()
-                                        let monthStr = (monthsArray.isEmpty || monthsArray.count == 12) ? "Every month" : months
-                                        Text("Day \(day) · \(monthStr) · \(repeatStr)")
-                                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                                            .foregroundStyle(Color("PrimaryText"))
-                                            .multilineTextAlignment(.leading)
-                                    } else if repeatType == "yearly" && !repeatDays.isEmpty {
-                                        let monthNamesLocal = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-                                        let day = repeatDays.filter { $0 >= 1 && $0 <= 31 }.first ?? 0
-                                        let months = repeatDays.filter { $0 >= 101 && $0 <= 112 }.sorted()
-                                        let monthStr = months.isEmpty ? "" : monthNamesLocal[months[0] - 101]
-                                        let years = repeatDays.filter { $0 >= 2025 }.sorted()
-                                        let yearStr = years.isEmpty ? "" : years.count == 1 ? "\(years[0])" : "\(years.first!) → \(years.last!)"
-                                        Text("\(monthStr) \(day) · \(yearStr)")
-                                            .font(.system(size: 15, weight: .bold, design: .rounded))
-                                            .foregroundStyle(Color("PrimaryText"))                                    } else {
-                                        Text("One time · Monthly · Yearly")
-                                            .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                            .foregroundStyle(Color("PrimaryText"))
-                                    }
-                                }
-                                Spacer()
-                                if scheduledDate != nil || (repeatType == "monthly" && !repeatDays.isEmpty) || (repeatType == "yearly" && !repeatDays.isEmpty) {
-                                    Button {
-                                        withAnimation(.spring(response: 0.3)) {
-                                            scheduledDate = nil
-                                            repeatType = ""
-                                            repeatDays = []
-                                        }
-                                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                    } label: {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .font(.system(size: 22))
-                                            .foregroundStyle(Color("SecondaryText").opacity(0.6))
-                                    }
-                                } else {
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .foregroundStyle(.orange)
-                                }
-                            }
-                            .padding(16)
-                        }
-                        .opacity(repeatType == "weekly" ? 0.3 : 1.0)
-                        .disabled(repeatType == "weekly")
-                        // ✅ Clear weekly when schedule selected
-                    }
-                    .padding(.horizontal, 20)
+                    .opacity(repeatType == "weekly" ? 0.3 : 1.0)
+                    .disabled(repeatType == "weekly")
+                    // ✅ Clear weekly when schedule selected
+                }
+                .padding(.horizontal, 20)
 
 
-                    // Title card
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Alarm name/label")
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color("SecondaryText"))
-                            .padding(.horizontal, 4)
+                // Title card
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Alarm name/label")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color("SecondaryText"))
+                        .padding(.horizontal, 4)
 
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
-                            HStack {
-                                Image(systemName: "tag").foregroundStyle(.orange)
-                                TextField("Give this alarm a name (optional)", text: $title)
-                                    .foregroundStyle(Color("PrimaryText")).tint(.orange)
-                            }
-                            .padding(16)
-                        }
-                        .frame(height: 54)
-                    }
-                    .padding(.horizontal, 20)
-
-                    // Voice card
                     ZStack {
                         RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Image(systemName: "mic.fill").foregroundStyle(.orange)
-                                Text("Custom Sound")
-                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(Color("PrimaryText"))
-                                Spacer()
-                                if hasRecording {
-                                    Text("Recorded ✓")
-                                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                                        .foregroundStyle(.green)
-                                }
-                            }
-                            Divider()
-                            Text("Record your voice — it will play when alarm fires")
-                                .font(.system(size: 12, design: .rounded))
-                                .foregroundStyle(Color("SecondaryText"))
-                            HStack(spacing: 12) {
-                                Button { isRecording ? stopRecording() : startRecording() } label: {
-                                    HStack {
-                                        Image(systemName: isRecording ? "stop.circle.fill" : "mic.circle.fill")
-                                        Text(isRecording ? "Stop" : "Record")
-                                            .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                    }
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 16).padding(.vertical, 10)
-                                    .background(isRecording ? Color.red : Color.orange)
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                }
-                                if isRecording {
-                                    Text("Recording...")
-                                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                                        .foregroundStyle(Color("SecondaryText"))
-                                }
-                            }
-                            if isJustRecorded {
-                                VStack(alignment: .leading, spacing: 10) {
-                                    Divider()
-                                    HStack {
-                                        Image(systemName: "pencil").foregroundStyle(.orange)
-                                        TextField("Name your recording...", text: $recordingName)
-                                            .foregroundStyle(Color("PrimaryText")).tint(.orange)
-                                    }
-                                    .padding(10)
-                                    .background(Color("AppBackground"))
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    // ✅ Save to list toggle
-                                    HStack {
-                                        Image(systemName: "list.bullet").foregroundStyle(.orange)
-                                        Text("Save to My Recordings")
-                                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                                            .foregroundStyle(Color("PrimaryText"))
-                                        Spacer()
-                                        Toggle("", isOn: $saveToList).tint(.orange)
-                                    }
-                                    .padding(10)
-                                    .background(Color("AppBackground"))
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                        HStack {
+                            Image(systemName: "tag").foregroundStyle(.orange)
+                            TextField("Give this alarm a name (optional)", text: $title)
+                                .foregroundStyle(Color("PrimaryText")).tint(.orange)
+                        }
+                        .padding(16)
+                    }
+                    .frame(height: 54)
+                }
+                .padding(.horizontal, 20)
 
-                                    HStack(spacing: 12) {
-                                        Button { playRecording() } label: {
-                                            HStack {
-                                                Image(systemName: "play.circle.fill")
-                                                Text("Preview").font(.system(size: 14, weight: .semibold, design: .rounded))
-                                            }
-                                            .foregroundStyle(Color("PrimaryText"))
-                                            .padding(.horizontal, 16).padding(.vertical, 10)
-                                            .background(Color("AppBackground"))
-                                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                                        }
-                                        Button { saveRecordingWithName() } label: {
-                                            HStack {
-                                                Image(systemName: "checkmark.circle.fill")
-                                                Text("Save").font(.system(size: 14, weight: .semibold, design: .rounded))
-                                            }
-                                            .foregroundStyle(.white).padding(.horizontal, 16).padding(.vertical, 10)
-                                            .background(Color.green).clipShape(RoundedRectangle(cornerRadius: 12))
-                                        }
-                                        Button { deleteRecording() } label: {
-                                            Image(systemName: "trash.circle.fill").foregroundStyle(.red).font(.system(size: 34))
-                                        }
-                                    }
-                                }
-                                .transition(.move(edge: .top).combined(with: .opacity))
+                // Voice card
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "mic.fill").foregroundStyle(.orange)
+                            Text("Custom Sound")
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color("PrimaryText"))
+                            Spacer()
+                            if hasRecording {
+                                Text("Recorded ✓")
+                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.green)
                             }
-                            if hasRecording && !isJustRecorded {
+                        }
+                        Divider()
+                        Text("Record your voice — it will play when alarm fires")
+                            .font(.system(size: 12, design: .rounded))
+                            .foregroundStyle(Color("SecondaryText"))
+                        HStack(spacing: 12) {
+                            Button { isRecording ? stopRecording() : startRecording() } label: {
                                 HStack {
-                                    Image(systemName: "waveform").foregroundStyle(.orange)
-                                    Text(recordingName.isEmpty ? "Voice Recording" : recordingName)
-                                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                                        .foregroundStyle(Color("PrimaryText"))
-                                    Spacer()
-                                    Button { playRecording() } label: {
-                                        Image(systemName: "play.circle.fill")
-                                            .foregroundStyle(.orange)
-                                            .font(.system(size: 22))
-                                    }
-                                    Button {
-                                        hasRecording = false; isJustRecorded = false; recordingName = ""
-                                        UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
-                                    } label: {
-                                        Image(systemName: "trash.circle.fill")
-                                            .foregroundStyle(.red)
-                                            .font(.system(size: 34))
-                                    }
+                                    Image(systemName: isRecording ? "stop.circle.fill" : "mic.circle.fill")
+                                    Text(isRecording ? "Stop" : "Record")
+                                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                }
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 16).padding(.vertical, 10)
+                                .background(isRecording ? Color.red : Color.orange)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                            if isRecording {
+                                Text("Recording...")
+                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                    .foregroundStyle(Color("SecondaryText"))
+                            }
+                        }
+                        if isJustRecorded {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Divider()
+                                HStack {
+                                    Image(systemName: "pencil").foregroundStyle(.orange)
+                                    TextField("Name your recording...", text: $recordingName)
+                                        .foregroundStyle(Color("PrimaryText")).tint(.orange)
                                 }
                                 .padding(10)
                                 .background(Color("AppBackground"))
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .transition(.move(edge: .top).combined(with: .opacity))
-                            }
-                            // ✅ My Recordings list — always show
-                            Divider()
-                            Button {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    showMyRecordings.toggle()
+                                // ✅ Save to list toggle
+                                HStack {
+                                    Image(systemName: "list.bullet").foregroundStyle(.orange)
+                                    Text("Save to My Recordings")
+                                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                                        .foregroundStyle(Color("PrimaryText"))
+                                    Spacer()
+                                    Toggle("", isOn: $saveToList).tint(.orange)
                                 }
-                            } label: {
-                                    HStack {
-                                        Text("MY RECORDINGS")
-                                            .font(.system(size: 11, weight: .heavy, design: .rounded))
-                                            .foregroundStyle(Color("SecondaryText"))
-                                            .tracking(1.2)
-                                        Spacer()
-                                        Image(systemName: showMyRecordings ? "chevron.up" : "chevron.down")
-                                            .font(.system(size: 11, weight: .semibold))
-                                            .foregroundStyle(Color("SecondaryText"))
+                                .padding(10)
+                                .background(Color("AppBackground"))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                                HStack(spacing: 12) {
+                                    Button { playRecording() } label: {
+                                        HStack {
+                                            Image(systemName: "play.circle.fill")
+                                            Text("Preview").font(.system(size: 14, weight: .semibold, design: .rounded))
+                                        }
+                                        .foregroundStyle(Color("PrimaryText"))
+                                        .padding(.horizontal, 16).padding(.vertical, 10)
+                                        .background(Color("AppBackground"))
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    }
+                                    Button { saveRecordingWithName() } label: {
+                                        HStack {
+                                            Image(systemName: "checkmark.circle.fill")
+                                            Text("Save").font(.system(size: 14, weight: .semibold, design: .rounded))
+                                        }
+                                        .foregroundStyle(.white).padding(.horizontal, 16).padding(.vertical, 10)
+                                        .background(Color.green).clipShape(RoundedRectangle(cornerRadius: 12))
+                                    }
+                                    Button { deleteRecording() } label: {
+                                        Image(systemName: "trash.circle.fill").foregroundStyle(.red).font(.system(size: 34))
                                     }
                                 }
-                                if showMyRecordings {
-                                    if customRecordings.isEmpty {
-                                        Text("No recordings yet")
-                                            .font(.system(size: 14, design: .rounded))
-                                            .foregroundStyle(Color("SecondaryText"))
-                                            .padding(.vertical, 8)
-                                    } else {
-                                    ForEach(customRecordings, id: \.file) { recording in
+                            }
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+                        if hasRecording && !isJustRecorded {
+                            HStack {
+                                Image(systemName: "waveform").foregroundStyle(.orange)
+                                Text(recordingName.isEmpty ? "Voice Recording" : recordingName)
+                                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                                    .foregroundStyle(Color("PrimaryText"))
+                                Spacer()
+                                Button { playRecording() } label: {
+                                    Image(systemName: "play.circle.fill")
+                                        .foregroundStyle(.orange)
+                                        .font(.system(size: 22))
+                                }
+                                Button {
+                                    hasRecording = false; isJustRecorded = false; recordingName = ""
+                                    UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
+                                } label: {
+                                    Image(systemName: "trash.circle.fill")
+                                        .foregroundStyle(.red)
+                                        .font(.system(size: 34))
+                                }
+                            }
+                            .padding(10)
+                            .background(Color("AppBackground"))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+                        // ✅ My Recordings list — always show
+                        Divider()
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                showMyRecordings.toggle()
+                            }
+                        } label: {
+                                HStack {
+                                    Text("MY RECORDINGS")
+                                        .font(.system(size: 11, weight: .heavy, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                        .tracking(1.2)
+                                    Spacer()
+                                    Image(systemName: showMyRecordings ? "chevron.up" : "chevron.down")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                }
+                            }
+                            if showMyRecordings {
+                                if customRecordings.isEmpty {
+                                    Text("No recordings yet")
+                                        .font(.system(size: 14, design: .rounded))
+                                        .foregroundStyle(Color("SecondaryText"))
+                                        .padding(.vertical, 8)
+                                } else {
+                                ForEach(customRecordings, id: \.file) { recording in
+                                HStack(spacing: 12) {
+                                    Button {
+                                        let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+                                        let url = libraryURL.appendingPathComponent("Sounds/\(recording.file)")
+                                        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+                                        try? AVAudioSession.sharedInstance().setActive(true)
+                                        audioPlayer = try? AVAudioPlayer(contentsOf: url)
+                                        audioPlayer?.play()
+                                    } label: {
+                                        Image(systemName: "play.circle.fill")
+                                            .foregroundStyle(.orange)
+                                            .font(.system(size: 22))
+                                    }
+                                    Text(recording.name)
+                                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                                        .foregroundStyle(Color("PrimaryText"))
+                                    Spacer()
+                                    if selectedSound == recording.file {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundStyle(.orange)
+                                            .font(.system(size: 18))
+                                    }
+                                    Button {
+                                        editingRecordingFile = recording.file
+                                        editingRecordingName = recording.name
+                                    } label: {
+                                        Image(systemName: "pencil.circle.fill")
+                                            .foregroundStyle(.orange)
+                                            .font(.system(size: 22))
+                                    }
+                                    Button {
+                                        deleteCustomRecording(file: recording.file)
+                                    } label: {
+                                        Image(systemName: "trash.circle.fill")
+                                            .foregroundStyle(.red)
+                                            .font(.system(size: 22))
+                                    }
+                                }
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 8)
+                                .background(selectedSound == recording.file ? Color.orange.opacity(0.15) : Color.clear)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    withAnimation(.spring(response: 0.3)) {
+                                        selectedSound = recording.file
+                                        hasRecording = true
+                                        isJustRecorded = false
+                                        recordingName = recording.name
+                                        UserDefaults.standard.set(recording.name, forKey: "voiceRecordingName_temp")
+                                        UserDefaults.standard.set(recording.file, forKey: "voiceRecordingFile_temp")
+                                    }
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                }
+                                }
+                            } // ✅ closes else
+                        }
+                    }
+                    .padding(16)
+                }
+                .padding(.horizontal, 20)
+                .animation(.easeInOut(duration: 0.3), value: isJustRecorded)
+                .animation(.easeInOut(duration: 0.3), value: hasRecording)
+                // Sound card
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "bell.fill").foregroundStyle(.orange)
+                            Text("Sound")
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color("PrimaryText"))
+                        }
+                        Divider()
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                ForEach(sounds, id: \.file) { sound in
                                     HStack(spacing: 12) {
                                         Button {
-                                            let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
-                                            let url = libraryURL.appendingPathComponent("Sounds/\(recording.file)")
-                                            try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-                                            try? AVAudioSession.sharedInstance().setActive(true)
-                                            audioPlayer = try? AVAudioPlayer(contentsOf: url)
-                                            audioPlayer?.play()
+                                            if playingSound == sound.file {
+                                                stopSoundPreview()
+                                            } else {
+                                                playSoundPreview(sound.file)
+                                            }
                                         } label: {
-                                            Image(systemName: "play.circle.fill")
-                                                .foregroundStyle(.orange)
-                                                .font(.system(size: 22))
+                                            Image(systemName: playingSound == sound.file ? "stop.circle.fill" : "play.circle.fill")
+                                                .foregroundStyle(playingSound == sound.file ? .red : .orange)
+                                                .font(.system(size: 24))
                                         }
-                                        Text(recording.name)
-                                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                                        Text(sound.name)
+                                            .font(.system(size: 15, weight: .medium, design: .rounded))
                                             .foregroundStyle(Color("PrimaryText"))
                                         Spacer()
-                                        if selectedSound == recording.file {
+                                        if selectedSound == sound.file && !selectedSound.hasPrefix("custom_voice_") && !selectedSound.hasPrefix("alarm_voice_") {
                                             Image(systemName: "checkmark.circle.fill")
                                                 .foregroundStyle(.orange)
                                                 .font(.system(size: 18))
                                         }
-                                        Button {
-                                            editingRecordingFile = recording.file
-                                            editingRecordingName = recording.name
-                                        } label: {
-                                            Image(systemName: "pencil.circle.fill")
-                                                .foregroundStyle(.orange)
-                                                .font(.system(size: 22))
-                                        }
-                                        Button {
-                                            deleteCustomRecording(file: recording.file)
-                                        } label: {
-                                            Image(systemName: "trash.circle.fill")
-                                                .foregroundStyle(.red)
-                                                .font(.system(size: 22))
-                                        }
                                     }
-                                    .padding(.vertical, 8)
+                                    .padding(.vertical, 10)
                                     .padding(.horizontal, 8)
-                                    .background(selectedSound == recording.file ? Color.orange.opacity(0.15) : Color.clear)
+                                    .background(selectedSound == sound.file && !selectedSound.hasPrefix("custom_voice_") && !selectedSound.hasPrefix("alarm_voice_") ? Color.orange.opacity(0.15) : Color.clear)
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
                                     .contentShape(Rectangle())
                                     .onTapGesture {
-                                        withAnimation(.spring(response: 0.3)) {
-                                            selectedSound = recording.file
-                                            hasRecording = true
-                                            isJustRecorded = false
-                                            recordingName = recording.name
-                                            UserDefaults.standard.set(recording.name, forKey: "voiceRecordingName_temp")
-                                            UserDefaults.standard.set(recording.file, forKey: "voiceRecordingFile_temp")
-                                        }
-                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        selectedSound = sound.file
+                                        hasRecording = false
+                                        recordingName = ""
+                                        UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
+                                        UserDefaults.standard.removeObject(forKey: "voiceRecordingFile_temp")
                                     }
-                                    }
-                                } // ✅ closes else
-                            }
-                        }
-                        .padding(16)
-                    }
-                    .padding(.horizontal, 20)
-                    .animation(.easeInOut(duration: 0.3), value: isJustRecorded)
-                    .animation(.easeInOut(duration: 0.3), value: hasRecording)
-                    // Sound card
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Image(systemName: "bell.fill").foregroundStyle(.orange)
-                                Text("Sound")
-                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(Color("PrimaryText"))
-                            }
-                            Divider()
-                            ScrollView {
-                                VStack(spacing: 0) {
-                                    ForEach(sounds, id: \.file) { sound in
-                                        HStack(spacing: 12) {
-                                            Button {
-                                                if playingSound == sound.file {
-                                                    stopSoundPreview()
-                                                } else {
-                                                    playSoundPreview(sound.file)
-                                                }
-                                            } label: {
-                                                Image(systemName: playingSound == sound.file ? "stop.circle.fill" : "play.circle.fill")
-                                                    .foregroundStyle(playingSound == sound.file ? .red : .orange)
-                                                    .font(.system(size: 24))
-                                            }
-                                            Text(sound.name)
-                                                .font(.system(size: 15, weight: .medium, design: .rounded))
-                                                .foregroundStyle(Color("PrimaryText"))
-                                            Spacer()
-                                            if selectedSound == sound.file && !selectedSound.hasPrefix("custom_voice_") && !selectedSound.hasPrefix("alarm_voice_") {
-                                                Image(systemName: "checkmark.circle.fill")
-                                                    .foregroundStyle(.orange)
-                                                    .font(.system(size: 18))
-                                            }
-                                        }
-                                        .padding(.vertical, 10)
-                                        .padding(.horizontal, 8)
-                                        .background(selectedSound == sound.file && !selectedSound.hasPrefix("custom_voice_") && !selectedSound.hasPrefix("alarm_voice_") ? Color.orange.opacity(0.15) : Color.clear)
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                        .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            selectedSound = sound.file
-                                            hasRecording = false
-                                            recordingName = ""
-                                            UserDefaults.standard.removeObject(forKey: "voiceRecordingName_temp")
-                                            UserDefaults.standard.removeObject(forKey: "voiceRecordingFile_temp")
-                                        }
-                                        Divider()
-                                    }
+                                    Divider()
                                 }
                             }
-                            .frame(height: 200)
                         }
-                        .padding(16)
+                        .frame(height: 200)
                     }
-                    .padding(.horizontal, 20)
-
-                    // Calendar card
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
-                        HStack {
-                            Image(systemName: "calendar.badge.plus").foregroundStyle(.orange)
-                            Text("Add to Calendar")
-                                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Color("PrimaryText"))
-                            Spacer()
-                            Toggle("", isOn: $addToCalendar)
-                                .tint(.orange)
-                                .onChange(of: addToCalendar) { _, newValue in
-                                    if newValue {
-                                        CalendarService.shared.refreshAuthorizationStatus()
-                                        let status = CalendarService.shared.authorizationStatus
-                                        if CalendarService.shared.shouldShowPermissionUI && status == .denied {
-                                            addToCalendar = false
-                                            NotificationCenter.default.post(name: NSNotification.Name("showCalendarPermission"), object: nil)
-                                        } else if status == .notDetermined {
-                                            Task {
-                                                await CalendarService.shared.requestPermissionIfNeeded()
-                                                CalendarService.shared.refreshAuthorizationStatus()
-                                                let newStatus = CalendarService.shared.authorizationStatus
-                                                await MainActor.run {
-                                                    if !CalendarService.hasCalendarAccess(status: newStatus) {
-                                                        addToCalendar = false
-                                                        NotificationCenter.default.post(name: NSNotification.Name("showCalendarPermission"), object: nil)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                        }
-                        .padding(16)
-                    }
-                    .padding(.horizontal, 20)
-
-                    Button {
-                        if isSpecificDateInPast {
-                            showPastDateAlert = true
-                            return
-                        }
-                        saveAlarm()
-                    } label: {
-                        Text(isEditing ? "Update Alarm" : "Set Alarm")
-                            .font(.system(size: 17, weight: .bold, design: .rounded))
-                            .foregroundStyle(hasChanges ? .black : Color("SecondaryText"))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 18)
-                            .background(hasChanges ? Color.orange : Color("CardBackground"))
-                            .clipShape(RoundedRectangle(cornerRadius: 18))
-                    }
-                    .disabled(isEditing && !hasChanges)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 32)
+                    .padding(16)
                 }
-            }
+                .padding(.horizontal, 20)
+
+                // Calendar card
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16).fill(Color("CardBackground"))
+                    HStack {
+                        Image(systemName: "calendar.badge.plus").foregroundStyle(.orange)
+                        Text("Add to Calendar")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color("PrimaryText"))
+                        Spacer()
+                        Toggle("", isOn: $addToCalendar)
+                            .tint(.orange)
+                            .onChange(of: addToCalendar) { _, newValue in
+                                if newValue {
+                                    CalendarService.shared.refreshAuthorizationStatus()
+                                    let status = CalendarService.shared.authorizationStatus
+                                    if CalendarService.shared.shouldShowPermissionUI && status == .denied {
+                                        addToCalendar = false
+                                        NotificationCenter.default.post(name: NSNotification.Name("showCalendarPermission"), object: nil)
+                                    } else if status == .notDetermined {
+                                        Task {
+                                            await CalendarService.shared.requestPermissionIfNeeded()
+                                            CalendarService.shared.refreshAuthorizationStatus()
+                                            let newStatus = CalendarService.shared.authorizationStatus
+                                            await MainActor.run {
+                                                if !CalendarService.hasCalendarAccess(status: newStatus) {
+                                                    addToCalendar = false
+                                                    NotificationCenter.default.post(name: NSNotification.Name("showCalendarPermission"), object: nil)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                    }
+                    .padding(16)
+                }
+                .padding(.horizontal, 20)
+
+                Button {
+                    if isSpecificDateInPast {
+                        showPastDateAlert = true
+                        return
+                    }
+                    saveAlarm()
+                } label: {
+                    Text(isEditing ? "Update Alarm" : "Set Alarm")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundStyle(hasChanges ? .black : Color("SecondaryText"))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(hasChanges ? Color.orange : Color("CardBackground"))
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                }
+                .disabled(isEditing && !hasChanges)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 32)
         }
+    }
+
+    var body: some View {
+        addAlarmScaffold
         .navigationDestination(isPresented: $showScheduleSheet) {
             ScheduleForFutureSheet(
                 selectedDate: $scheduledDate,
@@ -1194,7 +1197,8 @@ struct AddAlarmView: View {
                     startRecording()
                 }
             }
-        }            .onDisappear {
+        }
+        .onDisappear {
             stopSoundPreview()
         }
         .alert("Rename Recording", isPresented: Binding(

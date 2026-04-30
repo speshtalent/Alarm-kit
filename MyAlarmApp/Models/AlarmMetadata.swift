@@ -33,6 +33,12 @@ enum LiveActivityCoordinator {
         await endSnoozeActivity()
     }
 
+    /// Clears `AlarmAttributes`-backed Live Activities when AlarmKit has no alarms (orphans would otherwise show a blank Dynamic Island pill).
+    static func endAlarmLiveActivitiesIfAlarmKitEmpty() async {
+        guard let kitAlarms = try? AlarmManager.shared.alarms, kitAlarms.isEmpty else { return }
+        await endAlarmActivities()
+    }
+
     static func endAlarmActivities() async {
         await endActivities(for: Activity<AlarmAttributes<AlarmLiveActivityMetadata>>.activities)
     }

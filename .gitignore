@@ -1,3 +1,5 @@
+.DS_Store
+
 *.xcuserstate
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
@@ -5,4 +7,5 @@ build/
 *.xcarchive
 *.ipa
 DerivedData/
+.derivedData/
 *.xcdistributionlogs

@@ -221,21 +221,34 @@ final class TimerService: ObservableObject {
     }
 
     private func cleanupLegacyAlarmKitTimers(activeIDs: Set<String>) async {
+        let cancelled = cancelOrphanAlarmKitTimerRecords(activeIDs: activeIDs)
+        if cancelled {
+            await LiveActivityCoordinator.endTimerActivities()
+        }
+    }
+
+    /// Cancels zombie AlarmKit alarms that only existed for legacy timers (`schedule == nil`) while local timer state is gone.
+    /// Run on launch (via `AlarmService.loadAlarms`) so Dynamic Island does not keep an empty Live Activity.
+    @discardableResult
+    func cancelOrphanAlarmKitTimerRecords(activeIDs: Set<String>? = nil) -> Bool {
+        let resolvedActive = activeIDs ?? Set(loadStoredTimers().map(\.id.uuidString))
         var timerIDs = UserDefaults.standard.dictionaryRepresentation().keys.compactMap { key -> UUID? in
             guard key.hasPrefix("timerDuration_") else { return nil }
             let id = key.replacingOccurrences(of: "timerDuration_", with: "")
-            guard !activeIDs.contains(id) else { return nil }
+            guard !resolvedActive.contains(id) else { return nil }
             return UUID(uuidString: id)
         }
         let alarmKitTimerIDs = (try? AlarmManager.shared.alarms.compactMap { alarm -> UUID? in
-            guard alarm.schedule == nil, !activeIDs.contains(alarm.id.uuidString) else { return nil }
+            guard alarm.schedule == nil, !resolvedActive.contains(alarm.id.uuidString) else { return nil }
             return alarm.id
         }) ?? []
         timerIDs.append(contentsOf: alarmKitTimerIDs)
 
-        for id in Set(timerIDs) {
+        let unique = Set(timerIDs)
+        guard !unique.isEmpty else { return false }
+        for id in unique {
             try? AlarmManager.shared.cancel(id: id)
         }
-        await LiveActivityCoordinator.endTimerActivities()
+        return true
     }
 }
