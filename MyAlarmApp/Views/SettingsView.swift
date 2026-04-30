@@ -30,6 +30,9 @@ struct SettingsView: View {
         ("Blaze", "AppIcon1", "AppIcon1"),
     ]
 
+    /// App Store product page (used by Share App → `UIActivityViewController`).
+    private let appStoreListingURL = URL(string: "https://apps.apple.com/us/app/date-alarm/id6761073513")!
+
     private var useSystemDefault: Binding<Bool> {
         Binding(
             get: { appColorScheme == "system" },
@@ -387,7 +390,7 @@ struct SettingsView: View {
                             Image(systemName: "chevron.right").foregroundStyle(secondaryText).font(.system(size: 13)).padding(.trailing, 16)
                         }
                         .sheet(isPresented: $showShareSheet) {
-                            ShareSheet(items: ["Check out Date Alarm! 🔔"])
+                            ShareSheet(items: ["Check out Date Alarm! 🔔", appStoreListingURL])
                         }
 
                         Divider().padding(.leading, 16)
