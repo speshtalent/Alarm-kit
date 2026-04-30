@@ -33,10 +33,33 @@ enum LiveActivityCoordinator {
         await endSnoozeActivity()
     }
 
-    /// Clears `AlarmAttributes`-backed Live Activities when AlarmKit has no alarms (orphans would otherwise show a blank Dynamic Island pill).
-    static func endAlarmLiveActivitiesIfAlarmKitEmpty() async {
-        guard let kitAlarms = try? AlarmManager.shared.alarms, kitAlarms.isEmpty else { return }
-        await endAlarmActivities()
+    /// When nothing should appear on Dynamic Island, ends **all** ActivityKit sessions we own (alarm, timer metadata, snooze).
+    ///
+    /// **AlarmKit query failures:** `try?` previously skipped cleanup entirely — if `AlarmManager.shared.alarms` throws (e.g. before
+    /// authorization resolves), zombie activities could remain. We only skip teardown when local alarm/timer/snooze state says otherwise.
+    ///
+    /// **System bugs:** Apple Developer Forums (e.g. FB22295664) describe rare cases where a blank Island remains with **no**
+    /// `Activity` visible to the app; that requires an OS fix — we still clear everything the process can enumerate.
+    static func reconcileIdleIslandPresentation(
+        alarmKitSnapshot: Result<[Alarm], Error>,
+        hasActiveSnooze: Bool,
+        hasActiveLocalTimers: Bool,
+        userHasPersistedAlarmGroups: Bool
+    ) async {
+        let kitEmpty: Bool
+        switch alarmKitSnapshot {
+        case .success(let alarms):
+            kitEmpty = alarms.isEmpty
+        case .failure:
+            if userHasPersistedAlarmGroups || hasActiveSnooze || hasActiveLocalTimers {
+                return
+            }
+            await endAllActivities()
+            return
+        }
+
+        guard kitEmpty, !hasActiveSnooze, !hasActiveLocalTimers else { return }
+        await endAllActivities()
     }
 
     static func endAlarmActivities() async {

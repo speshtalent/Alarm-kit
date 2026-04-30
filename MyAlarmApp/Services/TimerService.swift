@@ -77,6 +77,12 @@ final class TimerService: ObservableObject {
     private func endDateKey(for id: UUID) -> String { "timerEndDate_\(id.uuidString)" }
 
     // MARK: - Load timers
+    /// Used with Live Activity idle detection (`AlarmService.loadAlarms`).
+    func hasActiveStoredTimers() -> Bool {
+        let now = Date()
+        return loadStoredTimers().contains { $0.endDate > now }
+    }
+
     func loadTimers() {
         let now = Date()
         let storedTimers = loadStoredTimers()

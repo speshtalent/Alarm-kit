@@ -319,8 +319,10 @@ final class AlarmService: ObservableObject {
     func loadAlarms() {
         let labels = loadLabels()
         let removedOrphanTimers = TimerService.shared.cancelOrphanAlarmKitTimerRecords()
+        let alarmKitSnapshot: Result<[Alarm], Error>
         do {
             let all = try AlarmManager.shared.alarms
+            alarmKitSnapshot = .success(all)
             let disabled = loadDisabledIDs()
             let groupIDs = loadGroupIDs()
             let repeatDaysDict = loadGroupRepeatDays()
@@ -372,6 +374,7 @@ final class AlarmService: ObservableObject {
             }
         } catch {
             print("Load alarms error:", error)
+            alarmKitSnapshot = .failure(error)
             alarms = []
         }
         rebuildGroups()
@@ -386,6 +389,10 @@ final class AlarmService: ObservableObject {
                 return (item.id.uuidString, fireDate)
             }
         )
+        let hasTimers = TimerService.shared.hasActiveStoredTimers()
+        let persistedGroups = !loadGroupIDs().isEmpty
+        let snoozeActive = !activeSnoozes.isEmpty
+
         Task {
             if removedOrphanTimers {
                 await LiveActivityCoordinator.endTimerActivities()
@@ -394,7 +401,12 @@ final class AlarmService: ObservableObject {
                 activeSnoozes: activeSnoozes,
                 labels: labels
             )
-            await LiveActivityCoordinator.endAlarmLiveActivitiesIfAlarmKitEmpty()
+            await LiveActivityCoordinator.reconcileIdleIslandPresentation(
+                alarmKitSnapshot: alarmKitSnapshot,
+                hasActiveSnooze: snoozeActive,
+                hasActiveLocalTimers: hasTimers,
+                userHasPersistedAlarmGroups: persistedGroups
+            )
         }
     }
 

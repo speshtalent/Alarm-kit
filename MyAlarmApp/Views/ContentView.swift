@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import AlarmKit
 import CoreSpotlight
 
@@ -38,6 +39,9 @@ struct ContentView: View {
         mainTabInterface
             .animation(.easeInOut(duration: 0.4), value: hasSeenOnboarding)
             .preferredColorScheme(preferredColorScheme)
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
+                alarmService.loadAlarms()
+            }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .background {
                     alarmService.loadAlarms()
