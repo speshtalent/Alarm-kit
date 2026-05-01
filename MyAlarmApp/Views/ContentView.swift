@@ -39,24 +39,13 @@ struct ContentView: View {
         mainTabInterface
             .animation(.easeInOut(duration: 0.4), value: hasSeenOnboarding)
             .preferredColorScheme(preferredColorScheme)
-            // Avoid `willResignActive` → loadAlarms: it fires for Control Center, calls, etc. and churns AlarmKit / Live Activities.
-            // Only reconcile when actually backgrounding, and await teardown so Dynamic Island clears before suspend.
+            // Reconcile Live Activities on background WITHOUT beginBackgroundTask: iOS 26 surfaces apps
+            // with active background tasks as a return pill in the Dynamic Island, which is what the user sees
+            // immediately after minimizing on a fresh install. loadAlarms kicks off its own Task; iOS gives a
+            // short grace window for it to finish before suspend.
             .onChange(of: scenePhase) { _, phase in
                 guard phase == .background else { return }
-                var token = UIBackgroundTaskIdentifier.invalid
-                token = UIApplication.shared.beginBackgroundTask(withName: "com.speshtalent.FutureAlarm26.liveactivity") {
-                    UIApplication.shared.endBackgroundTask(token)
-                    token = .invalid
-                }
-                Task {
-                    await alarmService.loadAlarmsAwaitingLiveActivitySync()
-                    await MainActor.run {
-                        if token != .invalid {
-                            UIApplication.shared.endBackgroundTask(token)
-                            token = .invalid
-                        }
-                    }
-                }
+                alarmService.loadAlarms()
             }
     }
 
