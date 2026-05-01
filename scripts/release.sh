@@ -23,6 +23,40 @@ die() {
   exit 1
 }
 
+usage() {
+  cat <<'EOF'
+Usage: release.sh [-m|--marketing-version <version>] [-h|--help]
+
+  -m, --marketing-version <version>   Set the App Store / marketing version (e.g. 1.3)
+                                      before bumping the build number. Uses agvtool
+                                      new-marketing-version (updates CFBundleShortVersionString).
+
+  -h, --help                          Show this help.
+
+Without -m, only the build number is incremented (agvtool next-version), same as before.
+EOF
+}
+
+MARKETING_VERSION=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -m|--marketing-version)
+      [[ -n "${2:-}" ]] || die "Missing value for $1 (example: $1 1.3)"
+      MARKETING_VERSION="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      printf '[release] Unknown option: %s\n' "$1" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
 is_version_file() {
   local file="$1"
 
@@ -58,6 +92,11 @@ cd "$ROOT_DIR"
 log "Checking git status"
 ensure_safe_git_state
 
+if [[ -n "$MARKETING_VERSION" ]]; then
+  log "Setting marketing version to $MARKETING_VERSION"
+  agvtool new-marketing-version "$MARKETING_VERSION"
+fi
+
 log "Incrementing build number"
 agvtool next-version -all
 
@@ -90,7 +129,11 @@ git add "${VERSION_FILES[@]}"
 if git diff --cached --quiet; then
   die "No version file changes were staged for commit."
 fi
-git commit -m "Bump build number after release"
+if [[ -n "$MARKETING_VERSION" ]]; then
+  git commit -m "Set marketing version to ${MARKETING_VERSION} and bump build after release"
+else
+  git commit -m "Bump build number after release"
+fi
 
 log "Pushing git changes"
 git push
