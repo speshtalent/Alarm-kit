@@ -390,7 +390,7 @@ struct SettingsView: View {
                             Image(systemName: "chevron.right").foregroundStyle(secondaryText).font(.system(size: 13)).padding(.trailing, 16)
                         }
                         .sheet(isPresented: $showShareSheet) {
-                            ShareSheet(items: ["Check out Date Alarm! 🔔", appStoreListingURL])
+                            ShareSheet(items: ["Check out Date Alarm! 🔔\nhttps://apps.apple.com/us/app/date-alarm/id6761073513"])
                         }
 
                         Divider().padding(.leading, 16)
