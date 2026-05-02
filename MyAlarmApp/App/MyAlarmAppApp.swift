@@ -17,6 +17,11 @@ struct MyAlarmAppApp: App {
         AlarmAppShortcutsProvider.updateAppShortcutParameters()
         setupAlarmStopListener()
         setupTimeFormat()
+        // Clear any zombie / leftover Live Activities (AlarmKit can keep them alive across reinstall).
+        // Doing this here means a fresh install never starts with a phantom Dynamic Island pill.
+        Task.detached(priority: .userInitiated) {
+            await LiveActivityCoordinator.endAllActivities()
+        }
     }
 
     private func setupTimeFormat() {
@@ -132,7 +137,13 @@ struct MyAlarmAppApp: App {
                             print("✅ App launched")
                         }
                         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OnboardingCompleted"))) { _ in
-                            // ✅ No automatic restore — user controls it from Settings
+                            // Request alarm authorization right after onboarding so we can query AlarmKit
+                            // and cancel zombie alarms left over from prior installs (which otherwise
+                            // render an empty Live Activity in the Dynamic Island after minimize).
+                            Task { @MainActor in
+                                await AlarmService.shared.requestAuthorizationIfNeeded()
+                                AlarmService.shared.loadAlarms()
+                            }
                         }
                 .alert("Alarms Restored 🔔", isPresented: $showVoiceRestoredAlert) {
                     Button("OK", role: .cancel) { }

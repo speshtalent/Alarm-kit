@@ -316,6 +316,40 @@ final class AlarmService: ObservableObject {
         rebuildGroups()
     }
 
+    /// AlarmKit alarms can survive app deletion / reinstall, leaving an empty Dynamic Island Live Activity for an alarm that the freshly installed
+    /// app no longer knows about. Cancel any AlarmKit-side alarm that has no matching local group, label, or saved timer record so the system
+    /// drops the orphan Live Activity along with the alarm itself.
+    private func cancelAlarmKitAlarmsNotTrackedLocally() {
+        guard let kitAlarms = try? AlarmManager.shared.alarms, !kitAlarms.isEmpty else { return }
+
+        let trackedAlarmIDs: Set<String> = {
+            var ids = Set<String>()
+            for (_, alarmIDs) in loadGroupIDs() {
+                ids.formUnion(alarmIDs)
+            }
+            ids.formUnion(loadLabels().keys)
+            ids.formUnion(loadDisabledIDs())
+            return ids
+        }()
+
+        let trackedTimerIDs: Set<String> = Set(
+            UserDefaults.standard.dictionaryRepresentation().keys
+                .filter { $0.hasPrefix("timerDuration_") }
+                .map { $0.replacingOccurrences(of: "timerDuration_", with: "") }
+        )
+
+        for alarm in kitAlarms {
+            let id = alarm.id.uuidString
+            if trackedAlarmIDs.contains(id) || trackedTimerIDs.contains(id) { continue }
+            do {
+                try AlarmManager.shared.cancel(id: alarm.id)
+                print("🧹 Cancelled untracked AlarmKit alarm \(id) — likely leftover from prior install or zombie")
+            } catch {
+                print("⚠️ Failed to cancel untracked alarm \(id): \(error)")
+            }
+        }
+    }
+
     private struct LiveActivitySyncInputs {
         let removedOrphanTimers: Bool
         let labels: [String: String]
@@ -344,6 +378,7 @@ final class AlarmService: ObservableObject {
     private func performLoadAlarmsSynchronously() -> LiveActivitySyncInputs {
         let labels = loadLabels()
         let removedOrphanTimers = TimerService.shared.cancelOrphanAlarmKitTimerRecords()
+        cancelAlarmKitAlarmsNotTrackedLocally()
         let alarmKitSnapshot: Result<[Alarm], Error>
         do {
             let all = try AlarmManager.shared.alarms
