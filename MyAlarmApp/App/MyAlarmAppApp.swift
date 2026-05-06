@@ -56,6 +56,9 @@ struct MyAlarmAppApp: App {
             UIApplicationShortcutItem(type: "settings", localizedTitle: "Settings",
                 localizedSubtitle: "Open Settings",
                 icon: UIApplicationShortcutIcon(systemImageName: "gearshape"), userInfo: nil),
+            UIApplicationShortcutItem(type: "shareApp", localizedTitle: "Share App",
+                localizedSubtitle: "Share Date Alarm with friends",
+                icon: UIApplicationShortcutIcon(systemImageName: "square.and.arrow.up"), userInfo: nil),
         ]
     }
 

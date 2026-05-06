@@ -1363,6 +1363,7 @@ struct AddAlarmView: View {
         let fileName = "custom_voice_\(UUID().uuidString).caf"
         let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
         let destURL = libraryURL.appendingPathComponent("Sounds/\(fileName)")
+        try? FileManager.default.createDirectory(at: libraryURL.appendingPathComponent("Sounds"), withIntermediateDirectories: true)
         try? FileManager.default.copyItem(at: tempRecordingURL, to: destURL)
         // ✅ Only save to list if toggle is ON
         if saveToList {
