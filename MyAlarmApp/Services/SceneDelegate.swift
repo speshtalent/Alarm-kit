@@ -10,10 +10,21 @@ class SceneDelegate: NSObject, UIWindowSceneDelegate {
         completionHandler: @escaping (Bool) -> Void
     ) {
         print("🚀 SceneDelegate: \(shortcutItem.type)")
-        NotificationCenter.default.post(
-            name: NSNotification.Name("QuickActionTriggered"),
-            object: shortcutItem.type
-        )
+        if shortcutItem.type == "shareApp" {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                guard let scene = windowScene.windows.first else { return }
+                let av = UIActivityViewController(
+                    activityItems: ["Check out Date Alarm!", URL(string: "https://apps.apple.com/us/app/date-alarm/id6761073513")!],
+                    applicationActivities: nil
+                )
+                scene.rootViewController?.present(av, animated: true)
+            }
+        } else {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("QuickActionTriggered"),
+                object: shortcutItem.type
+            )
+        }
         completionHandler(true)
     }
 }
